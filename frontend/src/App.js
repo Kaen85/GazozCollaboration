@@ -1,15 +1,44 @@
-import { useEffect, useState } from "react";
-import api from './services/api';
-import './App.css';
+import React from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import LoginPage, { getAuth } from "./pages/LoginPage";
+import Home from "./pages/Home";
 
+/**
+ * ProtectedRoute Component
+ * - Wraps around routes that require authentication
+ * - If user is not logged in, redirects to Login page
+ */
+function ProtectedRoute({ children }) {
+  const auth = getAuth();
+  if (!auth) return <Navigate to="/" replace />;
+  return children;
+}
+
+/**
+ * Main App Component
+ */
 function App() {
-   const [message, setMessage] = useState('');
+  return (
+    <Router>
+      <Routes>
+        {/* Login Page */}
+        <Route path="/" element={<LoginPage />} />
 
-  useEffect(() => {
-    api.get('/').then(res => setMessage(res.data));
-  }, []);
+        {/* Home Page (protected) */}
+        <Route
+          path="/home"
+          element={
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          }
+        />
 
-  return <h1>{message}</h1>
+        {/* Catch-all: redirect any unknown route to Login */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Router>
+  );
 }
 
 export default App;
