@@ -31,8 +31,9 @@ function Header() {
         {/* --- 2. div'i Link BİLEŞENİ İLE DEĞİŞTİR --- */}
         {/* 'to="/dashboard"' prop'u, tıklandığında gidilecek adresi belirtir. */}
         {/* Daha iyi bir kullanıcı deneyimi için hover efekti eklendi. */}
-        <Link to="/dashboard" className="text-xl font-bold hover:text-gray-300 transition-colors">
-          Project Collaboration Hub
+        <Link to="/dashboard" className="flex items-baseline hover:text-gray-300 transition-colors">
+        <span className="text-xl font-bold">Project Collaboration Hub</span>
+        <span className="ml-2 text-sm text-gray-400 font-normal">by Gazoz</span>
         </Link>
 
         {/* Right Side: Icons and User Menu */}
