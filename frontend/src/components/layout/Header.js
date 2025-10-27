@@ -2,12 +2,15 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { FiBell, FiMessageSquare, FiChevronDown } from 'react-icons/fi';
+// --- 1. Link BİLEŞENİNİ IMPORT ET ---
+import { Link } from 'react-router-dom';
 import ProfileDropdown from './ProfileDropdown';
+import { useAuth } from '../../context/AuthContext';
 
 function Header() {
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
-  const user = { name: 'Kaan' };
+  const { user } = useAuth();
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -23,34 +26,30 @@ function Header() {
 
   return (
     <header className="bg-gray-800 text-white shadow-md">
-      {/* MODIFICATION: Removed 'container' and 'mx-auto' to make the header full-width.
-        Increased padding from px-4 to px-6 for better spacing from the screen edges.
-      */}
       <div className="px-6 py-3 flex justify-between items-center">
-        {/* Left Side: Brand Name */}
-        <div className="text-xl font-bold">
+        
+        {/* --- 2. div'i Link BİLEŞENİ İLE DEĞİŞTİR --- */}
+        {/* 'to="/dashboard"' prop'u, tıklandığında gidilecek adresi belirtir. */}
+        {/* Daha iyi bir kullanıcı deneyimi için hover efekti eklendi. */}
+        <Link to="/dashboard" className="text-xl font-bold hover:text-gray-300 transition-colors">
           Project Collaboration Hub
-        </div>
+        </Link>
 
         {/* Right Side: Icons and User Menu */}
         <div className="flex items-center space-x-4">
-          {/* Notifications Icon Button */}
           <button className="p-2 rounded-full hover:bg-gray-700">
             <FiBell size={20} />
           </button>
-          
-          {/* Messages Icon Button */}
           <button className="p-2 rounded-full hover:bg-gray-700">
             <FiMessageSquare size={20} />
           </button>
           
-          {/* Profile Button and Dropdown */}
           <div className="relative" ref={dropdownRef}>
             <button 
               onClick={() => setDropdownOpen(!isDropdownOpen)} 
               className="flex items-center space-x-2 p-2 rounded-full hover:bg-gray-700"
             >
-              <span>{user.name}</span>
+              <span>{user ? user.name : 'Guest'}</span>
               <FiChevronDown size={16} />
             </button>
             <ProfileDropdown isOpen={isDropdownOpen} />

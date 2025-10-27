@@ -9,7 +9,8 @@ function Sidebar() {
   const activeLinkClasses = "bg-gray-700 text-white";
 
   return (
-    <aside className="w-64 bg-gray-800 p-4">
+    
+    <aside className="w-64 bg-gray-800 p-4 flex-shrink-0">
       <nav>
         <ul>
           <li>
