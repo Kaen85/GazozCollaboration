@@ -7,6 +7,8 @@ const express = require('express');
 const cors = require('cors');
 // Import the authentication routes we created.
 const authRoutes = require('./routes/authRoutes');
+const projectRoutes = require('./routes/projectRoutes');
+const authMiddleware = require('./middleware/authMiddleware');
 
 // --- 2. Initialize the Application ---
 // Create an instance of an Express application.
@@ -37,6 +39,7 @@ app.get('/', (req, res) => {
 // For any request that starts with '/api/auth', use the router defined in 'authRoutes.js'.
 // For example, a request to '/api/auth/login' will be handled by the login route.
 app.use('/api/auth', authRoutes);
+app.use('/api/projects', authMiddleware, projectRoutes);
 
 // --- 5. Start the Server ---
 // Start listening for incoming requests on the specified port.
