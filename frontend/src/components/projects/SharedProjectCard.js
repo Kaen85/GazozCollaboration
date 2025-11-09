@@ -1,24 +1,39 @@
 // src/components/projects/SharedProjectCard.js
-import { Link } from 'react-router-dom'; // <-- BU SATIRI EKLE
+
 import React from 'react';
-import { FiUser } from 'react-icons/fi'; // We'll use an icon for the owner
+import { Link } from 'react-router-dom';
+import { FiClock } from 'react-icons/fi'; // 'FiUser' yerine 'FiClock' kullanalım
 
 // This component receives a single 'project' object and displays its details.
 function SharedProjectCard({ project }) {
+  
+  // Güvenlik önlemi: Eğer 'project' prop'u bir şekilde gelmezse,
+  // çökmemesi için null döndür.
+  if (!project) {
+    return null;
+  }
+
+  // Bu component artık güvenlidir ve 'project.owner' gibi 
+  // backend'den gelmeyen bir veriye erişmeye çalışmaz.
   return (
-    <Link to={`/projects/${project.id}`}>
-      <div className="bg-gray-800 p-6 rounded-lg shadow-md border-2 border-transparent hover:border-purple-500 transition-all duration-300 h-full">
+    // Link'i '/project/' olarak düzelttim (diğer sayfalarla tutarlı olması için)
+    <Link to={`/project/${project.id}`} key={project.id}>
+      <div className="bg-gray-800 p-6 rounded-lg shadow-md hover:shadow-xl hover:border-blue-500 border-2 border-transparent transition-all duration-300 h-full">
+        
+        {/* Bunlar güvenli, çünkü 'project' objesinde 'name' ve 'description' var */}
         <h3 className="text-xl font-bold text-white mb-2">{project.name}</h3>
-        <p className="text-gray-400 text-sm mb-4 h-16">{project.description}</p>
+        <p className="text-gray-400 text-sm truncate">{project.description}</p>
+        
         <div className="border-t border-gray-700 my-4"></div>
-      {/* Owner Information */}
-      <div className="flex items-center">
-        <FiUser className="w-5 h-5 text-gray-500" />
-        <span className="text-xs text-gray-400 ml-2">
-          Shared by <span className="font-semibold text-gray-300">{project.owner.name}</span>
-        </span>
+        
+        {/* Bu da güvenli, çünkü 'last_updated_at' verisi backend'den geliyor */}
+        <div className="flex items-center">
+          <FiClock className="w-5 h-5 text-gray-500" />
+          <span className="text-xs text-gray-400 ml-2">
+            Last updated: {new Date(project.last_updated_at).toLocaleDateString()}
+          </span>
+        </div>
       </div>
-    </div>
     </Link>
   );
 }

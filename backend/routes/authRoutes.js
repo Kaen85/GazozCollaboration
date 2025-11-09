@@ -50,7 +50,7 @@ router.post('/register', async (req, res) => {
 
 // --- 2. USER LOGIN API ---
 // @route   POST /api/auth/login
-// @desc    Authenticate user and get token (replaces our dummy login)
+// @desc    Authenticate user and get token
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
@@ -63,8 +63,8 @@ router.post('/login', async (req, res) => {
     // Check if user exists
     const userResult = await db.query('SELECT * FROM users WHERE username = $1', [username]);
     if (userResult.rows.length === 0) {
-      // We don't say "user not found" for security reasons
-      return res.status(400).json({ message: 'Invalid credentials' });
+      // --- DÜZELTME 1 BURADA ---
+      return res.status(400).json({ message: 'Invalid username or password' });
     }
 
     const user = userResult.rows[0];
@@ -73,7 +73,8 @@ router.post('/login', async (req, res) => {
     // Compare the plain text password from the request with the hashed password from the DB
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      // --- DÜZELTME 2 BURADA ---
+      return res.status(400).json({ message: 'Invalid username or password' });
     }
 
     // User is validated. Create a JWT token.

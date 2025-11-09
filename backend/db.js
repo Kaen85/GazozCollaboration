@@ -1,18 +1,19 @@
 // backend/db.js
 const { Pool } = require('pg');
-require('dotenv').config();
+require('dotenv').config(); // .env dosyasındaki değişkenleri yükler
 
-// Create a new pool instance.
-// It will automatically read connection details from .env variables
-// like PGUSER, PGHOST, PGPASSWORD, PGDATABASE, PGPORT
+// Yeni Pool yapılandırması
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL, // Or use individual variables
-  ssl: {
-    rejectUnauthorized: false // Required for services like Heroku, Render
-  }
+  user: process.env.PGUSER,
+  host: process.env.PGHOST,
+  database: process.env.PGDATABASE,
+  password: process.env.PGPASSWORD,
+  port: process.env.PGPORT,
+  ssl: process.env.DATABASE_URL // Sadece Heroku/Render gibi servisler için 'ssl' gerekir.
+    ? { rejectUnauthorized: false } 
+    : false, // Lokal 'localhost' bağlantısında ssl: false olmalı
 });
 
 module.exports = {
-  // A function to query the database
-  query: (text, params) => pool.query(text, params),
+  query: (text, params) => pool.query(text, params),
 };

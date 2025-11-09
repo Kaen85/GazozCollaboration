@@ -1,59 +1,46 @@
 // src/pages/DashboardOverviewPage.js
-import React, { useState, useEffect } from 'react';
+
+import React, { useEffect } from 'react'; // useState kaldırıldı
 import ProjectList from '../components/projects/ProjectList';
-// Import BOTH mock data sets
-import { mockProjects, mockSharedProjects } from '../data/mockData';
+import { useProjectContext } from '../context/ProjectContext'; // Context'i kullan
+// import CreateProjectModal from '../components/projects/CreateProjectModal'; // Modal kaldırıldı
+// import { FiPlus } from 'react-icons/fi'; // Buton ikonu kaldırıldı
 
 function DashboardOverviewPage() {
-  // State for 'My Projects'
-  const [myProjects, setMyProjects] = useState([]);
-  const [myProjectsLoading, setMyProjectsLoading] = useState(true);
+  // Modal state'i kaldırıldı
+  // const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // State for 'Shared Projects'
-  const [sharedProjects, setSharedProjects] = useState([]);
-  const [sharedProjectsLoading, setSharedProjectsLoading] = useState(true);
+  // 1. Context'ten GEREKLİ VERİLERİ çek
+  const { projects, loading, fetchProjects } = useProjectContext();
 
-  // Fetch 'My Projects' data
+  // 2. Sayfa ilk yüklendiğinde projeleri backend'den çek
   useEffect(() => {
-    setTimeout(() => {
-      setMyProjects(mockProjects);
-      setMyProjectsLoading(false);
-    }, 1000);
-  }, []);
-
-  // Fetch 'Shared Projects' data
-  useEffect(() => {
-    setTimeout(() => {
-      setSharedProjects(mockSharedProjects);
-      setSharedProjectsLoading(false);
-    }, 1500); // A slightly different delay to simulate separate API calls
-  }, []);
+    fetchProjects();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // [] -> bu sayede sadece 1 kez çalışır
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-white mb-8">Dashboard</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold text-white">Dashboard</h1>
+        
+        {/* Proje Oluşturma Butonu KALDIRILDI */}
+      </div>
       
       <div className="space-y-8">
-        {/* Top Box: My Projects List */}
+        {/* 3. Proje Listesini SADECE BİR KEZ çağır */}
+        {/* Context'ten aldığımız gerçek 'projects' ve 'loading' verilerini prop olarak geç */}
         <div>
           <ProjectList 
-            title="My Projects" 
-            projects={myProjects} 
-            loading={myProjectsLoading}
-            viewAllLink="/my-projects" // Provide the correct link
-          />
-        </div>
-
-        {/* Bottom Box: Shared Projects List */}
-        <div>
-          <ProjectList 
-            title="Shared Projects" 
-            projects={sharedProjects} 
-            loading={sharedProjectsLoading}
-            viewAllLink="/shared-projects" // Provide the correct link
+            title="My Projects" // Artık 'My Projects' ve 'Shared Projects'in bir karmasını gösteriyor
+            projects={projects} // Gerçek projeler (sahte değil)
+            loading={loading} // Gerçek yüklenme durumu
+            viewAllLink="/my-projects" // Bu link hala 'My Projects'e gidebilir
           />
         </div>
       </div>
+
+      {/* Proje Oluşturma Penceresi (Modal) KALDIRILDI */}
     </div>
   );
 }

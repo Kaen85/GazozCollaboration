@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { FiBell, FiMessageSquare, FiChevronDown } from 'react-icons/fi';
-// --- 1. Link BİLEŞENİNİ IMPORT ET ---
 import { Link } from 'react-router-dom';
 import ProfileDropdown from './ProfileDropdown';
 import { useAuth } from '../../context/AuthContext';
@@ -10,7 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 function Header() {
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
-  const { user } = useAuth();
+  const { user } = useAuth(); // AuthContext'ten kullanıcıyı al
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -28,12 +27,10 @@ function Header() {
     <header className="bg-gray-800 text-white shadow-md">
       <div className="px-6 py-3 flex justify-between items-center">
         
-        {/* --- 2. div'i Link BİLEŞENİ İLE DEĞİŞTİR --- */}
-        {/* 'to="/dashboard"' prop'u, tıklandığında gidilecek adresi belirtir. */}
-        {/* Daha iyi bir kullanıcı deneyimi için hover efekti eklendi. */}
+        {/* Sol Taraf - Logo (Link olarak doğru ayarlanmış) */}
         <Link to="/dashboard" className="flex items-baseline hover:text-gray-300 transition-colors">
-        <span className="text-xl font-bold">Project Collaboration Hub</span>
-        <span className="ml-2 text-sm text-gray-400 font-normal">by Gazoz</span>
+          <span className="text-xl font-bold">Project Collaboration Hub</span>
+          <span className="ml-2 text-sm text-gray-400 font-normal">by Gazoz</span>
         </Link>
 
         {/* Right Side: Icons and User Menu */}
@@ -50,7 +47,12 @@ function Header() {
               onClick={() => setDropdownOpen(!isDropdownOpen)} 
               className="flex items-center space-x-2 p-2 rounded-full hover:bg-gray-700"
             >
-              <span>{user ? user.name : 'Guest'}</span>
+              {/* DÜZELTME BURADA: 
+                AuthContext'te 'user' objesini { username: '...' } olarak 
+                kaydettiğimiz için 'user.name' yerine 'user.username' 
+                kullanıyoruz.
+              */}
+              <span>{user ? user.username : 'Guest'}</span>
               <FiChevronDown size={16} />
             </button>
             <ProfileDropdown isOpen={isDropdownOpen} />

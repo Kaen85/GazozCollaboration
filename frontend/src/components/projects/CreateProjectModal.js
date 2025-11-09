@@ -1,71 +1,129 @@
-// src/components/projects/CreateProjectModal.js
-
 import React, { useState } from 'react';
+import { useProjectContext } from '../../context/ProjectContext'; // 1. Context'i import et
+import { FiX, FiLoader } from 'react-icons/fi';
 
-// This component receives functions from its parent to close itself and to "create" a project.
-function CreateProjectModal({ onClose, onProjectCreated }) {
+// Component, 'isOpen' (açık mı?) ve 'onClose' (kapatma fonksiyonu) proplarını alır
+function CreateProjectModal({ isOpen, onClose }) {
+  
+  // 2. Context'ten 'createProject' fonksiyonunu ve 'loading' durumunu al
+  const { createProject, loading } = useProjectContext();
+
+  // 3. Form alanları için state'ler
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
+  // Form gönderildiğinde çalışacak fonksiyon
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setError(null); // Eski hatayı temizle
 
-    // --- MOCK API CALL ---
-    // Instead of an axios request, we simulate a network delay with setTimeout.
-    setTimeout(() => {
-      // Create a new project object with a temporary unique ID
-      const newProject = {
-        id: Date.now(), // Use timestamp for a unique mock ID
-        name: name,
-        description: description,
-      };
+    if (!name) {
+      setError('Project name is required.');
+      return;
+    }
 
-      // Call the function passed from the parent component to add the new project to the list
-      onProjectCreated(newProject);
-      setLoading(false);
-      onClose(); // Close the modal
-    }, 1000); // Simulate a 1-second delay
+    try {
+      // 4. Context'teki 'createProject' fonksiyonunu çağır
+      // Bu fonksiyon backend'e API isteği atacak
+      await createProject(name, description);
+      
+      // Başarılı olursa, formu temizle ve modal'ı kapat
+      setName('');
+      setDescription('');
+      onClose(); 
+    } catch (err) {
+      // Başarısız olursa (örn: sunucu hatası), hatayı göster
+      setError(err.message);
+    }
   };
 
+  // Eğer modal 'isOpen' false ise, hiçbir şey gösterme
+  if (!isOpen) {
+    return null;
+  }
+
+  // Modal açıksa, bu JSX'i göster
   return (
-    // Modal background
-    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
-      {/* Modal content */}
-      <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md">
-        <h2 className="text-2xl font-bold text-white mb-6">Create a New Project</h2>
+    // Arka planı karartan overlay
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50">
+      
+      {/* Asıl Modal Penceresi */}
+      <div className="bg-gray-800 rounded-lg shadow-2xl w-full max-w-lg p-6">
+        
+        {/* Başlık ve Kapatma Butonu */}
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold text-white">Create New Project</h2>
+          <button 
+            onClick={onClose} 
+            className="text-gray-400 hover:text-white"
+          >
+            <FiX size={24} />
+          </button>
+        </div>
+        
+        {/* Proje Oluşturma Formu */}
         <form onSubmit={handleSubmit}>
-          {/* Project Name Input */}
-          <div className="mb-4">
-            <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-1">Project Name</label>
-            <input
-              type="text"
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full bg-gray-700 text-white border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
+          <div className="space-y-4">
+            
+            {/* Proje Adı */}
+            <div>
+              <label htmlFor="projectName" className="block text-sm font-medium text-gray-300 mb-1">
+                Project Name
+              </label>
+              <input 
+                type="text"
+                id="projectName"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full py-2 px-3 text-gray-200 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="My New Awesome Project"
+              />
+            </div>
+            
+            {/* Proje Açıklaması */}
+            <div>
+              <label htmlFor="projectDescription" className="block text-sm font-medium text-gray-300 mb-1">
+                Description (Optional)
+              </label>
+              <textarea
+                id="projectDescription"
+                rows="3"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="w-full py-2 px-3 text-gray-200 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="What is this project about?"
+              />
+            </div>
           </div>
-          {/* Project Description Input */}
-          <div className="mb-6">
-            <label htmlFor="description" className="block text-sm font-medium text-gray-300 mb-1">Description</label>
-            <textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows="4"
-              className="w-full bg-gray-700 text-white border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          {/* Action Buttons */}
-          <div className="flex justify-end space-x-4">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-gray-300 rounded-md hover:bg-gray-700">
+          
+          {/* Hata Mesajı Alanı */}
+          {error && (
+            <p className="text-sm text-red-400 text-center mt-4">
+              {error}
+            </p>
+          )}
+
+          {/* Butonlar */}
+          <div className="flex justify-end space-x-3 mt-6">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="py-2 px-4 bg-gray-600 hover:bg-gray-500 text-white rounded-lg transition-colors disabled:opacity-50"
+            >
               Cancel
             </button>
-            <button type="submit" disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-800">
-              {loading ? 'Creating...' : 'Create Project'}
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex items-center justify-center py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50"
+            >
+              {loading ? (
+                <FiLoader className="animate-spin mr-2" />
+              ) : (
+                'Create Project'
+              )}
             </button>
           </div>
         </form>

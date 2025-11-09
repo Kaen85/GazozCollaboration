@@ -1,39 +1,69 @@
 // src/App.js
 
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+// BrowserRouter'ı index.js yerine buraya alıyoruz (bir önceki adıma göre)
+import { Routes, Route, Navigate } from 'react-router-dom';
+// ProjectProvider'ı import et (AuthContext'i değil)
+import { ProjectProvider } from './context/ProjectContext'; 
 
-// Import all pages and the main layout component
-import LoginPage from './pages/LoginPage';
+// Sayfaları import et
 import DashboardLayout from './pages/DashboardLayout';
 import DashboardOverviewPage from './pages/DashboardOverviewPage';
-import SharedProjectsPage from './pages/SharedProjectsPage';
+// === DÜZELTME BURADA: './pages_MyProjectsPage' -> './pages/MyProjectsPage' ===
 import MyProjectsPage from './pages/MyProjectsPage';
-import ProjectDetailPage from './pages/ProjectDetailPage'
+import SharedProjectsPage from './pages/SharedProjectsPage';
+import ProjectDetailPage from './pages/ProjectDetailPage';
+import LoginPage from './pages/LoginPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+
+// Proje Detay Sekmelerini import et
+import ProjectFiles from './components/projects/ProjectFiles';
+import ProjectIssues from './components/projects/ProjectIssues';
+import ProjectDiscussion from './components/projects/ProjectDiscussion';
+import ProjectEditPage from './components/projects/ProjectEditPage';
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<LoginPage />} />
-
-        {/* --- 2. WRAP THE LAYOUT ROUTE WITH THE PROTECTEDROUTE COMPONENT --- */}
-        <Route 
-          element={
-            <ProtectedRoute>
+    // AuthProvider veya BrowserRouter BURADA DEĞİL
+    // (index.js dosyanızda oldukları varsayılarak)
+    <Routes>
+      {/* === KAMUYA AÇIK (PUBLIC) ROTA ===
+        Bu rota ProjectProvider'ın DIŞINDADIR.
+      */}
+      <Route path="/login" element={<LoginPage />} />
+      {/* <Route path="/register" element={<RegisterPage />} /> */}
+        
+      {/* === KORUMALI ALAN (PRIVATE) === */}
+      <Route 
+        path="/" 
+        element={
+          <ProtectedRoute>
+            {/* ProjectProvider SADECE korumalı alanı sarmalar */}
+            <ProjectProvider>
               <DashboardLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route path="/dashboard" element={<DashboardOverviewPage />} />
-          <Route path="/shared-projects" element={<SharedProjectsPage />} />
-          <Route path="/my-projects" element={<MyProjectsPage />} />
-          <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
+            </ProjectProvider>
+          </ProtectedRoute>
+        }
+      >
+        {/* DashboardLayout içindeki <Outlet> bu alt rotaları gösterir */}
+        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route path="dashboard" element={<DashboardOverviewPage />} />
+        <Route path="my-projects" element={<MyProjectsPage />} />
+        <Route path="shared-projects" element={<SharedProjectsPage />} />
+          
+        {/* İç İçe Proje Rotaları (Sekmeler) */}
+        <Route path="project/:id" element={<ProjectDetailPage />}>
+          <Route index element={<ProjectFiles />} /> 
+          <Route path="issues" element={<ProjectIssues />} />
+          <Route path="discussions" element={<ProjectDiscussion />} />
+          <Route path="edit" element={<ProjectEditPage />} />
         </Route>
-
-      </Routes>
-    </Router>
+      </Route>
+        
+      {/* Eşleşmeyen tüm rotaları girişe yönlendir */}
+      <Route path="*" element={<Navigate to="/login" />} /> 
+        
+    </Routes>
   );
 }
 

@@ -1,36 +1,50 @@
 // src/pages/LoginPage.js
 
-import React, { useState, useEffect } from 'react'; // Add useEffect
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-// We don't need axios for the mock login
-// import axios from 'axios'; 
 import { FiUser, FiLock } from 'react-icons/fi';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext'; // Import the custom hook
 
 function LoginPage() {
+  // --- States ---
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const navigate = useNavigate();
-  
-  // Get the login function and user state from the context
-  const { login, user } = useAuth();
+  const [error, setError] = useState(null); 
 
-  // This function now updates the global state instead of making an API call
-  const handleSubmit = (event) => {
-    event.preventDefault();
+  // --- Hooks ---
+  const navigate = useNavigate();
+  const { login, user, loading } = useAuth(); // 'loading' state'ini de alıyoruz
+
+  // --- Event Handler ---
+  const handleSubmit = async (event) => {
+    event.preventDefault(); 
+    setError(null); 
+
+    if (!username || !password) {
+        setError("Please enter all fields.");
+        return; 
+    }
     
-    // Call the global login function from our context with the entered username
-    login(username); 
+    try {
+      await login(username, password); 
+      // Başarılıysa, aşağıdaki useEffect yönlendirmeyi yapacak
+    } catch (err) {
+      // Backend'den veya axios'tan gelen hatayı state'e kaydet
+      setError(err.message);
+    }
   };
 
-  // This effect runs whenever the 'user' object in our context changes.
+  // --- Effect for Navigation ---
   useEffect(() => {
-    // If the user object is not null (meaning login was successful), navigate.
     if (user) {
+      // YÖNLENDİRME KONTROLÜ:
+      // Eğer '/dashboard' diye bir sayfanız yoksa, burayı '/projects'
+      // veya ana sayfanız ne ise onunla değiştirin.
       navigate('/dashboard');
     }
-  }, [user, navigate]); // Dependencies for the effect
+  }, [user, navigate]); 
 
+  // --- Render ---
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 to-gray-700">
       <div className="w-full max-w-md p-8 space-y-8 bg-gray-800 rounded-2xl shadow-2xl">
@@ -75,13 +89,26 @@ function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
+
+          {/* === 1. DEĞİŞİKLİK: HATA MESAJI GÖSTERGESİ === */}
+          {/* error state'i doluysa, bu paragraf görünür */}
+          {error && (
+            <p className="text-sm text-red-400 text-center">
+              {error}
+            </p>
+          )}
+
           {/* Submit Button */}
           <div>
             <button
               type="submit"
-              className="w-full px-4 py-3 font-semibold text-white bg-blue-600 rounded-lg shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500 transition-all duration-300"
+              // === 2. DEĞİŞİKLİK: 'loading' DURUMU ===
+              // 'loading' true ise buton pasifleşir
+              disabled={loading}
+              className="w-full px-4 py-3 font-semibold text-white bg-blue-600 rounded-lg shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500 transition-all duration-300 disabled:opacity-50"
             >
-              Sign In
+              {/* Buton yazısı 'loading' durumuna göre değişir */}
+              {loading ? 'Signing In...' : 'Sign In'}
             </button>
           </div>
         </form>
