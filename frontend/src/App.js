@@ -9,12 +9,14 @@ import { ProjectProvider } from './context/ProjectContext';
 // Sayfaları import et
 import DashboardLayout from './pages/DashboardLayout';
 import DashboardOverviewPage from './pages/DashboardOverviewPage';
-// === DÜZELTME BURADA: './pages_MyProjectsPage' -> './pages/MyProjectsPage' ===
 import MyProjectsPage from './pages/MyProjectsPage';
 import SharedProjectsPage from './pages/SharedProjectsPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import LoginPage from './pages/LoginPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+
+// === 1. YENİ SAYFAYI İMPORT ET ===
+import RegisterPage from './pages/RegisterPage'; 
 
 // Proje Detay Sekmelerini import et
 import ProjectFiles from './components/projects/ProjectFiles';
@@ -27,11 +29,10 @@ function App() {
     // AuthProvider veya BrowserRouter BURADA DEĞİL
     // (index.js dosyanızda oldukları varsayılarak)
     <Routes>
-      {/* === KAMUYA AÇIK (PUBLIC) ROTA ===
-        Bu rota ProjectProvider'ın DIŞINDADIR.
-      */}
+      {/* === 2. YENİ ROTAYI EKLE === */}
+      {/* Bu rotalar 'ProjectProvider'ın DIŞINDA olmalı */}
       <Route path="/login" element={<LoginPage />} />
-      {/* <Route path="/register" element={<RegisterPage />} /> */}
+      <Route path="/register" element={<RegisterPage />} /> 
         
       {/* === KORUMALI ALAN (PRIVATE) === */}
       <Route 

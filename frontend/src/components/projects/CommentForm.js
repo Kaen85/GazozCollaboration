@@ -1,24 +1,32 @@
 // src/components/projects/CommentForm.js
 
 import React, { useState } from 'react';
-import { useProjectContext } from '../../context/ProjectContext';
+// 1. Context import'ları kaldırıldı
+// import { useProjectContext } from '../../context/ProjectContext';
 import { FiSend, FiLoader } from 'react-icons/fi';
 
-// 'onCommentAdded' prop'u, yorum eklendikten sonra listeyi yenilemek için
-function CommentForm({ projectId, onCommentAdded }) {
+// 2. Component artık 'projectId' veya 'onCommentAdded' yerine
+//    'onSubmit' (bir fonksiyon) ve 'loading' (bir durum) proplarını alıyor.
+function CommentForm({ onSubmit, loading }) {
   const [text, setText] = useState('');
-  const { addComment, loading } = useProjectContext();
+  
+  // 3. 'addComment' ve 'loading' state'i context'ten kaldırıldı.
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!text.trim()) return;
 
     try {
-      await addComment(projectId, text);
-      setText(''); // Formu temizle
-      onCommentAdded(); // Listeyi yenilemesi için parent'a haber ver
+      // 4. Artık 'addComment'i DEĞİL, dışarıdan gelen 'onSubmit' fonksiyonunu
+      //    mevcut 'text' (metin) ile çağırıyoruz.
+      await onSubmit(text);
+      
+      // 5. Başarılı olursa formu temizle
+      setText(''); 
     } catch (error) {
-      console.error("Failed to add comment:", error);
+      // Hata yönetimi artık bu fonksiyonu çağıran
+      // parent component (IssueItem veya ProjectDiscussion) tarafından yapılacak.
+      console.error("CommentForm Error:", error);
     }
   };
 
@@ -33,6 +41,7 @@ function CommentForm({ projectId, onCommentAdded }) {
       />
       <button 
         type="submit" 
+        // 6. 'loading' durumunu dışarıdan (prop) al
         disabled={loading}
         className="flex items-center justify-center w-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-3 rounded-r-lg transition-colors disabled:opacity-50"
       >

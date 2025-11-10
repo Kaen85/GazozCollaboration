@@ -1,10 +1,11 @@
-// src/components/projects/CommentList.js (YENİ DOSYA)
+// src/components/projects/CommentList.js
 
 import React, { useState, useEffect } from 'react';
 import { useProjectContext } from '../../context/ProjectContext';
 import { FiLoader } from 'react-icons/fi';
-import Comment from './Comment'; // (Dosya yapınızda 'Comment.js' olduğunu varsayıyorum)
+import Comment from './Comment'; 
 
+// 'refreshKey', yeni yorum eklendiğinde (ProjectDiscussion'dan) tetiklenir
 function CommentList({ projectId, refreshKey }) {
   const [comments, setComments] = useState([]);
   const { fetchComments, loading } = useProjectContext();
@@ -13,28 +14,31 @@ function CommentList({ projectId, refreshKey }) {
   const loadComments = async () => {
     try {
       const fetchedComments = await fetchComments(projectId);
-      setComments(fetchedComments);
+      setComments(fetchedComments || []);
     } catch (error) {
       console.error("Failed to fetch comments:", error);
     }
   };
 
-  // 1. Sayfa yüklendiğinde yorumları çek
+  // 1. Sayfa yüklendiğinde VEYA 'refreshKey' değiştiğinde yorumları çek
   useEffect(() => {
     if (projectId) {
       loadComments();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId]);
+  }, [projectId, refreshKey]); // refreshKey'e bağımlı
 
-  // 2. 'refreshKey' (dışarıdan gelen) değiştiğinde yorumları YENİDEN ÇEK
-  useEffect(() => {
-    if (refreshKey > 0) { // Sadece refreshKey 0'dan büyükse
-      loadComments();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshKey]);
-
+  // === YENİ: Yorum Düzenlendiğinde veya Silindiğinde Listeyi Güncelle ===
+  const handleCommentUpdated = (updatedComment) => {
+    setComments(prev => 
+      prev.map(c => c.id === updatedComment.id ? updatedComment : c)
+    );
+  };
+  const handleCommentDeleted = (deletedCommentId) => {
+    setComments(prev => 
+      prev.filter(c => c.id !== deletedCommentId)
+    );
+  };
 
   return (
     <div className="space-y-4 mt-4">
@@ -44,9 +48,13 @@ function CommentList({ projectId, refreshKey }) {
         <p className="text-gray-500 text-sm text-center">Be the first to comment.</p>
       ) : (
         comments.map(comment => (
-          // 'Comment.js' component'inin bu 'comment' prop'unu alıp
-          // 'author_name' ve 'text' göstermesi gerekir.
-          <Comment key={comment.id} comment={comment} />
+          <Comment 
+            key={comment.id} 
+            comment={comment}
+            projectId={projectId} // 'like/edit/delete' için gerekli
+            onCommentUpdated={handleCommentUpdated} // Yeni prop
+            onCommentDeleted={handleCommentDeleted} // Yeni prop
+          />
         ))
       )}
     </div>

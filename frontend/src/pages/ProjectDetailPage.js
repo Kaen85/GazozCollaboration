@@ -26,11 +26,17 @@ function ProjectDetailPage() {
     return <div className="p-20 flex justify-center text-red-400"><FiAlertTriangle size={40} /><span className="ml-4">Error: {error}</span></div>;
   }
 
-  // 2. Kullanıcının rolünü al (Backend'den 'owner' veya 'viewer' vb. olarak gelir)
+  // 2. Kullanıcının rolünü al (Backend'den 'owner', 'editor', 'viewer', veya 'public_viewer' olarak gelir)
   const userRole = currentProject?.currentUserRole;
 
-  // 3. Role göre sekme menüsü 3'lü mü 4'lü mü olacağına karar ver
-  const navGridCols = userRole === 'owner' ? 'grid-cols-4' : 'grid-cols-3';
+  // 3. Role göre sekme menüsü kaç parçalı olacağına karar ver
+  // (Sahipse 4, üyeyse 3, public ise 2 sekme)
+  let navCols = 'grid-cols-2'; // Varsayılan (public_viewer için)
+  if (userRole === 'owner') {
+    navCols = 'grid-cols-4'; // Files, Issues, Discussions, Edit
+  } else if (userRole === 'editor' || userRole === 'viewer') {
+    navCols = 'grid-cols-3'; // Files, Issues, Discussions
+  }
 
   // NavLink (Sekme) stili
   const navLinkStyle = ({ isActive }) =>
@@ -42,32 +48,35 @@ function ProjectDetailPage() {
   // --- BAŞARILI RENDER ---
   return (
     <div className="p-4 text-white">
-      {/* Üst Kısım (Açıklama) */}
+      {/* 1. ÜST KISIM (Açıklama) */}
       <h1 className="text-4xl font-bold mb-2">{currentProject.name}</h1>
       <p className="text-lg text-gray-400 mb-6">{currentProject.description}</p>
       
       {/* === 4. GÜNCELLENMİŞ SEKME MENÜSÜ === */}
-      <nav className={`grid ${navGridCols} border-b border-gray-700 mb-6`}>
+      <nav className={`grid ${navCols} border-b border-gray-700 mb-6`}>
         
-        {/* YENİ SIRA 1: Files (Artık varsayılan 'index' rotası) */}
+        {/* SIRA 1: Files (Varsayılan 'index' rotası, herkes görür) */}
         <NavLink to="" end className={navLinkStyle}> 
           <FiFile className="mr-2" />
           Files
         </NavLink>
         
-        {/* YENİ SIRA 2: Issues */}
+        {/* SIRA 2: Issues (Herkes görür) */}
         <NavLink to="issues" className={navLinkStyle}>
           <FiCheckSquare className="mr-2" />
           Issues
         </NavLink>
         
-        {/* YENİ SIRA 3: Discussions */}
-        <NavLink to="discussions" className={navLinkStyle}>
-          <FiMessageSquare className="mr-2" />
-          Discussions
-        </NavLink>
+        {/* === 5. KOŞULLU 'DISCUSSIONS' SEKMESİ === */}
+        {/* Bu sekme, 'public_viewer' DEĞİLSE görünür */}
+        {userRole !== 'public_viewer' && (
+          <NavLink to="discussions" className={navLinkStyle}>
+            <FiMessageSquare className="mr-2" />
+            Discussions
+          </NavLink>
+        )}
         
-        {/* === 5. KOŞULLU 'EDIT' SEKMESİ === */}
+        {/* === 6. KOŞULLU 'EDIT' SEKMESİ === */}
         {/* Bu sekme, sadece 'userRole' "owner" ise görünür */}
         {userRole === 'owner' && (
           <NavLink to="edit" className={navLinkStyle}>

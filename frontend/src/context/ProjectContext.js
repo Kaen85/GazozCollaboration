@@ -1,4 +1,4 @@
-// src/context/ProjectContext.js (TAM VE EKSİKSİZ HALİ)
+// src/context/ProjectContext.js
 
 import React, { createContext, useState, useContext } from 'react';
 import axios from 'axios';
@@ -7,49 +7,35 @@ import { useAuth } from './AuthContext';
 const API_URL = 'http://localhost:5000/api/projects';
 
 export const ProjectContext = createContext();
-
-export const useProjectContext = () => {
-  return useContext(ProjectContext);
-};
+export const useProjectContext = () => useContext(ProjectContext);
 
 export const ProjectProvider = ({ children }) => {
   const [projects, setProjects] = useState([]);
   const [currentProject, setCurrentProject] = useState(null);
   const [myProjects, setMyProjects] = useState([]);
   const [sharedProjects, setSharedProjects] = useState([]);
-
+  const [currentMembers, setCurrentMembers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const { token, logout } = useAuth(); // AuthContext'ten token'ı al
+  const { token, logout } = useAuth();
 
-  // === YARDIMCI FONKSİYONLAR ===
-
-  // Token (Yetki) başlığını oluşturan helper
+  // --- YARDIMCI FONKSİYONLAR ---
   const getAuthHeaders = () => {
-    // Token'ı KONTROL ET
-    // Sayfa yenilendiğinde, 'token' state'i localStorage'dan anında yüklenir
-    // Eğer 'token' HÂLÂ yoksa, 'return' et
-    if (!token) {
-      console.error("getAuthHeaders: Token not found!");
-      // Bu hatayı fırlatmak, 'catch' bloklarını tetikler
-      throw new Error('Token not found. Please log in.');
-    }
+    if (!token) throw new Error('Token not found. Please log in.');
     return { headers: { 'Authorization': `Bearer ${token}` } };
   };
-
-  // Hata yönetimi helper'ı
   const handleError = (err) => {
     const message = err.response?.data?.message || 'An error occurred.';
     setError(message);
-    if (err.response?.status === 401) logout(); // Token geçersizse (örn: süresi dolmuşsa) çıkış yap
+    if (err.response?.status === 401) logout();
     throw new Error(message);
   };
-
-  // === PROJE LİSTESİ FONKSİYONLARI (SORUNUN ÇÖZÜMÜ) ===
-
-  // Dashboard için (Tüm projeler)
+  
+  // --- PROJE LİSTESİ FONKSİYONLARI ---
+  
+  // (Dashboard için)
   const fetchProjects = async () => {
-    if (!token) return; // Token yoksa (ilk yüklemede) dur
+    if (!token) return; 
     setLoading(true);
     setError(null);
     try {
@@ -63,7 +49,7 @@ export const ProjectProvider = ({ children }) => {
     }
   };
 
-  // MyProjectsPage için (Sadece sahibi olduklarım)
+  // (MyProjectsPage için)
   const fetchMyProjects = async () => {
     if (!token) return;
     setLoading(true);
@@ -79,7 +65,7 @@ export const ProjectProvider = ({ children }) => {
     }
   };
 
-  // SharedProjectsPage için (Sadece paylaşılanlar)
+  // (SharedProjectsPage için)
   const fetchSharedProjects = async () => {
     if (!token) return;
     setLoading(true);
@@ -95,11 +81,9 @@ export const ProjectProvider = ({ children }) => {
     }
   };
 
-  // === TEK PROJE FONKSİYONLARI ===
-
   // Proje oluşturma
   const createProject = async (name, description) => {
-    setLoading(true); // Yüklemeyi global olarak ayarla
+    setLoading(true);
     try {
       const response = await axios.post(API_URL, { name, description }, getAuthHeaders());
       // Yeni proje geldi, state'leri güncelle
@@ -108,12 +92,13 @@ export const ProjectProvider = ({ children }) => {
       return response.data;
     } catch (err) {
       handleError(err);
+      throw err; // Hatanın modal'da yakalanması için
     } finally {
       setLoading(false);
     }
   };
 
-  // Proje detay
+  // Proje detayını getir
   const fetchProjectById = async (projectId) => {
     if (!token) return;
     setLoading(true);
@@ -124,48 +109,168 @@ export const ProjectProvider = ({ children }) => {
       setCurrentProject(response.data);
     } catch (err) {
       handleError(err);
+      throw err; // Hatanın ProjectDetailPage'de yakalanması için
     } finally {
       setLoading(false);
     }
   };
+
+  // Proje görünürlüğünü güncelle
+  const updateProjectVisibility = async (projectId, isPublic) => {
+    try {
+      const response = await axios.put(
+        `${API_URL}/${projectId}/visibility`, 
+        { is_public: isPublic }, 
+        getAuthHeaders()
+      );
+      // 'currentProject' state'ini güncelle
+      setCurrentProject(response.data);
+      return response.data; 
+    } catch (err) {
+      handleError(err);
+      throw err;
+    }
+  };
   
-  // ... (Issues, Comments, Members fonksiyonları) ...
-  // (Buraya kopyalamadım ama sizin dosyanızda olmalılar)
+  // --- ISSUE FONKSİYONLARI ---
   const fetchIssues = async (projectId) => {
     try {
       const response = await axios.get(`${API_URL}/${projectId}/issues`, getAuthHeaders());
       return response.data;
-    } catch (err) { handleError(err); }
+    } catch (err) { handleError(err); throw err; }
   };
   
   const createIssue = async (projectId, text) => {
      try {
        const response = await axios.post(`${API_URL}/${projectId}/issues`, { text }, getAuthHeaders());
        return response.data;
-     } catch (err) { handleError(err); }
+     } catch (err) { handleError(err); throw err; }
   };
-
+  
+  const updateIssue = async (projectId, issueId, data) => {
+    try {
+      const response = await axios.put(
+        `${API_URL}/${projectId}/issues/${issueId}`, 
+        data, 
+        getAuthHeaders()
+      );
+      return response.data;
+    } catch (err) { handleError(err); throw err; }
+  };
+  
+  // --- YORUM FONKSİYONLARI ---
   const fetchComments = async (projectId) => {
     try {
       const response = await axios.get(`${API_URL}/${projectId}/comments`, getAuthHeaders());
       return response.data;
-    } catch (err) { handleError(err); }
+    } catch (err) { handleError(err); throw err; }
   };
 
   const addComment = async (projectId, text) => {
     try {
       const response = await axios.post(`${API_URL}/${projectId}/comments`, { text }, getAuthHeaders());
       return response.data;
-    } catch (err) { handleError(err); }
+    } catch (err) { handleError(err); throw err; }
   };
 
-  const fetchMembers = async (projectId) => {
+  const fetchIssueComments = async (projectId, issueId) => {
     try {
-       const response = await axios.get(`${API_URL}/${projectId}/members`, getAuthHeaders());
-       return response.data;
-    } catch (err) { handleError(err); }
+      const response = await axios.get(`${API_URL}/${projectId}/issues/${issueId}/comments`, getAuthHeaders());
+      return response.data;
+    } catch (err) { handleError(err); throw err; }
   };
 
+  const addIssueComment = async (projectId, issueId, text) => {
+    try {
+      const response = await axios.post(`${API_URL}/${projectId}/issues/${issueId}/comments`, { text }, getAuthHeaders());
+      return response.data;
+    } catch (err) { handleError(err); throw err; }
+  };
+
+  // --- ÜYE FONKSİYONLARI ---
+  const fetchMembers = async (projectId) => {
+  try {
+     const response = await axios.get(`${API_URL}/${projectId}/members`, getAuthHeaders());
+     setCurrentMembers(response.data); // Global state'i güncelle
+     return response.data; // (Yine de döndürebilir, opsiyonel)
+  } catch (err) { handleError(err); throw err; }
+};
+  
+  // === GÜNCELLEME BURADA: 'addMember' artık 'role' (rol) alıyor ===
+  const addMember = async (projectId, username, role) => {
+   try {
+     const response = await axios.post(
+       `${API_URL}/${projectId}/members`, 
+       { username: username, role: role }, 
+       getAuthHeaders()
+     );
+     // Yeni üyeyi global listeye ekle
+     setCurrentMembers(prev => [...prev, response.data]);
+     return response.data;
+   } catch (err) { 
+     handleError(err); 
+     throw err; 
+   }
+};
+// === YENİ FONKSİYON: ÜYE ÇIKAR ===
+const removeMember = async (projectId, userId) => {
+  try {
+    await axios.delete(
+      `${API_URL}/${projectId}/members/${userId}`,
+      getAuthHeaders()
+    );
+    // Üyeyi global listeden çıkar
+    setCurrentMembers(prev => prev.filter(member => member.id !== userId));
+    return true; // Başarılı
+  } catch (err) {
+    handleError(err);
+    throw err;
+  }
+};
+
+  // === YORUM YÖNETİMİ FONKSİYONLARI (BEĞEN/DÜZENLE/SİL) ===
+
+  const likeComment = async (projectId, commentId) => {
+    try {
+      const response = await axios.post(
+        `${API_URL}/${projectId}/comments/${commentId}/like`, 
+        {}, 
+        getAuthHeaders()
+      );
+      return response.data; 
+    } catch (err) {
+      handleError(err);
+      throw err;
+    }
+  };
+
+  const editComment = async (projectId, commentId, text) => {
+    try {
+      const response = await axios.put(
+        `${API_URL}/${projectId}/comments/${commentId}`, 
+        { text: text }, 
+        getAuthHeaders()
+      );
+      return response.data; 
+    } catch (err) {
+      handleError(err);
+      throw err; 
+    }
+  };
+
+  const deleteComment = async (projectId, commentId) => {
+    try {
+      await axios.delete(
+        `${API_URL}/${projectId}/comments/${commentId}`, 
+        getAuthHeaders()
+      );
+      return true; // Başarılı
+    } catch (err) {
+      handleError(err);
+      throw err;
+    }
+  };
+  
   // Context'in sağlayacağı tüm değerler
   const value = {
     projects,
@@ -180,11 +285,21 @@ export const ProjectProvider = ({ children }) => {
     fetchSharedProjects,
     fetchProjectById,
     createProject,
+    updateProjectVisibility,
     fetchIssues,
     createIssue,
+    updateIssue,
     fetchComments,
     addComment,
+    fetchIssueComments,
+    addIssueComment,
     fetchMembers,
+    addMember, // Bu artık 'role' (rol) alan güncellenmiş fonksiyondur
+    currentMembers,
+    removeMember,
+    likeComment,
+    editComment,
+    deleteComment
   };
 
   return (

@@ -1,45 +1,31 @@
 // src/components/layout/RightSidebar.js
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
+// 'useState' kaldırıldı
 import { useProjectContext } from '../../context/ProjectContext';
 import { FiUser, FiLoader, FiCalendar, FiClock, FiUsers } from 'react-icons/fi';
-import { useLocation, useParams } from 'react-router-dom'; // useParams eklendi
+import { useLocation, useParams } from 'react-router-dom'; 
 
 function RightSidebar() {
-  // 1. Proje ID'sini doğrudan URL'den al
   const { id: projectIdFromUrl } = useParams(); 
   
-  // 2. Context'ten 'currentProject' (tarihler/isim için) ve 'fetchMembers' (liste için) al
-  const { currentProject, fetchMembers } = useProjectContext();
+  // 1. Context'ten 'currentProject' (isim/tarih için)
+  //    ve 'currentMembers' (global üye listesi) al
+  const { currentProject, currentMembers, fetchMembers, loading } = useProjectContext();
   const location = useLocation();
 
-  const [members, setMembers] = useState([]);
-  const [loadingMembers, setLoadingMembers] = useState(false);
+  // 2. 'members' ve 'loadingMembers' state'leri kaldırıldı
 
   const isProjectDetailPage = location.pathname.startsWith('/project/');
 
-  // 3. useEffect'i 'currentProject'e DEĞİL, URL'deki 'projectIdFromUrl'e bağla
+  // 3. useEffect artık SADECE 'fetchMembers'ı çağırıyor.
+  //    (Liste 'currentMembers' state'inde tutuluyor)
   useEffect(() => {
-    // Sadece proje detay sayfasındaysak ve URL'de ID varsa
     if (isProjectDetailPage && projectIdFromUrl) {
-      setLoadingMembers(true);
-      
-      fetchMembers(projectIdFromUrl)
-        .then(data => {
-          setMembers(data || []);
-        })
-        .catch(err => {
-          console.error("RightSidebar: Failed to fetch members:", err);
-          setMembers([]);
-        })
-        .finally(() => {
-          setLoadingMembers(false);
-        });
-    } else {
-      // Proje detay sayfasında değilsek, listeyi temizle
-      setMembers([]);
+      // Global listeyi doldurmak için fetchMembers'ı tetikle
+      fetchMembers(projectIdFromUrl);
     }
-  // 'currentProject' bağımlılığını kaldırmak 'race condition'ı önler
+  // 'fetchMembers'ı bağımlılıklara ekleyelim (best practice)
   }, [isProjectDetailPage, projectIdFromUrl, fetchMembers]); 
 
   // Helper: Tarihleri formatlamak için
@@ -55,7 +41,7 @@ function RightSidebar() {
   return (
     <aside className="w-72 bg-gray-800 p-4 border-l border-gray-700 flex-shrink-0 hidden md:block">
       
-      {/* 4. 'currentProject' verisini SADECE render için kullan (data fetching için değil) */}
+      {/* 4. 'currentProject' verisini SADECE render için kullan */}
       {isProjectDetailPage && currentProject ? (
         
         // --- PROJE SAYFASI İÇERİĞİ ---
@@ -70,13 +56,14 @@ function RightSidebar() {
               <FiUsers className="inline mr-1" />
               Grup Üyeleri
             </h3>
-            {loadingMembers ? (
+            {/* 5. 'loading' (global) ve 'currentMembers' (global) state'ini kullan */}
+            {loading && currentMembers.length === 0 ? (
               <div className="flex justify-center p-4">
                 <FiLoader className="animate-spin text-blue-500" />
               </div>
-            ) : members.length > 0 ? (
+            ) : currentMembers.length > 0 ? (
               <ul className="space-y-3">
-                {members.map(member => (
+                {currentMembers.map(member => (
                   <li key={member.id} className="flex items-center">
                     <FiUser className="w-5 h-5 text-gray-400" />
                     <div className="ml-3">
@@ -91,7 +78,7 @@ function RightSidebar() {
             )}
           </div>
 
-          <div className="space-y-3 mt-4"> {/* Üstteki bölümle boşluk için 'mt-4' eklendi */}
+          <div className="space-y-3 mt-4"> 
             <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
               Project Info
             </h3>
@@ -114,7 +101,6 @@ function RightSidebar() {
           <h3 className="font-bold text-lg mb-4">Quick Info</h3>
           <p className="text-sm text-gray-400">
             This panel will show notifications or other relevant info in the future.
-          {/* === DÜZELTME BURADA: '</D>' yerine '</p>' === */}
           </p>
         </div>
 

@@ -2,40 +2,54 @@
 
 const express = require('express');
 const router = express.Router();
-const db = require('../db'); // Import the database connection
+const db = require('../db'); // Veritabanı bağlantısı
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
-// --- 1. USER REGISTRATION API ---
+// --- 1. USER REGISTRATION API (HATA KONTROLLÜ) ---
 // @route   POST /api/auth/register
 // @desc    Register a new user
 router.post('/register', async (req, res) => {
-  const { username, password } = req.body;
+  const { username, email, password } = req.body;
 
-  // Basic validation
-  if (!username || !password) {
+  // Alanların dolu olup olmadığını kontrol et
+  if (!username || !email || !password) {
     return res.status(400).json({ message: 'Please enter all fields' });
   }
 
   try {
-    // Check if user already exists
-    const userCheck = await db.query('SELECT * FROM users WHERE username = $1', [username]);
-    if (userCheck.rows.length > 0) {
-      return res.status(400).json({ message: 'Username already exists' });
-    }
+    // === İSTEDİĞİNİZ HATA KONTROLÜ BURADA ===
+    // 1. Veritabanında bu 'username' VEYA 'email' ile eşleşen bir kayıt ara
+    const userCheck = await db.query('SELECT * FROM users WHERE username = $1 OR email = $2', [username, email]);
 
-    // Hash the password
+    // 2. Eğer bir kayıt bulunduysa (rows.length > 0)
+    if (userCheck.rows.length > 0) {
+      // 3. Bulunan kayıt 'username' ile mi eşleşti?
+      if (userCheck.rows[0].username === username) {
+        // Evet -> Kullanıcıyı bilgilendir
+        return res.status(400).json({ message: 'Username already exists' });
+      }
+      // 4. Bulunan kayıt 'email' ile mi eşleşti?
+      if (userCheck.rows[0].email === email) {
+        // Evet -> Kullanıcıyı bilgilendir
+        return res.status(400).json({ message: 'Email already in use' });
+      }
+    }
+    // === HATA KONTROLÜ SONU ===
+
+
+    // Şifreyi hash'le
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    // Insert new user into the database
+    // Yeni kullanıcıyı (email dahil) veritabanına ekle
     const newUser = await db.query(
-      'INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING id, username',
-      [username, passwordHash]
+      'INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id, username, email',
+      [username, email, passwordHash]
     );
 
-    // Respond with success
+    // Başarı mesajı döndür
     res.status(201).json({
       message: 'User registered successfully',
       user: newUser.rows[0]
@@ -49,52 +63,48 @@ router.post('/register', async (req, res) => {
 
 
 // --- 2. USER LOGIN API ---
-// @route   POST /api/auth/login
-// @desc    Authenticate user and get token
+// (Bu rota aynı kalır)
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
-  // Basic validation
   if (!username || !password) {
     return res.status(400).json({ message: 'Please enter all fields' });
   }
 
   try {
-    // Check if user exists
     const userResult = await db.query('SELECT * FROM users WHERE username = $1', [username]);
     if (userResult.rows.length === 0) {
-      // --- DÜZELTME 1 BURADA ---
       return res.status(400).json({ message: 'Invalid username or password' });
     }
 
     const user = userResult.rows[0];
 
-    // Check if password matches
-    // Compare the plain text password from the request with the hashed password from the DB
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
-      // --- DÜZELTME 2 BURADA ---
       return res.status(400).json({ message: 'Invalid username or password' });
     }
 
-    // User is validated. Create a JWT token.
     const payload = {
       user: {
         id: user.id,
-        name: user.username // This will be used in the AuthContext
+        name: user.username
       }
     };
 
-    // Sign the token with a secret key
-    // Create a JWT_SECRET in your .env file
     jwt.sign(
       payload,
       process.env.JWT_SECRET,
-      { expiresIn: '30d' }, // Token expires in 30 days
+      { expiresIn: '30d' }, 
       (err, token) => {
         if (err) throw err;
-        // Send the token back to the frontend
-        res.json({ token });
+        
+        res.json({ 
+          token,
+          user: {
+            id: user.id,
+            username: user.username
+          } 
+        });
       }
     );
 

@@ -1,24 +1,28 @@
 // src/components/auth/ProtectedRoute.js
 
 import React from 'react';
-// Navigate component is used for declarative redirection
-import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { Navigate } from 'react-router-dom';
 
-// This component acts as a gatekeeper.
-// It receives the component to be protected as 'children'.
-function ProtectedRoute({ children }) {
-  const { user } = useAuth();
+// Bu component, App.js'te içine sardığımız
+// <ProjectProvider> ve <DashboardLayout> elementlerini 'children' prop'u olarak alır.
+const ProtectedRoute = ({ children }) => {
+  
+  // AuthContext'ten token'ı (giriş durumunu) al
+  const { token } = useAuth(); 
 
-  if (!user) {
-    // If the user is not logged in (user is null),
-    // render the Navigate component to redirect them to the login page.
-    // The 'replace' prop prevents the user from going back to the protected page using the browser's back button.
-    return <Navigate to="/" replace />;
+  // 1. EĞER TOKEN YOKSA (Kullanıcı giriş yapmamışsa):
+  if (!token) {
+    // Kullanıcıyı '/login' sayfasına yönlendir.
+    // 'replace', tarayıcı geçmişinde 'geri' tuşunun çalışmamasını sağlar.
+    // "Beyaz ekran" sorununuzun çözümü bu satırdır.
+    return <Navigate to="/login" replace />;
   }
 
-  // If the user is logged in, render the children (the component they were trying to access).
+  // 2. EĞER TOKEN VARSA (Kullanıcı giriş yapmışsa):
+  // Gitmek istediği sayfayı (children) göster.
+  // (Bu, <ProjectProvider><DashboardLayout /></ProjectProvider> olur)
   return children;
-}
+};
 
 export default ProtectedRoute;
