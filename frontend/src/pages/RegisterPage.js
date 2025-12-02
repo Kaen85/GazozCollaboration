@@ -1,17 +1,17 @@
-// src/pages/RegisterPage.js (GÜNCELLENMİŞ TAM HALİ)
+// src/pages/RegisterPage.js
 
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-// 1. 'Email' için 'FiMail' ikonunu import et
 import { FiUser, FiLock, FiMail } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext'; 
 
+// 1. Fotoğrafı buraya da import et
+import BackgroundImage from '../assets/background.jpg';
+
 function RegisterPage() {
   const [username, setUsername] = useState('');
-  // 2. 'email' için yeni state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  // 3. 'confirmPassword' state'i kaldırıldı
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   
@@ -22,32 +22,34 @@ function RegisterPage() {
     e.preventDefault();
     setError(null);
     setSuccess(null);
-
-    // 4. 'confirmPassword' kontrolü kaldırıldı
     
-    // 5. 'email' kontrolü eklendi
     if (!username || !email || !password) {
       setError("Please enter all fields.");
       return;
     }
 
     try {
-      // 6. Context'teki 'register' fonksiyonu 'email' ile çağrıldı
       await register(username, email, password);
-      
       setSuccess("Account created successfully! Redirecting to login...");
       setTimeout(() => {
         navigate('/login');
       }, 2000);
-      
     } catch (err) {
       setError(err.message);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 to-gray-700">
-      <div className="w-full max-w-md p-8 space-y-8 bg-gray-800 rounded-2xl shadow-2xl">
+    // 2. Arka plan stilini uygula
+    <div 
+      className="relative flex items-center justify-center min-h-screen bg-cover bg-center"
+      style={{ backgroundImage: `url(${BackgroundImage})` }}
+    >
+      {/* 3. Siyah Perde */}
+      <div className="absolute inset-0 bg-black bg-opacity-60"></div>
+
+      {/* 4. Ortadaki Kutucuk */}
+      <div className="relative z-10 w-full max-w-md p-8 space-y-8 bg-gray-800 bg-opacity-90 rounded-2xl shadow-2xl backdrop-blur-sm">
         <div className="text-center">
           <h2 className="text-3xl font-bold text-white">
             Create Account
@@ -58,7 +60,6 @@ function RegisterPage() {
         </div>
         <form className="space-y-6" onSubmit={handleSubmit}>
           
-          {/* Username Input */}
           <div className="relative">
             <div className="absolute top-0 left-0 flex items-center h-full pl-3 pointer-events-none">
               <FiUser className="w-5 h-5 text-gray-500" />
@@ -74,7 +75,6 @@ function RegisterPage() {
             />
           </div>
 
-          {/* === 7. YENİ EMAIL INPUT'U === */}
           <div className="relative">
             <div className="absolute top-0 left-0 flex items-center h-full pl-3 pointer-events-none">
               <FiMail className="w-5 h-5 text-gray-500" />
@@ -90,7 +90,6 @@ function RegisterPage() {
             />
           </div>
           
-          {/* Password Input */}
           <div className="relative">
             <div className="absolute top-0 left-0 flex items-center h-full pl-3 pointer-events-none">
               <FiLock className="w-5 h-5 text-gray-500" />
@@ -105,10 +104,7 @@ function RegisterPage() {
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
-          
-          {/* 8. 'Confirm Password' Input'u kaldırıldı */}
 
-          {/* Hata veya Başarı Mesajı Göstergesi */}
           {error && (
             <p className="text-sm text-red-400 text-center">
               {error}
@@ -120,7 +116,6 @@ function RegisterPage() {
             </p>
           )}
 
-          {/* Submit Button */}
           <div>
             <button
               type="submit"
@@ -132,7 +127,6 @@ function RegisterPage() {
           </div>
         </form>
         
-        {/* Giriş Sayfasına Geri Dön Linki */}
         <div className="text-center mt-4">
           <p className="text-sm text-gray-400">
             Already have an account?{' '}

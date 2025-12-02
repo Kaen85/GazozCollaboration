@@ -5,6 +5,7 @@ const router = express.Router();
 const db = require('../db'); // Veritabanı bağlantısı
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 require('dotenv').config();
 
 // --- 1. USER REGISTRATION API (HATA KONTROLLÜ) ---
@@ -36,7 +37,7 @@ router.post('/register', async (req, res) => {
         return res.status(400).json({ message: 'Email already in use' });
       }
     }
-    // === HATA KONTROLÜ SONU ===
+    
 
 
     // Şifreyi hash'le
@@ -107,6 +108,83 @@ router.post('/login', async (req, res) => {
         });
       }
     );
+
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
+// @route   POST /api/auth/forgot-password
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ message: 'Please provide an email.' });
+
+  try {
+    // 1. Kullanıcıyı bul
+    const user = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (user.rows.length === 0) {
+      return res.status(404).json({ message: 'User not found with this email.' });
+    }
+
+    // 2. Rastgele bir token oluştur
+    const resetToken = crypto.randomBytes(20).toString('hex');
+    // 3. Token'ın geçerlilik süresi (1 saat)
+    const resetExpires = new Date(Date.now() + 3600000); // 1 saat sonra
+
+    // 4. Veritabanına kaydet
+    await db.query(
+      'UPDATE users SET reset_token = $1, reset_token_expires = $2 WHERE email = $3',
+      [resetToken, resetExpires, email]
+    );
+
+    // 5. E-posta Gönderme Simülasyonu (Gerçek projede burada nodemailer kullanılır)
+    const resetUrl = `http://localhost:3000/reset-password?token=${resetToken}`;
+    
+    console.log("---------------------------------------------------");
+    console.log("E-POSTA GÖNDERİLDİ (SİMÜLASYON):");
+    console.log(`Kullanıcı: ${email}`);
+    console.log(`Sıfırlama Linki: ${resetUrl}`);
+    console.log("---------------------------------------------------");
+
+    res.json({ message: 'Password reset link sent (Check server console).' });
+
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
+
+// === YENİ: ŞİFREYİ GÜNCELLEME ===
+// @route   POST /api/auth/reset-password
+router.post('/reset-password', async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  if (!token || !newPassword) {
+    return res.status(400).json({ message: 'Invalid data.' });
+  }
+
+  try {
+    // 1. Token'ı ve süresini kontrol et
+    const user = await db.query(
+      'SELECT * FROM users WHERE reset_token = $1 AND reset_token_expires > NOW()',
+      [token]
+    );
+
+    if (user.rows.length === 0) {
+      return res.status(400).json({ message: 'Invalid or expired token.' });
+    }
+
+    // 2. Yeni şifreyi hash'le
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(newPassword, salt);
+
+    // 3. Şifreyi güncelle ve token'ı temizle
+    await db.query(
+      'UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expires = NULL WHERE id = $2',
+      [passwordHash, user.rows[0].id]
+    );
+
+    res.json({ message: 'Password updated successfully. You can now login.' });
 
   } catch (err) {
     console.error(err.message);

@@ -1,22 +1,22 @@
 // src/pages/LoginPage.js
 
 import React, { useState, useEffect } from 'react';
-// 1. 'Link' component'ini react-router-dom'dan import et
 import { useNavigate, Link } from 'react-router-dom';
 import { FiUser, FiLock } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext'; 
 
+// 1. Fotoğrafı import et
+// (Eğer dosya adınız veya uzantınız farklıysa burayı düzeltin)
+import BackgroundImage from '../assets/background.jpg'; 
+
 function LoginPage() {
-  // --- States ---
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null); 
 
-  // --- Hooks ---
   const navigate = useNavigate();
   const { login, user, loading } = useAuth(); 
 
-  // --- Event Handler ---
   const handleSubmit = async (event) => { 
     event.preventDefault(); 
     setError(null); 
@@ -28,24 +28,36 @@ function LoginPage() {
     
     try {
       await login(username, password); 
-      // (AuthContext'teki 'login' fonksiyonu zaten /dashboard'a yönlendiriyor)
     } catch (err) {
       setError(err.message);
     }
   };
 
-  // --- Effect for Navigation ---
   useEffect(() => {
-    // Kullanıcı zaten giriş yapmışsa, onu dashboard'a yönlendir
     if (user) {
       navigate('/dashboard');
     }
   }, [user, navigate]); 
 
-  // --- Render ---
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 to-gray-700">
-      <div className="w-full max-w-md p-8 space-y-8 bg-gray-800 rounded-2xl shadow-2xl">
+    // 2. En dıştaki div'i güncelle:
+    // - 'relative': İçindeki overlay'i konumlandırmak için
+    // - 'bg-cover bg-center': Resmi düzgün yaymak için
+    // - style={{ backgroundImage... }}: Resmi arka plan yap
+    <div 
+      className="relative flex items-center justify-center min-h-screen bg-cover bg-center"
+      style={{ backgroundImage: `url(${BackgroundImage})` }}
+    >
+      
+      {/* 3. Siyah Perde (Overlay) */}
+      {/* Bu, resmin üzerine yarı saydam siyah bir katman atar, 
+          böylece kutucuk ve yazılar daha net okunur. */}
+      <div className="absolute inset-0 bg-black bg-opacity-60"></div>
+
+      {/* 4. Ortadaki Kutucuk */}
+      {/* 'relative z-10': Perdenin önünde durması için */}
+      {/* 'bg-opacity-90': Kutucuğun kendisi de hafif şeffaf olsun (isteğe bağlı) */}
+      <div className="relative z-10 w-full max-w-md p-8 space-y-8 bg-gray-800 bg-opacity-90 rounded-2xl shadow-2xl backdrop-blur-sm">
         <div className="text-center">
           <h2 className="text-3xl font-bold text-white">
             Sign In
@@ -56,7 +68,6 @@ function LoginPage() {
         </div>
         <form className="space-y-6" onSubmit={handleSubmit}>
           
-          {/* Username Input (Doldurulmuş) */}
           <div className="relative">
             <div className="absolute top-0 left-0 flex items-center h-full pl-3 pointer-events-none">
               <FiUser className="w-5 h-5 text-gray-500" />
@@ -73,7 +84,6 @@ function LoginPage() {
             />
           </div>
           
-          {/* Password Input (Doldurulmuş) */}
           <div className="relative">
             <div className="absolute top-0 left-0 flex items-center h-full pl-3 pointer-events-none">
               <FiLock className="w-5 h-5 text-gray-500" />
@@ -90,14 +100,12 @@ function LoginPage() {
             />
           </div>
 
-          {/* Hata Mesajı Göstergesi */}
           {error && (
             <p className="text-sm text-red-400 text-center">
               {error}
             </p>
           )}
 
-          {/* Submit Button */}
           <div>
             <button
               type="submit"
@@ -106,10 +114,14 @@ function LoginPage() {
             >
               {loading ? 'Signing In...' : 'Sign In'}
             </button>
+            <div className="flex justify-end mb-4">
+            <Link to="/forgot-password" className="text-sm text-blue-400 hover:text-blue-300">
+              Forgot Password?
+            </Link>
+          </div>
           </div>
         </form>
         
-        {/* === 2. YENİ EKLENEN KAYIT LİNKİ === */}
         <div className="text-center mt-4">
           <p className="text-sm text-gray-400">
             Don't have an account?{' '}

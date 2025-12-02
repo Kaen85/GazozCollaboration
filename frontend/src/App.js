@@ -12,11 +12,12 @@ import DashboardOverviewPage from './pages/DashboardOverviewPage';
 import MyProjectsPage from './pages/MyProjectsPage';
 import SharedProjectsPage from './pages/SharedProjectsPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
-import LoginPage from './pages/LoginPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
-// === 1. YENİ SAYFAYI İMPORT ET ===
+import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage'; 
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 // Proje Detay Sekmelerini import et
 import ProjectFiles from './components/projects/ProjectFiles';
@@ -33,6 +34,8 @@ function App() {
       {/* Bu rotalar 'ProjectProvider'ın DIŞINDA olmalı */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} /> 
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         
       {/* === KORUMALI ALAN (PRIVATE) === */}
       <Route 

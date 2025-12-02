@@ -39,7 +39,7 @@ function RightSidebar() {
   };
 
   return (
-    <aside className="w-72 bg-gray-800 p-4 border-l border-gray-700 flex-shrink-0 hidden md:block">
+    <aside className="w-72 bg-black bg-opacity-30 p-4 backdrop-blur-md border-l border-gray-700 flex-shrink-0 hidden md:block">
       
       {/* 4. 'currentProject' verisini SADECE render için kullan */}
       {isProjectDetailPage && currentProject ? (
@@ -54,7 +54,7 @@ function RightSidebar() {
           <div className="mb-2 pb-2 border-b border-gray-700">
             <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
               <FiUsers className="inline mr-1" />
-              Grup Üyeleri
+              Group Members
             </h3>
             {/* 5. 'loading' (global) ve 'currentMembers' (global) state'ini kullan */}
             {loading && currentMembers.length === 0 ? (

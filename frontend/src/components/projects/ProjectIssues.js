@@ -1,28 +1,27 @@
 // src/components/projects/ProjectIssues.js
 
-import {React} from 'react';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useProjectContext } from '../../context/ProjectContext';
 import { useAuth } from '../../context/AuthContext';
-import { FiLoader, FiPlus } from 'react-icons/fi';
-import IssueItem from './IssueItem'; // Bu component'i çağırıyoruz
+import { FiLoader, FiPlus, FiSearch } from 'react-icons/fi'; // Search ikonu eklendi
+import IssueItem from './IssueItem'; 
 
 function ProjectIssues() {
   const [issues, setIssues] = useState([]);
   const [newIssueText, setNewIssueText] = useState('');
   
-  // 1. Context'ten 'currentProject'i almamız gerekiyor (Rol bilgisi için)
+  // === YENİ STATE: Arama Kelimesi ===
+  const [searchTerm, setSearchTerm] = useState('');
+  
   const { currentProject, fetchIssues, createIssue, loading } = useProjectContext();
-  const { user } = useAuth(); // Yazar adını bilmek için
+  const { user } = useAuth(); 
 
-  const projectId = currentProject?.id; // Proje ID'sini al
-  // 2. Kullanıcının projedeki rolünü al ('owner', 'editor', 'viewer', veya 'public_viewer')
+  const projectId = currentProject?.id; 
   const userRole = currentProject?.currentUserRole;
 
-  // Sayfa yüklendiğinde issue'ları çek
+  // Issue'ları çek
   useEffect(() => {
     const loadIssues = async () => {
-      // 'loading' state'ini burada 'true' yapabiliriz (opsiyonel)
       try {
         const fetchedIssues = await fetchIssues(projectId);
         setIssues(fetchedIssues || []);
@@ -30,44 +29,62 @@ function ProjectIssues() {
         console.error("Failed to fetch issues:", error);
       }
     };
-    
-    if (projectId) {
-      loadIssues();
-    }
+    if (projectId) loadIssues();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]); 
 
-  // Yeni issue oluşturma formu
+  // Issue Ekle
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!newIssueText.trim()) return; 
-
     try {
       const newIssue = await createIssue(projectId, newIssueText);
-      // 'created_by_name' backend'den zaten geliyor olmalı
-      setIssues([newIssue, ...issues]); // Başa ekle
+      // Yeni ekleneni listeye (başa) ekle
+      setIssues([newIssue, ...issues]); 
       setNewIssueText(''); 
     } catch (error) {
       console.error("Failed to create issue:", error);
     }
   };
 
-  // === DÜZELTME: Bu fonksiyon 'return'ün ÜSTÜNE TAŞINDI ===
-  // IssueItem (çocuk) bir issue'yu güncellediğinde bu ebeveyn fonksiyonu çalışır
   const handleIssueUpdate = (updatedIssue) => {
     setIssues(prevIssues => 
       prevIssues.map(issue => 
-        // ID'si eşleşen issue'yu bul ve yenisiyle değiştir
         issue.id === updatedIssue.id ? updatedIssue : issue
       )
     );
   };
 
+  // === FİLTRELEME MANTIĞI ===
+  // Arama kutusuna yazılan kelimeye göre issue'ları filtrele
+  const filteredIssues = issues.filter(issue => 
+    issue.text.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="bg-gray-800 p-4 rounded-lg shadow-lg">
-      <h3 className="text-xl font-semibold text-white mb-4">Project Issues</h3>
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-xl font-semibold text-white">Project Issues</h3>
+        <span className="text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded-full">
+          {issues.length} Total
+        </span>
+      </div>
       
-      {/* Issue Ekleme Formu (Rol kontrolü ile) */}
+      {/* === YENİ: ARAMA KUTUSU === */}
+      <div className="relative mb-6">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <FiSearch className="text-gray-500" />
+        </div>
+        <input 
+          type="text"
+          placeholder="Search issues..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full bg-gray-900 text-gray-200 border border-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block pl-10 p-2.5 placeholder-gray-500 transition-colors"
+        />
+      </div>
+
+      {/* Issue Ekleme Formu */}
       {(userRole === 'owner' || userRole === 'editor') && (
         <form onSubmit={handleSubmit} className="flex mb-4">
           <input 
@@ -87,23 +104,24 @@ function ProjectIssues() {
         </form>
       )}
 
-      {/* Issue Listesi */}
+      {/* Issue Listesi (Filtrelenmiş listeyi kullanıyoruz) */}
       <div className="space-y-3">
-        {/* 'loading' (genel) yerine 'issues' listesinin boş olup olmadığını kontrol edebiliriz */}
-        {issues.length === 0 && !loading ? (
-          <p className="text-gray-400">No issues found for this project.</p>
+        {loading && issues.length === 0 ? (
+          <p className="text-gray-400 text-center py-4">Loading issues...</p>
+        ) : issues.length === 0 ? (
+          <p className="text-gray-400 text-center py-4">No issues found for this project.</p>
+        ) : filteredIssues.length === 0 ? (
+          // Arama sonucu boşsa
+          <p className="text-gray-400 text-center py-4">No issues match your search.</p>
         ) : (
-          issues.map(issue => (
+          filteredIssues.map(issue => (
             <IssueItem 
               key={issue.id} 
-              issue={issue} // Güncellenmiş 'issue' verisi buradan çocuğa gider
+              issue={issue} 
               projectId={projectId} 
-              onIssueUpdated={handleIssueUpdate} // Artık 'handleIssueUpdate' tanımlı
+              onIssueUpdated={handleIssueUpdate} 
             />
           ))
-        )}
-        {loading && issues.length === 0 && (
-          <p className="text-gray-400">Loading issues...</p>
         )}
       </div>
     </div>

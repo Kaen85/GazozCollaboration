@@ -78,6 +78,39 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     }
   };
+const forgotPassword = async (email) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await axios.post(`${API_URL}/forgot-password`, { email });
+      return response.data;
+    } catch (err) {
+      const message = err.response?.data?.message || 'Failed to send reset link.';
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetPassword = async (token, newPassword) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await axios.post(`${API_URL}/reset-password`, { token, newPassword });
+      return response.data;
+    } catch (err) {
+      const message = err.response?.data?.message || 'Failed to reset password.';
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+ 
+
+
 
   // ÇIKIŞ FONKSİYONU (Değişiklik yok)
   const logout = () => {
@@ -97,6 +130,8 @@ export const AuthProvider = ({ children }) => {
     login,
     register, // Güncellenmiş 'register' fonksiyonu
     logout,
+    forgotPassword,
+    resetPassword
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

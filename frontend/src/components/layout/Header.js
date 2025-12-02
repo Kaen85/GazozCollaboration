@@ -9,7 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 function Header() {
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
-  const { user } = useAuth(); // AuthContext'ten kullanıcıyı al
+  const { user } = useAuth();
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -24,37 +24,38 @@ function Header() {
   }, [dropdownRef]);
 
   return (
-    <header className="bg-gray-800 text-white shadow-md">
+    // === DÜZELTME BURADA ===
+    // 'z-20' yerine 'z-50' yapıldı.
+    // 'relative' eklendi.
+    // Bu sayede Header ve içindeki Dropdown her zaman diğer içeriklerin üstünde görünür.
+    <header className="bg-black bg-opacity-40 backdrop-blur-md text-white shadow-sm border-b border-white/10 z-50 relative">
       <div className="px-6 py-3 flex justify-between items-center">
         
-        {/* Sol Taraf - Logo (Link olarak doğru ayarlanmış) */}
         <Link to="/dashboard" className="flex items-baseline hover:text-gray-300 transition-colors">
-          <span className="text-xl font-bold">Project Collaboration Hub</span>
+          <span className="text-xl font-bold tracking-wide">Project Collaboration Hub</span>
           <span className="ml-2 text-sm text-gray-400 font-normal">by Gazoz</span>
         </Link>
 
-        {/* Right Side: Icons and User Menu */}
         <div className="flex items-center space-x-4">
-          <button className="p-2 rounded-full hover:bg-gray-700">
+          <button className="p-2 rounded-full hover:bg-white/10 transition">
             <FiBell size={20} />
           </button>
-          <button className="p-2 rounded-full hover:bg-gray-700">
+          {/* <button className="p-2 rounded-full hover:bg-white/10 transition">
             <FiMessageSquare size={20} />
-          </button>
+          </button> 
+          */}
           
+          {/* Dropdown Kapsayıcısı */}
           <div className="relative" ref={dropdownRef}>
             <button 
               onClick={() => setDropdownOpen(!isDropdownOpen)} 
-              className="flex items-center space-x-2 p-2 rounded-full hover:bg-gray-700"
+              className="flex items-center space-x-2 p-2 rounded-full hover:bg-white/10 transition"
             >
-              {/* DÜZELTME BURADA: 
-                AuthContext'te 'user' objesini { username: '...' } olarak 
-                kaydettiğimiz için 'user.name' yerine 'user.username' 
-                kullanıyoruz.
-              */}
-              <span>{user ? user.username : 'Guest'}</span>
+              <span className="font-medium">{user ? user.username : 'Guest'}</span>
               <FiChevronDown size={16} />
             </button>
+            
+            {/* Dropdown Bileşeni */}
             <ProfileDropdown isOpen={isDropdownOpen} />
           </div>
         </div>

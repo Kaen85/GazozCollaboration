@@ -36,10 +36,9 @@ function IssueItem({ issue, projectId, onIssueUpdated }) {
   const { user } = useAuth(); 
   const userRole = currentProject?.currentUserRole;
 
-  // === 2. EFFECT'LER (STATE GÜNCELLEME VE MENÜ) ===
+  // === 2. EFFECT'LER ===
   
-  // Ebeveyn (ProjectIssues) güncellendiğinde 'issue' prop'u değişir.
-  // Bu, 'localIssue' state'imizi günceller.
+  // 'issue' prop'u değiştiğinde yerel state'i güncelle
   useEffect(() => {
     setLocalIssue(issue);
   }, [issue]); 
@@ -57,8 +56,7 @@ function IssueItem({ issue, projectId, onIssueUpdated }) {
     };
   }, [menuRef]);
   
-  // === 3. FONKSİYONLAR (TANIMLAMALAR) ===
-  // (Tüm fonksiyonlar 'return' satırından ÖNCE burada tanımlanır)
+  // === 3. FONKSİYONLAR ===
 
   // Yorumları aç/kapat
   const toggleComments = async () => {
@@ -149,8 +147,6 @@ function IssueItem({ issue, projectId, onIssueUpdated }) {
   };
 
   // === 4. RENDER (GÖRÜNÜM) ===
-  
-  // Stilleri belirle
   const isDone = localIssue.status === 'Closed';
   const issueTextStyle = isDone ? "text-gray-500 line-through" : "text-white";
   const issueAuthorStyle = isDone ? "text-gray-600" : "text-gray-400";
@@ -160,7 +156,7 @@ function IssueItem({ issue, projectId, onIssueUpdated }) {
       <div className="flex justify-between items-center p-3">
         
         {isEditing ? (
-          // --- DÜZENLEME MODU (Değişiklik yok) ---
+          // --- DÜZENLEME MODU ---
           <div className="flex-1 flex flex-col">
             <div className="flex-1 flex items-center space-x-2">
               <input
@@ -190,7 +186,7 @@ function IssueItem({ issue, projectId, onIssueUpdated }) {
           </div>
 
         ) : (
-          // --- NORMAL MOD (METİN GÖSTER) (Değişiklik yok) ---
+          // --- NORMAL MOD ---
           <>
             <button 
               onClick={toggleComments}
@@ -217,14 +213,47 @@ function IssueItem({ issue, projectId, onIssueUpdated }) {
               {(userRole === 'owner' || userRole === 'editor') && (
                 <div className="relative" ref={menuRef}>
                   <button 
-                    onClick={() => setMenuOpen(prev => !prev)}
+                    onClick={(e) => {
+                      e.stopPropagation(); // Düzeltme: Tıklamanın yayılmasını engelle
+                      setMenuOpen(prev => !prev);
+                    }}
                     className="p-1 text-gray-400 hover:text-white rounded-full"
                   >
                     <FiMoreVertical size={18} />
                   </button>
+                  
                   {isMenuOpen && (
-                    <div className="absolute right-0 top-8 w-48 bg-gray-800 border border-gray-600 rounded-md shadow-lg z-10">
-                      {/* ... (Menu içeriği: Edit, Mark as Done) ... */}
+                    // Düzeltme: z-index 50 yapıldı
+                    <div className="absolute right-0 top-8 w-48 bg-gray-800 border border-gray-600 rounded-md shadow-lg z-50">
+                      <ul className="py-1">
+                        <li>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditClick();
+                            }}
+                            className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
+                          >
+                            <FiEdit size={14} className="mr-2" />
+                            Edit Issue
+                          </button>
+                        </li>
+                        <li>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleStatus();
+                            }}
+                            className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
+                          >
+                            {isDone ? (
+                              <><FiCircle size={14} className="mr-2 text-yellow-500" />Mark as Open</>
+                            ) : (
+                              <><FiCheckCircle size={14} className="mr-2 text-green-500" />Mark as Done</>
+                            )}
+                          </button>
+                        </li>
+                      </ul>
                     </div>
                   )}
                 </div>
@@ -234,7 +263,7 @@ function IssueItem({ issue, projectId, onIssueUpdated }) {
         )}
       </div>
 
-      {/* Yorum Bölümü (Sadece 'Normal Mod'da ve 'Açık'ken göster) */}
+      {/* Yorum Bölümü */}
       {isOpen && !isEditing && (
         <div className="p-4 border-t border-gray-600">
           
@@ -261,8 +290,7 @@ function IssueItem({ issue, projectId, onIssueUpdated }) {
             </div>
           )}
           
-          {/* === DÜZELTME BURADA: KAPALIYSA FORMU GİZLE === */}
-          
+          {/* Yorum Formu veya Kapalı Mesajı */}
           {isDone ? (
             <div className="p-3 bg-gray-800 rounded-md text-center">
               <p className="text-sm text-gray-400">
@@ -270,10 +298,7 @@ function IssueItem({ issue, projectId, onIssueUpdated }) {
               </p>
             </div>
           ) : (
-            // === DÜZELTME BURADA: ROL KONTROLÜ KALDIRILDI ===
-            // 'userRole !== 'public_viewer'' kontrolü kaldırıldı.
-            // Backend zaten kapalı issue'lara yorumu engelliyor
-            // ve 'public_viewer'ın yorum yapmasına İZİN VERİYOR.
+            // Herkes (public_viewer dahil) yorum yapabilir
             <CommentForm 
               onSubmit={handleCommentAdded}
               loading={contextLoading} 

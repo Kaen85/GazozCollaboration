@@ -11,7 +11,7 @@ export const loginUser = (req, res) => {
 };
 
 
-//Yeni
+
 // Minimal auth to obtain a JWT for protected project routes
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
