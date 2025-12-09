@@ -13,6 +13,7 @@ import MyProjectsPage from './pages/MyProjectsPage';
 import SharedProjectsPage from './pages/SharedProjectsPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import ProjectTasks from './components/projects/ProjectTasks';
 
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage'; 
@@ -59,6 +60,7 @@ function App() {
         <Route path="project/:id" element={<ProjectDetailPage />}>
           <Route index element={<ProjectFiles />} /> 
           <Route path="issues" element={<ProjectIssues />} />
+          <Route path="tasks" element={<ProjectTasks />} />
           <Route path="discussions" element={<ProjectDiscussion />} />
           <Route path="edit" element={<ProjectEditPage />} />
         </Route>

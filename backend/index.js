@@ -5,6 +5,7 @@
 const express = require('express');
 // Import CORS to allow cross-origin requests from the frontend.
 const cors = require('cors');
+const path = require('path');
 // Import the authentication routes we created.
 const authRoutes = require('./routes/authRoutes');
 const projectRoutes = require('./routes/projectRoutes');
@@ -41,6 +42,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', authMiddleware, projectRoutes);
 
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // --- 5. Start the Server ---
 // Start listening for incoming requests on the specified port.
 app.listen(PORT, () => {

@@ -3,12 +3,15 @@
 import React, { useEffect } from 'react';
 import { useParams, NavLink, Outlet } from 'react-router-dom';
 import { useProjectContext } from '../context/ProjectContext';
-import { FiLoader, FiAlertTriangle, FiCheckSquare, FiMessageSquare, FiFile, FiEdit } from 'react-icons/fi';
+import { 
+  FiLoader, FiAlertTriangle, FiCheckSquare, 
+  FiMessageSquare, FiFile, FiEdit, FiLayout 
+} from 'react-icons/fi';
 
 function ProjectDetailPage() {
   const { id } = useParams();
   
-  // 1. Context'ten 'currentProject' verisini (artık 'currentUserRole' içeriyor) al
+  // Context'ten verileri al
   const { currentProject, loading, error, fetchProjectById } = useProjectContext();
 
   useEffect(() => {
@@ -20,65 +23,96 @@ function ProjectDetailPage() {
 
   // --- Güvenlik Blokları (Beyaz Ekran Önleyici) ---
   if (loading || (!currentProject && !error)) {
-    return <div className="p-20 flex justify-center"><FiLoader className="animate-spin text-blue-500" size={40} /></div>;
+    return (
+      <div className="p-20 flex justify-center">
+        <FiLoader className="animate-spin text-blue-500" size={40} />
+      </div>
+    );
   }
   if (error && !currentProject) {
-    return <div className="p-20 flex justify-center text-red-400"><FiAlertTriangle size={40} /><span className="ml-4">Error: {error}</span></div>;
+    return (
+      <div className="p-20 flex justify-center text-red-400">
+        <FiAlertTriangle size={40} />
+        <span className="ml-4">Error: {error}</span>
+      </div>
+    );
   }
 
-  // 2. Kullanıcının rolünü al (Backend'den 'owner', 'editor', 'viewer', veya 'public_viewer' olarak gelir)
+  // Kullanıcının rolünü ve proje ayarlarını al
   const userRole = currentProject?.currentUserRole;
+  const isTasksPublic = currentProject?.is_tasks_public;
 
-  // 3. Role göre sekme menüsü kaç parçalı olacağına karar ver
-  // (Sahipse 4, üyeyse 3, public ise 2 sekme)
-  let navCols = 'grid-cols-2'; // Varsayılan (public_viewer için)
-  if (userRole === 'owner') {
-    navCols = 'grid-cols-4'; // Files, Issues, Discussions, Edit
-  } else if (userRole === 'editor' || userRole === 'viewer') {
-    navCols = 'grid-cols-3'; // Files, Issues, Discussions
-  }
+  // === GÖRÜNÜRLÜK KONTROLLERİ ===
+  
+  // 1. Tasks Sekmesi: 
+  // - Üyeler ('owner', 'editor', 'viewer') HER ZAMAN görür.
+  // - 'public_viewer' (üye olmayan) ise SADECE 'isTasksPublic' true ise görür.
+  const showTasksTab = userRole !== 'public_viewer' || isTasksPublic;
+  
+  // 2. Discussions Sekmesi: 
+  // - Sadece Üyeler görür ('public_viewer' göremez).
+  const showDiscussionsTab = userRole !== 'public_viewer';
 
-  // NavLink (Sekme) stili
+  // 3. Edit Sekmesi: 
+  // - Sadece Sahip (Owner) görür.
+  const showEditTab = userRole === 'owner';
+
+  // === GRID HESAPLAMA ===
+  // Kaç sekme göstereceğimizi hesaplayıp grid-cols sınıfını ona göre verelim.
+  // Files ve Issues her zaman görünür (Total: 2)
+  let totalTabs = 2; 
+  if (showTasksTab) totalTabs++;
+  if (showDiscussionsTab) totalTabs++;
+  if (showEditTab) totalTabs++;
+
+  const navCols = `grid-cols-${totalTabs}`;
+
+  // NavLink stili
   const navLinkStyle = ({ isActive }) =>
     `flex items-center justify-center px-4 py-3 font-semibold border-b-2 transition-colors ` +
     (isActive 
       ? 'text-white border-blue-500' 
       : 'text-gray-400 border-transparent hover:text-gray-200');
 
-  // --- BAŞARILI RENDER ---
   return (
     <div className="p-4 text-white">
-      {/* 1. ÜST KISIM (Açıklama) */}
+      {/* Başlık ve Açıklama */}
       <h1 className="text-4xl font-bold mb-2">{currentProject.name}</h1>
       <p className="text-lg text-gray-400 mb-6">{currentProject.description}</p>
       
-      {/* === 4. GÜNCELLENMİŞ SEKME MENÜSÜ === */}
+      {/* Sekme Menüsü */}
       <nav className={`grid ${navCols} border-b border-gray-700 mb-6`}>
         
-        {/* SIRA 1: Files (Varsayılan 'index' rotası, herkes görür) */}
+        {/* Files (Herkes görür) */}
         <NavLink to="" end className={navLinkStyle}> 
           <FiFile className="mr-2" />
           Files
         </NavLink>
+
+        {/* Tasks (Koşullu) */}
+        {showTasksTab && (
+          <NavLink to="tasks" className={navLinkStyle}>
+            <FiLayout className="mr-2" />
+            Tasks
+          </NavLink>
+        )}
         
-        {/* SIRA 2: Issues (Herkes görür) */}
+        {/* Issues (Herkes görür) */}
         <NavLink to="issues" className={navLinkStyle}>
           <FiCheckSquare className="mr-2" />
           Issues
         </NavLink>
         
-        {/* === 5. KOŞULLU 'DISCUSSIONS' SEKMESİ === */}
-        {/* Bu sekme, 'public_viewer' DEĞİLSE görünür */}
-        {userRole !== 'public_viewer' && (
+        {/* Discussions (Koşullu) */}
+        {showDiscussionsTab && (
           <NavLink to="discussions" className={navLinkStyle}>
             <FiMessageSquare className="mr-2" />
             Discussions
           </NavLink>
         )}
         
-        {/* === 6. KOŞULLU 'EDIT' SEKMESİ === */}
-        {/* Bu sekme, sadece 'userRole' "owner" ise görünür */}
-        {userRole === 'owner' && (
+        {/* Edit (Koşullu) */}
+        {showEditTab && (
           <NavLink to="edit" className={navLinkStyle}>
             <FiEdit className="mr-2" />
             Edit
@@ -86,7 +120,7 @@ function ProjectDetailPage() {
         )}
       </nav>
 
-      {/* İçerik Alanı (App.js'deki tanıma göre dolar) */}
+      {/* İçerik Alanı */}
       <Outlet />
     </div>
   );

@@ -131,6 +131,21 @@ export const ProjectProvider = ({ children }) => {
       throw err;
     }
   };
+
+  const updateTask = async (projectId, taskId, data) => {
+    try {
+      const response = await axios.put(`${API_URL}/${projectId}/tasks/${taskId}`, data, getAuthHeaders());
+      return response.data;
+    } catch (err) { handleError(err); throw err; }
+  };
+
+  // Görevi Sil
+  const deleteTask = async (projectId, taskId) => {
+    try {
+      await axios.delete(`${API_URL}/${projectId}/tasks/${taskId}`, getAuthHeaders());
+      return true;
+    } catch (err) { handleError(err); throw err; }
+  };
   
   // --- ISSUE FONKSİYONLARI ---
   const fetchIssues = async (projectId) => {
@@ -270,7 +285,92 @@ const removeMember = async (projectId, userId) => {
       throw err;
     }
   };
+  const fetchFiles = async (projectId) => {
+    try {
+      const response = await axios.get(`${API_URL}/${projectId}/files`, getAuthHeaders());
+      return response.data;
+    } catch (err) { handleError(err); }
+  };
+
+  const uploadFile = async (projectId, fileObj) => {
+    try {
+      // Dosya yüklerken JSON değil 'FormData' kullanılır
+      const formData = new FormData();
+      formData.append('file', fileObj); // Backend 'file' ismini bekliyor
+
+      const response = await axios.post(
+        `${API_URL}/${projectId}/files`, 
+        formData, 
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data' // Bu header çok önemli
+          }
+        }
+      );
+      return response.data;
+    } catch (err) { 
+      handleError(err); 
+      throw err; 
+    }
+  };
+
+  const deleteFile = async (projectId, fileId) => {
+    try {
+      await axios.delete(`${API_URL}/${projectId}/files/${fileId}`, getAuthHeaders());
+      return true;
+    } catch (err) { handleError(err); }
+  };
+  const updateTasksVisibility = async (projectId, isPublic) => {
+    try {
+      const response = await axios.put(`${API_URL}/${projectId}/settings/tasks-visibility`, { is_tasks_public: isPublic }, getAuthHeaders());
+      // Mevcut projeyi güncelle ki arayüz anlasın
+      setCurrentProject(prev => ({ ...prev, is_tasks_public: response.data.is_tasks_public }));
+    } catch (err) { handleError(err); }
+  };
+
+  const fetchTasks = async (projectId) => {
+    try {
+      const response = await axios.get(`${API_URL}/${projectId}/tasks`, getAuthHeaders());
+      return response.data;
+    } catch (err) { 
+      // Eğer 403 (Yasak) dönerse, boş dizi döndür ama hatayı fırlatma (UI halledecek)
+      if (err.response && err.response.status === 403) return null;
+      handleError(err); 
+    }
+  };
+
+  const createTask = async (projectId, taskData) => {
+    try {
+      const response = await axios.post(`${API_URL}/${projectId}/tasks`, taskData, getAuthHeaders());
+      return response.data;
+    } catch (err) { handleError(err); }
+  };
+
+  const updateTaskStatus = async (projectId, taskId, newStatus) => {
+    try {
+      const response = await axios.put(`${API_URL}/${projectId}/tasks/${taskId}`, { status: newStatus }, getAuthHeaders());
+      return response.data;
+    } catch (err) { handleError(err); }
+  };
   
+  const updateProjectDetails = async (projectId, name, description, longDescription) => {
+    setLoading(true);
+    try {
+      const response = await axios.put(
+        `${API_URL}/${projectId}`, 
+        { name, description, long_description: longDescription }, // Backend 'long_description' bekliyor
+        getAuthHeaders()
+      );
+      setCurrentProject(response.data);
+      return response.data;
+    } catch (err) {
+      handleError(err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
   // Context'in sağlayacağı tüm değerler
   const value = {
     projects,
@@ -294,12 +394,22 @@ const removeMember = async (projectId, userId) => {
     fetchIssueComments,
     addIssueComment,
     fetchMembers,
-    addMember, // Bu artık 'role' (rol) alan güncellenmiş fonksiyondur
+    addMember, 
     currentMembers,
     removeMember,
     likeComment,
     editComment,
-    deleteComment
+    deleteComment,
+    fetchFiles,
+    uploadFile,
+    deleteFile,
+    updateTasksVisibility,
+    fetchTasks,
+    createTask,
+    updateTaskStatus,
+    updateTask,
+    deleteTask,
+    updateProjectDetails
   };
 
   return (

@@ -1,21 +1,27 @@
-// backend/routes/projectRoutes.js
 const express = require('express');
 const router = express.Router();
 const db = require('../db'); // Veritabanı bağlantısı
+const multer = require('multer');
+const path = require('path');
 
+// === DOSYA YÜKLEME AYARLARI (MULTER) ===
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, 'uploads/'),
+  filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
+});
+const upload = multer({ storage: storage });
 
 // =================================
 // MIDDLEWARE (KAPI BEKÇİSİ)
 // =================================
-// Bu fonksiyon, :id içeren rotalarda kullanıcının üye olup olmadığını VEYA projenin public olup olmadığını kontrol eder
 const checkProjectMember = async (req, res, next) => {
   try {
-    const projectId = req.params.id; // URL'den proje ID'si
-    const userId = req.user.id; // authMiddleware'den kullanıcı ID'si
+    const projectId = req.params.id; 
+    const userId = req.user.id; 
 
-    // 1. Önce projenin 'public' (genel) olup olmadığını kontrol et
+    // 1. Proje var mı ve Public mi?
     const projectCheck = await db.query(
-      'SELECT is_public, owner_id FROM projects WHERE id = $1',
+      'SELECT is_public, owner_id, is_tasks_public FROM projects WHERE id = $1',
       [projectId]
     );
 
@@ -23,33 +29,30 @@ const checkProjectMember = async (req, res, next) => {
       return res.status(404).json({ message: 'Project not found.' });
     }
 
-    const isPublic = projectCheck.rows[0].is_public;
-    
+    const project = projectCheck.rows[0];
 
-    // 2. Kullanıcının o projede kayıtlı rolünü kontrol et
+    // 2. Üyelik kontrolü
     const memberCheck = await db.query(
       'SELECT role FROM project_members WHERE project_id = $1 AND user_id = $2',
       [projectId, userId]
     );
 
-    const memberRole = memberCheck.rows[0]?.role; // 'owner', 'editor', 'viewer' veya 'undefined'
+    const memberRole = memberCheck.rows[0]?.role; 
 
-    // === GÜNCELLENMİŞ İZİN MANTIĞI ===
+    // === İZİN MANTIĞI ===
     if (memberRole) {
-      // 3. EĞER KULLANICI ÜYE İSE (Zaten 'owner', 'editor' veya 'viewer')
       req.projectId = projectId;
       req.memberRole = memberRole;
+      req.projectSettings = project; 
       next();
-    } else if (isPublic) {
-      // 4. EĞER KULLANICI ÜYE DEĞİL, AMA PROJE 'PUBLIC' İSE
+    } else if (project.is_public) {
       req.projectId = projectId;
-      req.memberRole = 'public_viewer'; // Yeni, geçici bir rol
+      req.memberRole = 'public_viewer';
+      req.projectSettings = project;
       next();
     } else {
-      // 5. EĞER KULLANICI ÜYE DEĞİL VE PROJE ÖZEL İSE
-      return res.status(403).json({ message: 'Access Denied: You are not a member of this project.' });
+      return res.status(403).json({ message: 'Access Denied.' });
     }
-
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');
@@ -57,7 +60,7 @@ const checkProjectMember = async (req, res, next) => {
 };
 
 // =================================
-// ANA PROJE ROTALARI
+// 1. PROJE YÖNETİMİ (ANA ROTALAR)
 // =================================
 
 // @route   POST /api/projects
@@ -67,18 +70,25 @@ router.post('/', async (req, res) => {
   const ownerId = req.user.id; 
 
   try {
+    const existingProject = await db.query('SELECT id FROM projects WHERE name = $1', [name]);
+    if (existingProject.rows.length > 0) {
+      return res.status(400).json({ message: 'A project with this name already exists.' });
+    }
+
     await db.query('BEGIN'); 
+    
     const newProjectQuery = `
       INSERT INTO projects (name, description, owner_id)
       VALUES ($1, $2, $3)
       RETURNING * `; 
     const newProject = await db.query(newProjectQuery, [name, description, ownerId]);
     const projectId = newProject.rows[0].id;
-    const addMemberQuery = `
-      INSERT INTO project_members (project_id, user_id, role)
-      VALUES ($1, $2, $3)
-    `;
-    await db.query(addMemberQuery, [projectId, ownerId, 'owner']);
+    
+    await db.query(
+      'INSERT INTO project_members (project_id, user_id, role) VALUES ($1, $2, $3)',
+      [projectId, ownerId, 'owner']
+    );
+    
     await db.query('COMMIT'); 
     res.status(201).json(newProject.rows[0]);
   } catch (err) {
@@ -88,563 +98,405 @@ router.post('/', async (req, res) => {
   }
 });
 
-// @route   GET /api/projects
-// @desc    Kullanıcının üye olduğu TÜM projeleri getir (Dashboard için)
+// @route   GET /api/projects (Tüm Üye Olduklarım)
 router.get('/', async (req, res) => {
-  const userId = req.user.id;
   try {
-    const projectsQuery = `
+    const projects = await db.query(`
       SELECT p.* FROM projects p
       JOIN project_members pm ON p.id = pm.project_id
       WHERE pm.user_id = $1
       ORDER BY p.last_updated_at DESC
-    `;
-    const projects = await db.query(projectsQuery, [userId]);
+    `, [req.user.id]);
     res.json(projects.rows);
   } catch (err) { 
-    console.error(err.message);
     res.status(500).send('Server error');
   }
 });
 
-
-// @route   GET /api/projects/my-projects
-// @desc    Kullanıcının SAHİBİ olduğu projeleri getir
+// @route   GET /api/projects/my-projects (Sadece Benimkiler)
 router.get('/my-projects', async (req, res) => {
-  const userId = req.user.id;
   try {
-    const projectsQuery = `
+    const projects = await db.query(`
       SELECT * FROM projects
       WHERE owner_id = $1
       ORDER BY last_updated_at DESC
-    `;
-    const projects = await db.query(projectsQuery, [userId]);
+    `, [req.user.id]);
     res.json(projects.rows);
   } catch (err) {
-    console.error(err.message);
     res.status(500).send('Server error');
   }
 });
 
-// @route   GET /api/projects/shared-projects
-// @desc    Kullanıcıya PAYLAŞILAN veya PUBLIC olan projeleri getir
+// @route   GET /api/projects/shared-projects (Paylaşılanlar + Public)
 router.get('/shared-projects', async (req, res) => {
-  const userId = req.user.id;
   try {
-    // 'UNION' komutu kullanarak iki sorgunun sonucunu birleştiriyoruz:
-    const projectsQuery = `
+    const projects = await db.query(`
       (
-        -- 1. BANA ÖZEL PAYLAŞILANLAR (Private)
-        -- 'users' tablosundan 'owner_name' (Sahibin Adı) alınır
-        SELECT 
-          p.id, p.name, p.description, p.owner_id, p.created_at, p.last_updated_at, p.is_public,
-          pm.joined_at, -- Paylaşılma tarihi (artık frontend'de kullanılmayacak ama sorguda kalabilir)
-          u.username as owner_name -- Sahibin adı (BUNU KULLANACAĞIZ)
+        SELECT p.*, u.username as owner_name, pm.joined_at
         FROM projects p
         JOIN project_members pm ON p.id = pm.project_id
-        JOIN users u ON p.owner_id = u.id -- Sahibi bulmak için
+        JOIN users u ON p.owner_id = u.id
         WHERE pm.user_id = $1 AND p.owner_id != $1
       )
       UNION
       (
-        -- 2. HERKESE AÇIK OLANLAR (Public)
-        -- 'users' tablosundan 'owner_name' (Sahibin Adı) alınır
-        SELECT 
-          p.id, p.name, p.description, p.owner_id, p.created_at, p.last_updated_at, p.is_public,
-          NULL as joined_at,
-          u.username as owner_name -- Sahibin adı (BUNU KULLANACAĞIZ)
+        SELECT p.*, u.username as owner_name, NULL as joined_at
         FROM projects p
         JOIN users u ON p.owner_id = u.id
         WHERE p.is_public = true AND p.owner_id != $1
       )
       ORDER BY last_updated_at DESC
-    `;
-    const projects = await db.query(projectsQuery, [userId]);
+    `, [req.user.id]);
     res.json(projects.rows);
   } catch (err) {
-    console.error(err.message);
     res.status(500).send('Server error');
   }
 });
 
-
-// @route   GET /api/projects/:id
-// @desc    Tek bir projenin detaylarını ID ile getir
+// @route   GET /api/projects/:id (Detay)
 router.get('/:id', checkProjectMember, async (req, res) => {
   try {
-    const projectResult = await db.query(
-      'SELECT * FROM projects WHERE id = $1',
-      [req.projectId] 
-    );
-    if (projectResult.rows.length === 0) {
-      return res.status(404).json({ message: 'Project not found' });
-    }
-    const projectData = projectResult.rows[0];
-    // Rol bilgisini (owner, viewer, public_viewer) yanıta ekle
-    projectData.currentUserRole = req.memberRole;
-    res.json(projectData);
+    const project = await db.query('SELECT * FROM projects WHERE id = $1', [req.projectId]);
+    const data = project.rows[0];
+    data.currentUserRole = req.memberRole; 
+    res.json(data);
   } catch (err) {
-    console.error(err.message);
     res.status(500).send('Server error');
   }
 });
 
-// @route   PUT /api/projects/:id/visibility
-// @desc    Projenin 'is_public' bayrağını değiştir
-router.put('/:id/visibility', checkProjectMember, async (req, res) => {
-  // Sadece 'owner' (sahip) bu ayarı değiştirebilir
+// === EKSİK OLAN PUT ROTASI BURADA ===
+// @route   PUT /api/projects/:id (Güncelleme)
+// backend/routes/projectRoutes.js
+
+// ...
+
+// @route   PUT /api/projects/:id
+// @desc    Proje adını ve açıklamalarını güncelle
+router.put('/:id', checkProjectMember, async (req, res) => {
+  // Sadece SAHİP (Owner) güncelleyebilir
   if (req.memberRole !== 'owner') {
-    return res.status(403).json({ message: 'Only the project owner can change visibility.' });
+    return res.status(403).json({ message: 'Only the project owner can update details.' });
   }
-  const { is_public } = req.body;
-  if (is_public === undefined) {
-    return res.status(400).json({ message: 'is_public field is required.' });
-  }
+
+  const { name, description, long_description } = req.body;
+
   try {
     const updatedProject = await db.query(
-      'UPDATE projects SET is_public = $1 WHERE id = $2 RETURNING *',
-      [is_public, req.projectId]
+      // 'long_description || null' diyerek, veri yoksa NULL kaydediyoruz (Çökmez)
+      'UPDATE projects SET name = $1, description = $2, long_description = $3, last_updated_at = NOW() WHERE id = $4 RETURNING *',
+      [name, description, long_description || null, req.projectId]
     );
-    // Rol bilgisini de ekleyip yolla
-    const response = updatedProject.rows[0];
-    response.currentUserRole = req.memberRole;
-    res.json(response);
+    
+    if (updatedProject.rows.length === 0) {
+       return res.status(404).json({ message: 'Project not found.' });
+    }
+
+    const projectData = updatedProject.rows[0];
+    projectData.currentUserRole = req.memberRole;
+    
+    res.json(projectData);
+  } catch (err) {
+    console.error("UPDATE ERROR:", err.message); // Hatayı terminale yaz
+    // Gerçek hatayı frontend'e gönderelim ki ne olduğunu görelim
+    res.status(500).json({ message: 'Server Error: ' + err.message });
+  }
+});
+
+// === EKSİK OLAN DELETE ROTASI BURADA ===
+// @route   DELETE /api/projects/:id (Silme)
+router.delete('/:id', checkProjectMember, async (req, res) => {
+  if (req.memberRole !== 'owner') {
+    return res.status(403).json({ message: 'Only the project owner can delete the project.' });
+  }
+
+  try {
+    await db.query('DELETE FROM projects WHERE id = $1', [req.projectId]);
+    res.json({ message: 'Project deleted successfully' });
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');
   }
 });
 
+// @route   PUT /visibility (Public/Private Ayarı)
+router.put('/:id/visibility', checkProjectMember, async (req, res) => {
+  if (req.memberRole !== 'owner') return res.status(403).json({ message: 'Only owner.' });
+  try {
+    const upd = await db.query(
+      'UPDATE projects SET is_public = $1 WHERE id = $2 RETURNING *',
+      [req.body.is_public, req.projectId]
+    );
+    const data = upd.rows[0];
+    data.currentUserRole = req.memberRole;
+    res.json(data);
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
 // =================================
-// ISSUES API ROTALARI
+// 2. TASKS (GÖREVLER)
 // =================================
 
-// @route   GET /api/projects/:id/issues
-// @desc    Bir projeye ait tüm issue'ları getir
+router.put('/:id/settings/tasks-visibility', checkProjectMember, async (req, res) => {
+  if (req.memberRole !== 'owner') return res.status(403).json({ message: 'Only owner.' });
+  try {
+    const upd = await db.query('UPDATE projects SET is_tasks_public = $1 WHERE id = $2 RETURNING is_tasks_public', [req.body.is_tasks_public, req.projectId]);
+    res.json(upd.rows[0]);
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
+router.get('/:id/tasks', checkProjectMember, async (req, res) => {
+  if (req.memberRole === 'public_viewer' && !req.projectSettings.is_tasks_public) {
+    return res.status(403).json({ message: 'Tasks are private.' });
+  }
+  try {
+    const tasks = await db.query(
+      'SELECT t.*, u.username as created_by_name FROM project_tasks t LEFT JOIN users u ON t.assignee_id = u.id WHERE t.project_id = $1 ORDER BY t.created_at ASC',
+      [req.projectId]
+    );
+    res.json(tasks.rows);
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
+router.post('/:id/tasks', checkProjectMember, async (req, res) => {
+  if (req.memberRole === 'public_viewer') return res.status(403).json({ message: 'Read-only.' });
+  const { title, description, status, due_date } = req.body;
+  try {
+    const newTask = await db.query(
+      'INSERT INTO project_tasks (project_id, title, description, status, due_date, assignee_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [req.projectId, title, description, status || 'todo', due_date, req.user.id]
+    );
+    const user = await db.query('SELECT username FROM users WHERE id = $1', [req.user.id]);
+    const taskObj = newTask.rows[0];
+    taskObj.created_by_name = user.rows[0].username;
+    res.status(201).json(taskObj);
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
+router.put('/:id/tasks/:taskId', checkProjectMember, async (req, res) => {
+  if (req.memberRole === 'public_viewer') return res.status(403).json({ message: 'Read-only.' });
+  const { title, status } = req.body;
+  const { taskId } = req.params;
+  try {
+    let q, p;
+    if (status) { q = 'UPDATE project_tasks SET status = $1 WHERE id = $2 RETURNING *'; p = [status, taskId]; }
+    else { q = 'UPDATE project_tasks SET title = $1 WHERE id = $2 RETURNING *'; p = [title, taskId]; }
+    
+    const upd = await db.query(q, p);
+    const taskObj = upd.rows[0];
+    const user = await db.query('SELECT username FROM users WHERE id = $1', [taskObj.assignee_id]);
+    taskObj.created_by_name = user.rows.length > 0 ? user.rows[0].username : 'Unknown';
+    res.json(taskObj);
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
+router.delete('/:id/tasks/:taskId', checkProjectMember, async (req, res) => {
+  if (req.memberRole === 'public_viewer') return res.status(403).json({ message: 'Read-only.' });
+  try {
+    await db.query('DELETE FROM project_tasks WHERE id = $1', [req.params.taskId]);
+    res.json({ message: 'Deleted' });
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
+// =================================
+// 3. ISSUES
+// =================================
+
 router.get('/:id/issues', checkProjectMember, async (req, res) => {
-  // 'public_viewer' dahil herkes issue'ları okuyabilir
   try {
     const issues = await db.query(
       'SELECT pi.*, u.username as created_by_name FROM project_issues pi JOIN users u ON pi.created_by_id = u.id WHERE pi.project_id = $1 ORDER BY pi.created_at DESC',
       [req.projectId]
     );
     res.json(issues.rows);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
-  }
+  } catch (err) { res.status(500).send('Server Error'); }
 });
 
-// @route   POST /api/projects/:id/issues
-// @desc    Bir projeye yeni issue ekle
 router.post('/:id/issues', checkProjectMember, async (req, res) => {
-  const { text } = req.body;
-  const authorId = req.user.id;
-  // 'viewer' VEYA 'public_viewer' (Herkese açık bakanlar) issue ekleyemez
-  if (req.memberRole === 'viewer' || req.memberRole === 'public_viewer') {
-    return res.status(403).json({ message: 'You do not have permission to add issues.' });
-  }
+  if (req.memberRole === 'viewer' || req.memberRole === 'public_viewer') return res.status(403).json({ message: 'No permission.' });
   try {
     const newIssue = await db.query(
       'INSERT INTO project_issues (project_id, created_by_id, text) VALUES ($1, $2, $3) RETURNING *',
-      [req.projectId, authorId, text]
+      [req.projectId, req.user.id, req.body.text]
     );
-    // Yazar adını da ekle
+    const user = await db.query('SELECT username FROM users WHERE id = $1', [req.user.id]);
     const result = newIssue.rows[0];
-    const author = await db.query('SELECT username FROM users WHERE id = $1', [result.created_by_id]);
-    result.created_by_name = author.rows[0].username;
+    result.created_by_name = user.rows[0].username;
     res.status(201).json(result);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
-  }
+  } catch (err) { res.status(500).send('Server Error'); }
 });
 
-// @route   PUT /api/projects/:id/issues/:issueId
-// @desc    Bir "Issue"yu güncelle
 router.put('/:id/issues/:issueId', checkProjectMember, async (req, res) => {
-  // 'owner' veya 'editor' (public_viewer'ı engeller)
-  if (req.memberRole !== 'owner' && req.memberRole !== 'editor') {
-    return res.status(403).json({ message: 'Only project owners or editors can edit issues.' });
-  }
-  
-  const { issueId } = req.params;
-  const { text, status } = req.body; 
-  let updateQuery, queryParams;
-
-  if (text !== undefined) {
-    updateQuery = 'UPDATE project_issues SET text = $1 WHERE id = $2 RETURNING *';
-    queryParams = [text, issueId];
-  } else if (status !== undefined) {
-    updateQuery = 'UPDATE project_issues SET status = $1 WHERE id = $2 RETURNING *';
-    queryParams = [status, issueId];
-  } else {
-    return res.status(400).json({ message: 'No update field provided (text or status).' });
-  }
-
+  if (req.memberRole !== 'owner' && req.memberRole !== 'editor') return res.status(403).json({ message: 'No permission.' });
+  const { text, status } = req.body;
   try {
-    const updatedIssue = await db.query(updateQuery, queryParams);
-    if (updatedIssue.rows.length === 0) {
-      return res.status(404).json({ message: 'Issue not found.' });
-    }
-    // Yazar adını da ekle
-    const result = updatedIssue.rows[0];
-    const author = await db.query('SELECT username FROM users WHERE id = $1', [result.created_by_id]);
-    result.created_by_name = author.rows[0].username;
+    let q, p;
+    if (text !== undefined) { q = 'UPDATE project_issues SET text = $1 WHERE id = $2 RETURNING *'; p = [text, req.params.issueId]; }
+    else { q = 'UPDATE project_issues SET status = $1 WHERE id = $2 RETURNING *'; p = [status, req.params.issueId]; }
+    const upd = await db.query(q, p);
+    const result = upd.rows[0];
+    const userResult = await db.query('SELECT username FROM users WHERE id = $1', [result.created_by_id]);
+    result.created_by_name = userResult.rows[0].username;
     res.json(result);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
-  }
+  } catch (err) { res.status(500).send('Server Error'); }
 });
 
 // =================================
-// COMMENTS API ROTALARI
+// 4. COMMENTS
 // =================================
 
-// @route   GET /api/projects/:id/comments
-// @desc    Bir projeye ait GENEL yorumları getir (Discussions)
 router.get('/:id/comments', checkProjectMember, async (req, res) => {
-  // 'public_viewer' dahil herkes yorumları okuyabilir
   try {
     const comments = await db.query(
-      // 'created_at DESC' (yeni üstte) yerine 'created_at ASC' (eski üstte)
       'SELECT c.*, u.username as author_name, c.likes_user_ids FROM comments c JOIN users u ON c.author_id = u.id WHERE c.project_id = $1 AND c.issue_id IS NULL ORDER BY c.created_at ASC',
       [req.projectId]
     );
     res.json(comments.rows);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
-  }
+  } catch (err) { res.status(500).send('Server Error'); }
 });
 
-// @route   POST /api/projects/:id/comments
-// @desc    Bir projeye GENEL yorum ekle
 router.post('/:id/comments', checkProjectMember, async (req, res) => {
-  // 'checkProjectMember'dan geçen herkes ('public_viewer' dahil) yorum yapabilir
-  const { text } = req.body;
-  const authorId = req.user.id; 
   try {
-    const newCommentQuery = `
-      INSERT INTO comments (project_id, author_id, text) 
-      VALUES ($1, $2, $3) 
-      RETURNING *
-    `; 
-    const newComment = await db.query(newCommentQuery, [req.projectId, authorId, text]);
-    
-    // Yazarın adını ve (boş) beğeni listesini ekle
-    const userResult = await db.query('SELECT username FROM users WHERE id = $1', [authorId]);
+    const newComment = await db.query(
+      'INSERT INTO comments (project_id, author_id, text) VALUES ($1, $2, $3) RETURNING *',
+      [req.projectId, req.user.id, req.body.text]
+    );
+    const user = await db.query('SELECT username FROM users WHERE id = $1', [req.user.id]);
     const result = newComment.rows[0];
-    result.author_name = userResult.rows[0].username; 
-    result.likes_user_ids = []; // Yeni yorumun beğeni listesi boş başlar
-    
-    res.status(201).json(result); // Tam mesajı döndür
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
-  }
+    result.author_name = user.rows[0].username;
+    result.likes_user_ids = [];
+    res.status(201).json(result);
+  } catch (err) { res.status(500).send('Server Error'); }
 });
 
-// === ISSUE YORUM ROTALARI ===
-
-// @route   GET /api/projects/:id/issues/:issueId/comments
-// @desc    Spesifik bir "Issue"ya ait yorumları getir
 router.get('/:id/issues/:issueId/comments', checkProjectMember, async (req, res) => {
-  // 'public_viewer' dahil herkes yorumları okuyabilir
-  const { issueId } = req.params; 
   try {
     const comments = await db.query(
       'SELECT c.*, u.username as author_name, c.likes_user_ids FROM comments c JOIN users u ON c.author_id = u.id WHERE c.issue_id = $1 ORDER BY c.created_at ASC',
-      [issueId]
+      [req.params.issueId]
     );
     res.json(comments.rows);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
-  }
+  } catch (err) { res.status(500).send('Server Error'); }
 });
 
-// @route   POST /api/projects/:id/issues/:issueId/comments
-// @desc    Spesifik bir "Issue"ya yeni yorum ekle
 router.post('/:id/issues/:issueId/comments', checkProjectMember, async (req, res) => {
-  // 'checkProjectMember'dan geçen herkes ('public_viewer' dahil) yorum yapabilir
-  const { issueId } = req.params;
-  const { text } = req.body;
-  const authorId = req.user.id;
-
   try {
-    // 1. Yorum eklemeden önce Issue'nun durumunu (status) kontrol et
-    const issueCheck = await db.query(
-      'SELECT status FROM project_issues WHERE id = $1',
-      [issueId]
-    );
-
-    if (issueCheck.rows.length === 0) {
-      return res.status(404).json({ message: 'Issue not found.' });
-    }
-
-    // 2. Eğer Issue'nun durumu 'Closed' (Kapalı) ise, hata ver
-    if (issueCheck.rows[0].status === 'Closed') {
-      return res.status(403).json({ message: 'Cannot comment on a closed issue.' });
-    }
-
-    // 3. Issue açıksa, yoruma devam et
-    const newCommentQuery = `
-      INSERT INTO comments (project_id, issue_id, author_id, text) 
-      VALUES ($1, $2, $3, $4) 
-      RETURNING *
-    `;
-    const newComment = await db.query(newCommentQuery, [req.projectId, issueId, authorId, text]);
+    const issueCheck = await db.query('SELECT status FROM project_issues WHERE id = $1', [req.params.issueId]);
+    if (issueCheck.rows[0].status === 'Closed') return res.status(403).json({ message: 'Issue is closed.' });
     
-    // Yazarın adını da yanıta ekle
-    const userResult = await db.query('SELECT username FROM users WHERE id = $1', [authorId]);
+    const newComment = await db.query(
+      'INSERT INTO comments (project_id, issue_id, author_id, text) VALUES ($1, $2, $3, $4) RETURNING *',
+      [req.projectId, req.params.issueId, req.user.id, req.body.text]
+    );
+    const userResult = await db.query('SELECT username FROM users WHERE id = $1', [req.user.id]);
     const result = newComment.rows[0];
-    result.author_name = userResult.rows[0].username; 
-    
+    result.author_name = userResult.rows[0].username;
     res.status(201).json(result);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
-  }
+  } catch (err) { res.status(500).send('Server Error'); }
 });
 
-
-// === YENİ YORUM YÖNETİMİ ROTALARI ===
-
-// @route   PUT /api/projects/:id/comments/:commentId
-// @desc    Bir yorumu DÜZENLE (Edit)
 router.put('/:id/comments/:commentId', checkProjectMember, async (req, res) => {
-  const { commentId } = req.params;
-  const { text } = req.body;
-  const userId = req.user.id;
-
-  if (!text) {
-    return res.status(400).json({ message: 'Text is required.' });
-  }
-
   try {
-    let updateQuery;
-    let queryParams;
-
-    // Proje Sahibi ('owner') HERKESİN yorumunu düzenleyebilir
-    if (req.memberRole === 'owner') {
-      updateQuery = 'UPDATE comments SET text = $1 WHERE id = $2 RETURNING *';
-      queryParams = [text, commentId];
-    } else {
-      // Kullanıcılar SADECE KENDİ yorumlarını düzenleyebilir
-      updateQuery = 'UPDATE comments SET text = $1 WHERE id = $2 AND author_id = $3 RETURNING *';
-      queryParams = [text, commentId, userId];
-    }
-
-    const updatedComment = await db.query(updateQuery, queryParams);
-
-    if (updatedComment.rows.length === 0) {
-      // Ya yorum bulunamadı ya da kullanıcı bu yorumu düzenlemeye yetkili değil
-      return res.status(403).json({ message: 'Comment not found or user not authorized to edit.' });
-    }
+    let q = 'UPDATE comments SET text = $1 WHERE id = $2 AND author_id = $3 RETURNING *';
+    let p = [req.body.text, req.params.commentId, req.user.id];
+    if (req.memberRole === 'owner') { q = 'UPDATE comments SET text = $1 WHERE id = $2 RETURNING *'; p = [req.body.text, req.params.commentId]; }
     
-    // Yorumu güncelledikten sonra yazar adını ve beğenileri ekleyip geri gönder
-    const result = updatedComment.rows[0];
-    const author = await db.query('SELECT username FROM users WHERE id = $1', [result.author_id]);
-    result.author_name = author.rows[0].username;
-
+    const upd = await db.query(q, p);
+    if(upd.rows.length===0) return res.status(403).json({message:'Denied'});
+    
+    const result = upd.rows[0];
+    const userResult = await db.query('SELECT username FROM users WHERE id = $1', [result.author_id]);
+    result.author_name = userResult.rows[0].username;
     res.json(result);
-
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
-  }
+  } catch (err) { res.status(500).send('Server Error'); }
 });
 
-// @route   DELETE /api/projects/:id/comments/:commentId
-// @desc    Bir yorumu SİL (Delete)
 router.delete('/:id/comments/:commentId', checkProjectMember, async (req, res) => {
-  const { commentId } = req.params;
-  const userId = req.user.id;
-
   try {
-    let deleteQuery;
-    let queryParams;
-
-    // Proje Sahibi ('owner') HERKESİN yorumunu silebilir
-    if (req.memberRole === 'owner') {
-      deleteQuery = 'DELETE FROM comments WHERE id = $1 RETURNING *';
-      queryParams = [commentId];
-    } else {
-      // Kullanıcılar SADECE KENDİ yorumlarını silebilir
-      deleteQuery = 'DELETE FROM comments WHERE id = $1 AND author_id = $2 RETURNING *';
-      queryParams = [commentId, userId];
-    }
-
-    const deletedComment = await db.query(deleteQuery, queryParams);
-
-    if (deletedComment.rows.length === 0) {
-      return res.status(403).json({ message: 'Comment not found or user not authorized to delete.' });
-    }
-
-    res.json({ message: 'Comment deleted' });
-
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
-  }
+    let q = 'DELETE FROM comments WHERE id = $1 AND author_id = $2 RETURNING *';
+    let p = [req.params.commentId, req.user.id];
+    if (req.memberRole === 'owner') { q = 'DELETE FROM comments WHERE id = $1 RETURNING *'; p = [req.params.commentId]; }
+    const del = await db.query(q, p);
+    if(del.rows.length===0) return res.status(403).json({message:'Denied'});
+    res.json({message:'Deleted'});
+  } catch (err) { res.status(500).send('Server Error'); }
 });
 
-// @route   POST /api/projects/:id/comments/:commentId/like
-// @desc    Bir yorumu BEĞEN (Like) / BEĞENMEKTEN VAZGEÇ (Unlike)
 router.post('/:id/comments/:commentId/like', checkProjectMember, async (req, res) => {
-  const { commentId } = req.params;
-  const userId = req.user.id; 
-
-  try {
-    const commentCheck = await db.query(
-      'SELECT likes_user_ids FROM comments WHERE id = $1',
-      [commentId]
-    );
-    if (commentCheck.rows.length === 0) {
-      return res.status(404).json({ message: 'Comment not found.' });
-    }
-
-    const likesArray = commentCheck.rows[0].likes_user_ids || [];
-    
-    let updatedComment;
-
-    // Kullanıcı bu yorumu daha önce beğenmiş mi?
-    if (likesArray.includes(userId)) {
-      // EVET -> Beğenmekten vazgeç (ID'yi diziden çıkar)
-      updatedComment = await db.query(
-        'UPDATE comments SET likes_user_ids = array_remove(likes_user_ids, $1) WHERE id = $2 RETURNING likes_user_ids',
-        [userId, commentId]
-      );
-    } else {
-      // HAYIR -> Beğen (ID'yi diziye ekle)
-      updatedComment = await db.query(
-        'UPDATE comments SET likes_user_ids = array_append(likes_user_ids, $1) WHERE id = $2 RETURNING likes_user_ids',
-        [userId, commentId]
-      );
-    }
-
-    res.json(updatedComment.rows[0]); // Sadece güncel beğeni listesini döndür
-
-  } catch (err) {
-    console.error(err.message);
-    res.status(5).send('Server Error');
-  }
+   try {
+     const c = await db.query('SELECT likes_user_ids FROM comments WHERE id = $1', [req.params.commentId]);
+     if(c.rows.length===0) return res.status(404).json({message:'Not found'});
+     const likes = c.rows[0].likes_user_ids || [];
+     let q;
+     if(likes.includes(req.user.id)) q = 'UPDATE comments SET likes_user_ids = array_remove(likes_user_ids, $1) WHERE id = $2 RETURNING likes_user_ids';
+     else q = 'UPDATE comments SET likes_user_ids = array_append(likes_user_ids, $1) WHERE id = $2 RETURNING likes_user_ids';
+     const upd = await db.query(q, [req.user.id, req.params.commentId]);
+     res.json(upd.rows[0]);
+   } catch (err) { res.status(500).send('Server Error'); }
 });
 
 // =================================
-// MEMBERS API ROTALARI
+// 5. MEMBERS
 // =================================
-
-// @route   GET /api/projects/:id/members
-// @desc    Bir projenin tüm üyelerini getir
 router.get('/:id/members', checkProjectMember, async (req, res) => {
-  // 'public_viewer' dahil herkes üyeleri görebilmeli
   try {
-    const membersQuery = `
-      SELECT u.id, u.username, pm.role 
-      FROM project_members pm
-      LEFT JOIN users u ON pm.user_id = u.id 
-      WHERE pm.project_id = $1
-    `;
-    const members = await db.query(membersQuery, [req.projectId]);
-    res.json(members.rows);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
-  }
+    const m = await db.query('SELECT u.id, u.username, pm.role FROM project_members pm LEFT JOIN users u ON pm.user_id = u.id WHERE pm.project_id = $1', [req.projectId]);
+    res.json(m.rows);
+  } catch (err) { res.status(500).send('Server Error'); }
 });
 
-// @route   POST /api/projects/:id/members
-// @desc    Bir projeye (username ile) yeni üye ekle/davet et
 router.post('/:id/members', checkProjectMember, async (req, res) => {
-  // Sadece 'owner' veya 'editor' rolündekiler üye ekleyebilir
-  if (req.memberRole !== 'owner' && req.memberRole !== 'editor') {
-    return res.status(403).json({ message: 'Only project owners or editors can add new members.' });
-  }
-
-  // 1. Artık 'role' de req.body'den geliyor
-  const { username, role } = req.body; 
-  if (!username || !role) { // Rolün de gelip gelmediğini kontrol et
-    return res.status(400).json({ message: 'Please provide a username and a role.' });
-  }
-
-  // 2. Rolü doğrula (Kimse 'owner' rolü atayamaz)
-  if (role !== 'editor' && role !== 'viewer') {
-    return res.status(400).json({ message: "Invalid role. Must be 'editor' or 'viewer'." });
-  }
-
-  let userIdToAdd; 
-
+  if (req.memberRole !== 'owner' && req.memberRole !== 'editor') return res.status(403).json({message:'Denied'});
+  const { username, role } = req.body;
   try {
-    // 3. Kullanıcıyı bul
-    const userToAddResult = await db.query('SELECT id FROM users WHERE username = $1', [username]);
-    if (userToAddResult.rows.length === 0) {
-      return res.status(404).json({ message: 'User not found.' });
-    }
-    userIdToAdd = userToAddResult.rows[0].id;
-    
-    // 4. Zaten üye mi kontrol et
-    const memberCheck = await db.query(
-      'SELECT * FROM project_members WHERE project_id = $1 AND user_id = $2',
-      [req.projectId, userIdToAdd]
-    );
-    if (memberCheck.rows.length > 0) {
-      return res.status(400).json({ message: 'User is already a member of this project.' });
-    }
-
-    // 5. Kullanıcıyı 'role' (rol) değişkeni ile ekle
-    const newMemberQuery = `
-      INSERT INTO project_members (project_id, user_id, role) 
-      VALUES ($1, $2, $3) 
-      RETURNING project_id, user_id, role
-    `;
-    const newMember = await db.query(newMemberQuery, [req.projectId, userIdToAdd, role]); // 'viewer' yerine 'role'
-    
-    res.status(201).json({ ...newMember.rows[0], username: username });
-
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
-  }
+    const u = await db.query('SELECT id FROM users WHERE username = $1', [username]);
+    if(u.rows.length===0) return res.status(404).json({message:'User not found'});
+    const uid = u.rows[0].id;
+    const check = await db.query('SELECT * FROM project_members WHERE project_id=$1 AND user_id=$2', [req.projectId, uid]);
+    if(check.rows.length>0) return res.status(400).json({message:'Already member'});
+    const nm = await db.query('INSERT INTO project_members (project_id, user_id, role) VALUES ($1, $2, $3) RETURNING role', [req.projectId, uid, role]);
+    res.status(201).json({id: uid, username, role: nm.rows[0].role});
+  } catch (err) { res.status(500).send('Server Error'); }
 });
-// === YENİ ROTA: ÜYE ÇIKARMA ===
-// @route   DELETE /api/projects/:id/members/:userId
-// @desc    Bir üyeyi projeden çıkar
+
 router.delete('/:id/members/:userId', checkProjectMember, async (req, res) => {
-  // Sadece 'owner' (sahip) üye çıkarabilir
-  if (req.memberRole !== 'owner') {
-    return res.status(403).json({ message: 'Only the project owner can remove members.' });
-  }
-
-  const { userId: userIdToRemove } = req.params; // Çıkarılacak kullanıcının ID'si
-  const ownerId = req.user.id; // İşlemi yapan 'owner'ın ID'si
-
-  // Sahip kendini projeden çıkaramaz (projeyi silmesi gerekir)
-  if (userIdToRemove === ownerId) {
-    return res.status(400).json({ message: 'Cannot remove the project owner.' });
-  }
-
+  if (req.memberRole !== 'owner') return res.status(403).json({message:'Denied'});
+  if (req.params.userId === req.user.id) return res.status(400).json({message:'Cannot remove owner'});
   try {
-    const deleteQuery = `
-      DELETE FROM project_members 
-      WHERE project_id = $1 AND user_id = $2
-      RETURNING *
-    `;
-    const deletedMember = await db.query(deleteQuery, [req.projectId, userIdToRemove]);
-
-    if (deletedMember.rows.length === 0) {
-      return res.status(404).json({ message: 'Member not found in this project.' });
-    }
-
-    res.json({ message: 'Member removed successfully' });
-
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
-  }
+    const del = await db.query('DELETE FROM project_members WHERE project_id=$1 AND user_id=$2 RETURNING *', [req.projectId, req.params.userId]);
+    if(del.rows.length===0) return res.status(404).json({message:'Not found'});
+    res.json({message:'Removed'});
+  } catch (err) { res.status(500).send('Server Error'); }
 });
 
-// Router'ı export et
+// =================================
+// 6. FILES
+// =================================
+router.get('/:id/files', checkProjectMember, async (req, res) => {
+  try {
+    const f = await db.query('SELECT pf.*, u.username as uploader_name FROM project_files pf JOIN users u ON pf.uploader_id = u.id WHERE pf.project_id = $1 ORDER BY pf.created_at DESC', [req.projectId]);
+    res.json(f.rows);
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
+router.post('/:id/files', checkProjectMember, upload.single('file'), async (req, res) => {
+  if(req.memberRole!=='owner' && req.memberRole!=='editor') return res.status(403).json({message:'Denied'});
+  if(!req.file) return res.status(400).json({message:'No file'});
+  try {
+    const nf = await db.query('INSERT INTO project_files (project_id, uploader_id, filename, file_path, file_type) VALUES ($1, $2, $3, $4, $5) RETURNING *', [req.projectId, req.user.id, req.file.originalname, req.file.path, req.file.mimetype]);
+    const u = await db.query('SELECT username FROM users WHERE id=$1', [req.user.id]);
+    const r = nf.rows[0];
+    r.uploader_name = u.rows[0].username;
+    res.status(201).json(r);
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
+router.delete('/:id/files/:fileId', checkProjectMember, async (req, res) => {
+  if(req.memberRole!=='owner' && req.memberRole!=='editor') return res.status(403).json({message:'Denied'});
+  try {
+    await db.query('DELETE FROM project_files WHERE id=$1', [req.params.fileId]);
+    res.json({message:'Deleted'});
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
 module.exports = router;
