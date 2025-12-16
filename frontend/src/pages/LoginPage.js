@@ -4,10 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FiUser, FiLock } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext'; 
-
-// 1. Fotoğrafı import et
-// (Eğer dosya adınız veya uzantınız farklıysa burayı düzeltin)
 import BackgroundImage from '../assets/background.jpg'; 
+import LogoImage from '../assets/logo.png';
 
 function LoginPage() {
   const [username, setUsername] = useState('');
@@ -40,60 +38,59 @@ function LoginPage() {
   }, [user, navigate]); 
 
   return (
-    // 2. En dıştaki div'i güncelle:
-    // - 'relative': İçindeki overlay'i konumlandırmak için
-    // - 'bg-cover bg-center': Resmi düzgün yaymak için
-    // - style={{ backgroundImage... }}: Resmi arka plan yap
     <div 
       className="relative flex items-center justify-center min-h-screen bg-cover bg-center"
       style={{ backgroundImage: `url(${BackgroundImage})` }}
     >
-      
-      {/* 3. Siyah Perde (Overlay) */}
-      {/* Bu, resmin üzerine yarı saydam siyah bir katman atar, 
-          böylece kutucuk ve yazılar daha net okunur. */}
-      <div className="absolute inset-0 bg-black bg-opacity-60"></div>
+      <div className="absolute inset-0 bg-black bg-opacity-70"></div>
 
-      {/* 4. Ortadaki Kutucuk */}
-      {/* 'relative z-10': Perdenin önünde durması için */}
-      {/* 'bg-opacity-90': Kutucuğun kendisi de hafif şeffaf olsun (isteğe bağlı) */}
-      <div className="relative z-10 w-full max-w-md p-8 space-y-8 bg-gray-800 bg-opacity-90 rounded-2xl shadow-2xl backdrop-blur-sm">
+      <div className="relative z-10 w-full max-w-md p-10 space-y-8 bg-gray-900 bg-opacity-90 rounded-3xl shadow-2xl backdrop-blur-md border border-gray-700">
         <div className="text-center">
-          <h2 className="text-3xl font-bold text-white">
+          
+          {/* === DEV LOGO === */}
+          <img 
+            src={LogoImage} 
+            alt="GazozHub Logo" 
+            className="h-40 w-40 object-contain mx-auto mb-6 drop-shadow-2xl" 
+          />
+          
+          {/* === DEV BAŞLIK === */}
+          <h2 className="text-4xl font-extrabold text-white tracking-tight mb-2">
             Sign In
           </h2>
-          <p className="mt-2 text-sm text-gray-400">
-            Welcome to the Project Hub
+          <p className="mt-2 text-lg text-gray-300">
+            Welcome to <span className="font-extrabold text-blue-500 text-2xl tracking-wide">GazozHub</span>
           </p>
         </div>
+
         <form className="space-y-6" onSubmit={handleSubmit}>
           
-          <div className="relative">
-            <div className="absolute top-0 left-0 flex items-center h-full pl-3 pointer-events-none">
-              <FiUser className="w-5 h-5 text-gray-500" />
+          <div className="relative group">
+            <div className="absolute top-0 left-0 flex items-center h-full pl-4 pointer-events-none">
+              <FiUser className="w-6 h-6 text-gray-500 group-focus-within:text-blue-500 transition-colors" />
             </div>
             <input
               id="username"
               name="username"
               type="text"
               required
-              className="w-full py-3 pl-10 pr-4 text-gray-200 bg-gray-700 border border-gray-600 rounded-lg placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+              className="w-full py-4 pl-12 pr-4 text-lg bg-gray-800 text-white border border-gray-600 rounded-xl placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               placeholder="Username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />
           </div>
           
-          <div className="relative">
-            <div className="absolute top-0 left-0 flex items-center h-full pl-3 pointer-events-none">
-              <FiLock className="w-5 h-5 text-gray-500" />
+          <div className="relative group">
+            <div className="absolute top-0 left-0 flex items-center h-full pl-4 pointer-events-none">
+              <FiLock className="w-6 h-6 text-gray-500 group-focus-within:text-blue-500 transition-colors" />
             </div>
             <input
               id="password"
               name="password"
               type="password"
               required
-              className="w-full py-3 pl-10 pr-4 text-gray-200 bg-gray-700 border border-gray-600 rounded-lg placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+              className="w-full py-4 pl-12 pr-4 text-lg bg-gray-800 text-white border border-gray-600 rounded-xl placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -101,34 +98,36 @@ function LoginPage() {
           </div>
 
           {error && (
-            <p className="text-sm text-red-400 text-center">
-              {error}
-            </p>
+            <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-3">
+              <p className="text-sm text-red-200 text-center font-medium">
+                {error}
+              </p>
+            </div>
           )}
 
           <div>
             <button
               type="submit"
               disabled={loading}
-              className="w-full px-4 py-3 font-semibold text-white bg-blue-600 rounded-lg shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500 transition-all duration-300 disabled:opacity-50"
+              className="w-full py-4 text-lg font-bold text-white bg-blue-600 rounded-xl shadow-lg hover:bg-blue-700 hover:shadow-blue-900/30 focus:outline-none focus:ring-4 focus:ring-blue-500/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:-translate-y-0.5"
             >
               {loading ? 'Signing In...' : 'Sign In'}
             </button>
-            <div className="flex justify-end mb-4">
-            <Link to="/forgot-password" className="text-sm text-blue-400 hover:text-blue-300">
-              Forgot Password?
-            </Link>
-          </div>
           </div>
         </form>
         
-        <div className="text-center mt-4">
-          <p className="text-sm text-gray-400">
+        <div className="text-center mt-6 space-y-2">
+          <p className="text-base text-gray-400">
             Don't have an account?{' '}
-            <Link to="/register" className="font-semibold text-blue-500 hover:text-blue-400">
+            <Link to="/register" className="font-bold text-blue-400 hover:text-blue-300 underline decoration-2 underline-offset-4 transition-colors">
               Sign Up
             </Link>
           </p>
+          <div>
+            <Link to="/forgot-password" className="text-sm font-medium text-gray-500 hover:text-gray-300 transition-colors">
+              Forgot Password?
+            </Link>
+          </div>
         </div>
 
       </div>

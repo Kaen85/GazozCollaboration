@@ -1,45 +1,42 @@
 // src/components/layout/ProfileDropdown.js
 
 import React from 'react';
+import { Link } from 'react-router-dom'; // 1. Link'i import et
 import { FiUser, FiSettings, FiLogOut } from 'react-icons/fi';
-// --- 1. IMPORT useNavigate AND useAuth ---
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 function ProfileDropdown({ isOpen }) {
   const { logout } = useAuth();
-  // --- 2. GET THE NAVIGATE FUNCTION ---
-  const navigate = useNavigate();
 
-  if (!isOpen) {
-    return null;
-  }
-
-  const handleLogout = () => {
-    // --- 3. PERFORM BOTH ACTIONS HERE ---
-    logout();      // First, clear the user state
-    navigate('/'); // Then, immediately navigate to the login page
-  };
+  if (!isOpen) return null;
 
   return (
-    <div className="absolute top-full right-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg border border-gray-700 z-50">
-      <div className="py-1">
-        <a href="#profile" className="flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-gray-700">
-          <FiUser className="mr-3" />
-          Profile
-        </a>
-        <a href="#settings" className="flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-gray-700">
-          <FiSettings className="mr-3" />
-          Settings
-        </a>
-        <button
-          onClick={handleLogout}
-          className="flex items-center w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-gray-700"
-        >
-          <FiLogOut className="mr-3" />
-          Logout
-        </button>
-      </div>
+    <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg py-1 border border-gray-700 z-50 animate-fade-in-up">
+      
+      {/* Profil Linki (Opsiyonel, şimdilik Settings'e gitsin) */}
+      <Link 
+        to="/settings" 
+        className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center"
+      >
+        <FiUser className="mr-2" /> Profile
+      </Link>
+      
+      {/* === 2. SETTINGS LİNKİ GÜNCELLENDİ === */}
+      <Link 
+        to="/settings" 
+        className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center"
+      >
+        <FiSettings className="mr-2" /> Settings
+      </Link>
+      
+      <div className="border-t border-gray-700 my-1"></div>
+      
+      <button 
+        onClick={logout}
+        className="block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-gray-700 hover:text-red-300 flex items-center"
+      >
+        <FiLogOut className="mr-2" /> Logout
+      </button>
     </div>
   );
 }

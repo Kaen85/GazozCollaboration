@@ -4,20 +4,20 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
+import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import { BrowserRouter } from 'react-router-dom'; // BrowserRouter'ı buraya taşı
+// 1. ThemeProvider'ı import et
+import { ThemeProvider } from './context/ThemeContext';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    {/*
-      1. AuthProvider, TÜM uygulamayı sarmalar.
-      2. BrowserRouter, TÜM uygulamayı sarmalar.
-    */}
     <BrowserRouter>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   </React.StrictMode>
 );

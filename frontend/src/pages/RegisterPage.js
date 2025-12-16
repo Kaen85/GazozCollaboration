@@ -4,9 +4,8 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FiUser, FiLock, FiMail } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext'; 
-
-// 1. Fotoğrafı buraya da import et
 import BackgroundImage from '../assets/background.jpg';
+import LogoImage from '../assets/logo.png';
 
 function RegisterPage() {
   const [username, setUsername] = useState('');
@@ -40,65 +39,74 @@ function RegisterPage() {
   };
 
   return (
-    // 2. Arka plan stilini uygula
     <div 
       className="relative flex items-center justify-center min-h-screen bg-cover bg-center"
       style={{ backgroundImage: `url(${BackgroundImage})` }}
     >
-      {/* 3. Siyah Perde */}
-      <div className="absolute inset-0 bg-black bg-opacity-60"></div>
+      <div className="absolute inset-0 bg-black bg-opacity-70"></div>
 
-      {/* 4. Ortadaki Kutucuk */}
-      <div className="relative z-10 w-full max-w-md p-8 space-y-8 bg-gray-800 bg-opacity-90 rounded-2xl shadow-2xl backdrop-blur-sm">
+      <div className="relative z-10 w-full max-w-md p-10 space-y-6 bg-gray-900 bg-opacity-90 rounded-3xl shadow-2xl backdrop-blur-md border border-gray-700">
         <div className="text-center">
-          <h2 className="text-3xl font-bold text-white">
+          
+          {/* === DEV LOGO === */}
+          <img 
+            src={LogoImage} 
+            alt="GazozHub Logo" 
+            className="h-40 w-40 object-contain mx-auto mb-6 drop-shadow-2xl" 
+          />
+          
+          <h2 className="text-4xl font-extrabold text-white tracking-tight mb-2">
             Create Account
           </h2>
-          <p className="mt-2 text-sm text-gray-400">
-            Join the Project Hub
+          <p className="text-lg text-gray-400 font-medium">
+            Join <span className="font-extrabold text-blue-500 tracking-wide">GazozHub</span>
           </p>
         </div>
-        <form className="space-y-6" onSubmit={handleSubmit}>
+
+        <form className="space-y-5" onSubmit={handleSubmit}>
           
-          <div className="relative">
-            <div className="absolute top-0 left-0 flex items-center h-full pl-3 pointer-events-none">
-              <FiUser className="w-5 h-5 text-gray-500" />
+          {/* Username Input */}
+          <div className="relative group">
+            <div className="absolute top-0 left-0 flex items-center h-full pl-4 pointer-events-none">
+              <FiUser className="w-6 h-6 text-gray-500 group-focus-within:text-blue-500 transition-colors" />
             </div>
             <input
               id="username"
               type="text"
               required
-              className="w-full py-3 pl-10 pr-4 text-gray-200 bg-gray-700 border border-gray-600 rounded-lg placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+              className="w-full py-4 pl-12 pr-4 text-lg bg-gray-800 text-white border border-gray-600 rounded-xl placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               placeholder="Username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />
           </div>
 
-          <div className="relative">
-            <div className="absolute top-0 left-0 flex items-center h-full pl-3 pointer-events-none">
-              <FiMail className="w-5 h-5 text-gray-500" />
+          {/* Email Input */}
+          <div className="relative group">
+            <div className="absolute top-0 left-0 flex items-center h-full pl-4 pointer-events-none">
+              <FiMail className="w-6 h-6 text-gray-500 group-focus-within:text-blue-500 transition-colors" />
             </div>
             <input
               id="email"
               type="email"
               required
-              className="w-full py-3 pl-10 pr-4 text-gray-200 bg-gray-700 border border-gray-600 rounded-lg placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+              className="w-full py-4 pl-12 pr-4 text-lg bg-gray-800 text-white border border-gray-600 rounded-xl placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
           
-          <div className="relative">
-            <div className="absolute top-0 left-0 flex items-center h-full pl-3 pointer-events-none">
-              <FiLock className="w-5 h-5 text-gray-500" />
+          {/* Password Input */}
+          <div className="relative group">
+            <div className="absolute top-0 left-0 flex items-center h-full pl-4 pointer-events-none">
+              <FiLock className="w-6 h-6 text-gray-500 group-focus-within:text-blue-500 transition-colors" />
             </div>
             <input
               id="password"
               type="password"
               required
-              className="w-full py-3 pl-10 pr-4 text-gray-200 bg-gray-700 border border-gray-600 rounded-lg placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+              className="w-full py-4 pl-12 pr-4 text-lg bg-gray-800 text-white border border-gray-600 rounded-xl placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -106,31 +114,35 @@ function RegisterPage() {
           </div>
 
           {error && (
-            <p className="text-sm text-red-400 text-center">
-              {error}
-            </p>
+            <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-3">
+              <p className="text-sm text-red-200 text-center font-medium">
+                {error}
+              </p>
+            </div>
           )}
           {success && (
-            <p className="text-sm text-green-400 text-center">
-              {success}
-            </p>
+            <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-3">
+              <p className="text-sm text-green-200 text-center font-medium">
+                {success}
+              </p>
+            </div>
           )}
 
           <div>
             <button
               type="submit"
               disabled={loading}
-              className="w-full px-4 py-3 font-semibold text-white bg-blue-600 rounded-lg shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500 transition-all duration-300 disabled:opacity-50"
+              className="w-full py-4 text-lg font-bold text-white bg-blue-600 rounded-xl shadow-lg hover:bg-blue-700 hover:shadow-blue-900/30 focus:outline-none focus:ring-4 focus:ring-blue-500/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:-translate-y-0.5"
             >
               {loading ? 'Creating Account...' : 'Sign Up'}
             </button>
           </div>
         </form>
         
-        <div className="text-center mt-4">
-          <p className="text-sm text-gray-400">
+        <div className="text-center mt-6">
+          <p className="text-base text-gray-400">
             Already have an account?{' '}
-            <Link to="/login" className="font-semibold text-blue-500 hover:text-blue-400">
+            <Link to="/login" className="font-bold text-blue-400 hover:text-blue-300 underline decoration-2 underline-offset-4 transition-colors">
               Sign In
             </Link>
           </p>

@@ -1,12 +1,13 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    "./src/**/*.{js,jsx,ts,tsx}", // Bu satır stillerin nerede kullanılacağını belirtir
+    "./src/**/*.{js,jsx,ts,tsx}",
   ],
+ 
+  darkMode: 'class', 
+ 
   theme: {
     extend: {},
   },
-  plugins: [
-    require('tailwindcss-scrollbar'),
-  ],
+  plugins: [],
 }

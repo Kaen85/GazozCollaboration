@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db'); // Veritabanı bağlantısı
+const db = require('../db'); // Database connection
 const multer = require('multer');
 const path = require('path');
 
-// === DOSYA YÜKLEME AYARLARI (MULTER) ===
+// === FILE UPLOAD SETTINGS (MULTER) ===
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, 'uploads/'),
   filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
@@ -12,14 +12,14 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // =================================
-// MIDDLEWARE (KAPI BEKÇİSİ)
+// MIDDLEWARE (GATEKEEPER)
 // =================================
 const checkProjectMember = async (req, res, next) => {
   try {
     const projectId = req.params.id; 
     const userId = req.user.id; 
 
-    // 1. Proje var mı ve Public mi?
+    // 1. Check if project exists and is Public
     const projectCheck = await db.query(
       'SELECT is_public, owner_id, is_tasks_public FROM projects WHERE id = $1',
       [projectId]
@@ -31,7 +31,7 @@ const checkProjectMember = async (req, res, next) => {
 
     const project = projectCheck.rows[0];
 
-    // 2. Üyelik kontrolü
+    // 2. Check membership
     const memberCheck = await db.query(
       'SELECT role FROM project_members WHERE project_id = $1 AND user_id = $2',
       [projectId, userId]
@@ -39,7 +39,7 @@ const checkProjectMember = async (req, res, next) => {
 
     const memberRole = memberCheck.rows[0]?.role; 
 
-    // === İZİN MANTIĞI ===
+    // === PERMISSION LOGIC ===
     if (memberRole) {
       req.projectId = projectId;
       req.memberRole = memberRole;
@@ -60,11 +60,11 @@ const checkProjectMember = async (req, res, next) => {
 };
 
 // =================================
-// 1. PROJE YÖNETİMİ (ANA ROTALAR)
+// 1. PROJECT MANAGEMENT (MAIN ROUTES)
 // =================================
 
 // @route   POST /api/projects
-// @desc    Yeni proje oluştur
+// @desc    Create new project
 router.post('/', async (req, res) => {
   const { name, description } = req.body;
   const ownerId = req.user.id; 
@@ -98,7 +98,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-// @route   GET /api/projects (Tüm Üye Olduklarım)
+// @route   GET /api/projects (All Projects I am a member of)
 router.get('/', async (req, res) => {
   try {
     const projects = await db.query(`
@@ -113,7 +113,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// @route   GET /api/projects/my-projects (Sadece Benimkiler)
+// @route   GET /api/projects/my-projects (Projects I Own)
 router.get('/my-projects', async (req, res) => {
   try {
     const projects = await db.query(`
@@ -127,12 +127,16 @@ router.get('/my-projects', async (req, res) => {
   }
 });
 
-// @route   GET /api/projects/shared-projects (Paylaşılanlar + Public)
+// @route   GET /api/projects/shared-projects (Shared + Public)
+// === GÜNCELLEME BURADA: Public projeler için 'created_at' tarihini 'joined_at' olarak gönderiyoruz ===
 router.get('/shared-projects', async (req, res) => {
   try {
     const projects = await db.query(`
       (
-        SELECT p.*, u.username as owner_name, pm.joined_at
+        -- 1. Private Shared (Joined date exists)
+        SELECT p.id, p.name, p.description, p.owner_id, p.created_at, p.last_updated_at, p.is_public,
+          pm.joined_at,
+          u.username as owner_name
         FROM projects p
         JOIN project_members pm ON p.id = pm.project_id
         JOIN users u ON p.owner_id = u.id
@@ -140,7 +144,10 @@ router.get('/shared-projects', async (req, res) => {
       )
       UNION
       (
-        SELECT p.*, u.username as owner_name, NULL as joined_at
+        -- 2. Public Projects (Use created_at as joined_at)
+        SELECT p.id, p.name, p.description, p.owner_id, p.created_at, p.last_updated_at, p.is_public,
+          p.created_at as joined_at, -- NULL yerine created_at kullanıyoruz
+          u.username as owner_name
         FROM projects p
         JOIN users u ON p.owner_id = u.id
         WHERE p.is_public = true AND p.owner_id != $1
@@ -153,7 +160,7 @@ router.get('/shared-projects', async (req, res) => {
   }
 });
 
-// @route   GET /api/projects/:id (Detay)
+// @route   GET /api/projects/:id (Details)
 router.get('/:id', checkProjectMember, async (req, res) => {
   try {
     const project = await db.query('SELECT * FROM projects WHERE id = $1', [req.projectId]);
@@ -165,16 +172,8 @@ router.get('/:id', checkProjectMember, async (req, res) => {
   }
 });
 
-// === EKSİK OLAN PUT ROTASI BURADA ===
-// @route   PUT /api/projects/:id (Güncelleme)
-// backend/routes/projectRoutes.js
-
-// ...
-
-// @route   PUT /api/projects/:id
-// @desc    Proje adını ve açıklamalarını güncelle
+// @route   PUT /api/projects/:id (Update)
 router.put('/:id', checkProjectMember, async (req, res) => {
-  // Sadece SAHİP (Owner) güncelleyebilir
   if (req.memberRole !== 'owner') {
     return res.status(403).json({ message: 'Only the project owner can update details.' });
   }
@@ -183,28 +182,21 @@ router.put('/:id', checkProjectMember, async (req, res) => {
 
   try {
     const updatedProject = await db.query(
-      // 'long_description || null' diyerek, veri yoksa NULL kaydediyoruz (Çökmez)
       'UPDATE projects SET name = $1, description = $2, long_description = $3, last_updated_at = NOW() WHERE id = $4 RETURNING *',
-      [name, description, long_description || null, req.projectId]
+      [name, description, long_description, req.projectId]
     );
     
-    if (updatedProject.rows.length === 0) {
-       return res.status(404).json({ message: 'Project not found.' });
-    }
-
     const projectData = updatedProject.rows[0];
     projectData.currentUserRole = req.memberRole;
     
     res.json(projectData);
   } catch (err) {
-    console.error("UPDATE ERROR:", err.message); // Hatayı terminale yaz
-    // Gerçek hatayı frontend'e gönderelim ki ne olduğunu görelim
-    res.status(500).json({ message: 'Server Error: ' + err.message });
+    console.error(err.message);
+    res.status(500).send('Server Error');
   }
 });
 
-// === EKSİK OLAN DELETE ROTASI BURADA ===
-// @route   DELETE /api/projects/:id (Silme)
+// @route   DELETE /api/projects/:id (Delete)
 router.delete('/:id', checkProjectMember, async (req, res) => {
   if (req.memberRole !== 'owner') {
     return res.status(403).json({ message: 'Only the project owner can delete the project.' });
@@ -219,7 +211,7 @@ router.delete('/:id', checkProjectMember, async (req, res) => {
   }
 });
 
-// @route   PUT /visibility (Public/Private Ayarı)
+// @route   PUT /visibility (Public/Private)
 router.put('/:id/visibility', checkProjectMember, async (req, res) => {
   if (req.memberRole !== 'owner') return res.status(403).json({ message: 'Only owner.' });
   try {
@@ -234,7 +226,7 @@ router.put('/:id/visibility', checkProjectMember, async (req, res) => {
 });
 
 // =================================
-// 2. TASKS (GÖREVLER)
+// 2. TASKS (KANBAN)
 // =================================
 
 router.put('/:id/settings/tasks-visibility', checkProjectMember, async (req, res) => {
@@ -296,6 +288,34 @@ router.delete('/:id/tasks/:taskId', checkProjectMember, async (req, res) => {
     await db.query('DELETE FROM project_tasks WHERE id = $1', [req.params.taskId]);
     res.json({ message: 'Deleted' });
   } catch (err) { res.status(500).send('Server Error'); }
+});
+
+router.get('/user/all-tasks', async (req, res) => {
+  const userId = req.user.id;
+  try {
+    // Bu sorgu şunları yapar:
+    // 1. project_tasks tablosundan görevleri al (t)
+    // 2. projects tablosuyla birleştir (p) -> Proje adını almak için
+    // 3. project_members tablosuyla birleştir (pm) -> SADECE kullanıcının üye olduğu projeleri filtrelemek için
+    // 4. Son 10 görevi, en yeniye göre sırala
+    const query = `
+      SELECT 
+        t.id, t.title, t.status, t.due_date, t.created_at,
+        p.id as project_id, p.name as project_name
+      FROM project_tasks t
+      JOIN projects p ON t.project_id = p.id
+      JOIN project_members pm ON p.id = pm.project_id
+      WHERE pm.user_id = $1
+      ORDER BY t.created_at DESC
+      LIMIT 10
+    `;
+    
+    const result = await db.query(query, [userId]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
 });
 
 // =================================
@@ -400,10 +420,8 @@ router.put('/:id/comments/:commentId', checkProjectMember, async (req, res) => {
     let q = 'UPDATE comments SET text = $1 WHERE id = $2 AND author_id = $3 RETURNING *';
     let p = [req.body.text, req.params.commentId, req.user.id];
     if (req.memberRole === 'owner') { q = 'UPDATE comments SET text = $1 WHERE id = $2 RETURNING *'; p = [req.body.text, req.params.commentId]; }
-    
     const upd = await db.query(q, p);
     if(upd.rows.length===0) return res.status(403).json({message:'Denied'});
-    
     const result = upd.rows[0];
     const userResult = await db.query('SELECT username FROM users WHERE id = $1', [result.author_id]);
     result.author_name = userResult.rows[0].username;
