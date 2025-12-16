@@ -1,0 +1,144 @@
+// src/components/projects/SharedProjectCard.js
+
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { FiUser, FiCalendar, FiShare2, FiGlobe } from 'react-icons/fi'; 
+
+// Tarih formatlama helper fonksiyonu
+const formatDate = (dateString) => {
+  if (!dateString) return 'N/A';
+  return new Date(dateString).toLocaleDateString('en-US', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  });
+};
+
+function SharedProjectCard({ project, viewMode = 'grid' }) {
+  
+  if (!project) {
+    return null;
+  }
+
+  const ownerName = project.owner_name || 'Unknown';
+  const createdDate = project.created_at; 
+  const sharedDate = project.joined_at; // Public projeler için null'dır
+
+  // === LISTE GÖRÜNÜMÜ ===
+  if (viewMode === 'list') {
+    return (
+      <Link to={`/project/${project.id}`} className="block">
+        {/* Light Mode: bg-white, border-gray-200 
+            Dark Mode: dark:bg-gray-800, dark:border-gray-700
+        */}
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-purple-500 dark:hover:border-purple-500 transition-all flex flex-col md:flex-row md:items-center justify-between group gap-4 shadow-sm hover:shadow-md">
+          
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center mb-2">
+               <h3 className="text-lg font-bold text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors truncate mr-3">
+                {project.name}
+              </h3>
+            </div>
+            
+            <div className="flex flex-wrap items-center text-xs text-gray-500 dark:text-gray-400 gap-x-6 gap-y-2">
+               
+               {/* 1. Sahip */}
+               <span className="flex items-center" title="Project Owner">
+                 <FiUser className="mr-1.5 w-3 h-3 text-gray-400 dark:text-gray-500" />
+                 <span className="font-semibold text-gray-700 dark:text-gray-300">{ownerName}</span>
+               </span>
+
+               {/* 2. Oluşturulma Tarihi */}
+               <span className="flex items-center" title="Created Date">
+                 <FiCalendar className="mr-1.5 w-3 h-3 text-gray-400 dark:text-gray-500" />
+                 Created: {formatDate(createdDate)}
+               </span>
+
+               {/* 3. Paylaşılma Durumu */}
+               {sharedDate ? (
+                 <span className="flex items-center" title="Shared Date">
+                   <FiShare2 className="mr-1.5 w-3 h-3 text-gray-400 dark:text-gray-500" />
+                   Shared: {formatDate(sharedDate)}
+                 </span>
+               ) : (
+                 <span className="flex items-center text-green-600 dark:text-green-400 font-medium">
+                   <FiGlobe className="mr-1.5 w-3 h-3" />
+                   Public Project
+                 </span>
+               )}
+            </div>
+          </div>
+          
+          {/* Açıklama (Sadece masaüstünde) */}
+          <div className="flex-shrink-0 text-gray-500 dark:text-gray-400 text-sm max-w-md truncate hidden md:block">
+            {project.description}
+          </div>
+
+        </div>
+      </Link>
+    );
+  }
+
+  // === GRID GÖRÜNÜMÜ (Varsayılan) ===
+  return (
+    <Link to={`/project/${project.id}`} className="block h-full">
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-lg hover:border-purple-500 dark:hover:border-purple-500 transition-all duration-300 h-full flex flex-col justify-between">
+        
+        {/* Üst Kısım */}
+        <div>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 truncate" title={project.name}>
+            {project.name}
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-2">
+            {project.description}
+          </p>
+        </div>
+        
+        {/* Alt Kısım */}
+        <div>
+          <div className="border-t border-gray-100 dark:border-gray-700 my-4"></div>
+          
+          <div className="space-y-2">
+            {/* 1. Sahip Bilgisi */}
+            <div className="flex items-center">
+              <FiUser className="w-4 h-4 text-gray-400 dark:text-gray-500 mr-2 flex-shrink-0" />
+              <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                Owner: <span className="font-semibold text-gray-700 dark:text-gray-300">{ownerName}</span>
+              </span>
+            </div>
+
+            {/* 2. Oluşturulma Tarihi */}
+            <div className="flex items-center">
+              <FiCalendar className="w-4 h-4 text-gray-400 dark:text-gray-500 mr-2 flex-shrink-0" />
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                Created: {formatDate(createdDate)}
+              </span>
+            </div>
+
+             {/* 3. Paylaşılma Durumu veya Public Bilgisi */}
+             <div className="flex items-center">
+              {sharedDate ? (
+                <>
+                  <FiShare2 className="w-4 h-4 text-gray-400 dark:text-gray-500 mr-2 flex-shrink-0" />
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    Shared: {formatDate(sharedDate)}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <FiGlobe className="w-4 h-4 text-green-600 dark:text-green-400 mr-2 flex-shrink-0" />
+                  <span className="text-xs font-semibold text-green-600 dark:text-green-400">
+                    Public Project
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+export default SharedProjectCard;

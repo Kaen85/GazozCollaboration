@@ -290,6 +290,34 @@ router.delete('/:id/tasks/:taskId', checkProjectMember, async (req, res) => {
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
+router.get('/user/all-tasks', async (req, res) => {
+  const userId = req.user.id;
+  try {
+    // Bu sorgu şunları yapar:
+    // 1. project_tasks tablosundan görevleri al (t)
+    // 2. projects tablosuyla birleştir (p) -> Proje adını almak için
+    // 3. project_members tablosuyla birleştir (pm) -> SADECE kullanıcının üye olduğu projeleri filtrelemek için
+    // 4. Son 10 görevi, en yeniye göre sırala
+    const query = `
+      SELECT 
+        t.id, t.title, t.status, t.due_date, t.created_at,
+        p.id as project_id, p.name as project_name
+      FROM project_tasks t
+      JOIN projects p ON t.project_id = p.id
+      JOIN project_members pm ON p.id = pm.project_id
+      WHERE pm.user_id = $1
+      ORDER BY t.created_at DESC
+      LIMIT 10
+    `;
+    
+    const result = await db.query(query, [userId]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
 // =================================
 // 3. ISSUES
 // =================================
