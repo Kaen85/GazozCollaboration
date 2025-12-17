@@ -118,21 +118,7 @@ export default function SettingsPage() {
 
                   <hr className="border-gray-200 dark:border-gray-700" />
 
-                  {/* Dil Ayarı (Görsel Güncellendi) */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <FiGlobe className="text-gray-400 mr-3" size={20} />
-                      <div>
-                        <h4 className={`${textPrimary} font-medium`}>Language</h4>
-                        <p className={`text-sm ${textSecondary}`}>Select your preferred language.</p>
-                      </div>
-                    </div>
-                    <select className={inputClass.replace('w-full', 'w-40')}>
-                      <option>English (US)</option>
-                      <option>Turkish (TR)</option>
-                    </select>
-                  </div>
-
+                 
                 </div>
               </div>
             </div>

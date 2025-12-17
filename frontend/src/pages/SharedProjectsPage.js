@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useProjectContext } from '../context/ProjectContext';
-import { FiLoader, FiGrid, FiList } from 'react-icons/fi'; 
+import { FiLoader, FiGrid, FiList, FiChevronLeft, FiChevronRight } from 'react-icons/fi'; 
 import SharedProjectCard from '../components/projects/SharedProjectCard';
 
 function SharedProjectsPage() {
@@ -12,6 +12,14 @@ function SharedProjectsPage() {
   const [viewMode, setViewMode] = useState(() => {
     return localStorage.getItem('sharedProjectsViewMode') || 'grid';
   });
+
+  // --- PAGINATION STATE ---
+  const [currentPage, setCurrentPage] = useState(1);
+  
+  // !!! DÜZELTME BURADA !!!
+  // Liste görünümünde butonların oynamaması için sayıyı 5'ten 4'e indirdik.
+  // Grid: 6 adet, List: 4 adet. (Yükseklikleri birbirine daha yakın olur)
+  const projectsPerPage = viewMode === 'grid' ? 6 : 4;
 
   const changeViewMode = (mode) => {
     setViewMode(mode);
@@ -39,18 +47,38 @@ function SharedProjectsPage() {
     return Array.from(projectMap.values());
   }, [sharedProjects]);
 
+  // Görünüm veya veri değişirse 1. sayfaya dön
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [uniqueProjects, viewMode]);
+
+  // --- PAGINATION HESAPLAMALARI ---
+  const indexOfLastProject = currentPage * projectsPerPage;
+  const indexOfFirstProject = indexOfLastProject - projectsPerPage;
+  const currentProjects = uniqueProjects.slice(indexOfFirstProject, indexOfLastProject);
+  const totalPages = Math.ceil(uniqueProjects.length / projectsPerPage);
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
+  const nextPage = () => {
+    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+  };
+
+  const prevPage = () => {
+    if (currentPage > 1) setCurrentPage(currentPage - 1);
+  };
 
   return (
     <div>
+      {/* --- HEADER --- */}
       <div className="flex justify-between items-end mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-white">Shared Projects</h1>
+          <h1 className="text-3xl font-bold text-white">Shared by Others</h1>
           <p className="text-gray-400 mt-2 text-sm">
             Projects shared with you or available publicly.
           </p>
         </div>
 
-        {/* Görünüm Değiştirme Butonları */}
         <div className="bg-gray-800 p-1 rounded-lg border border-gray-700 flex">
           <button
             onClick={() => changeViewMode('grid')}
@@ -73,6 +101,7 @@ function SharedProjectsPage() {
         </div>
       </div>
 
+      {/* --- CONTENT --- */}
       {loading ? (
         <div className="flex justify-center items-center p-20">
           <FiLoader className="animate-spin text-purple-500" size={40} />
@@ -81,34 +110,84 @@ function SharedProjectsPage() {
       ) : uniqueProjects.length === 0 ? (
         <p className="text-gray-400">No projects have been shared with you yet.</p>
       ) : (
-        <>
-          {/* GRID MODU */}
-          {viewMode === 'grid' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {uniqueProjects.map(project => (
-                <SharedProjectCard 
-                  key={project.id} 
-                  project={project} 
-                  viewMode="grid" // viewMode'u prop olarak geçiyoruz
-                />
-              ))}
-            </div>
-          )}
+        // !!! SABİT YÜKSEKLİK GÜNCELLEMESİ !!!
+        // min-h-[500px]: 4 liste elemanı için tam ideal yükseklik.
+        // Bu sayede butonlar ne yukarı zıplar ne de ekranı taşırır.
+        <div className="flex flex-col min-h-[500px]">
+          
+          <div className="flex-grow">
+            {/* GRID MODU (6 tane) */}
+            {viewMode === 'grid' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {currentProjects.map(project => (
+                  <SharedProjectCard 
+                    key={project.id} 
+                    project={project} 
+                    viewMode="grid" 
+                  />
+                ))}
+              </div>
+            )}
 
-          {/* LIST MODU - DÜZELTİLDİ */}
-          {/* Artık elle yazılmış HTML yerine SharedProjectCard kullanılıyor */}
-          {viewMode === 'list' && (
-            <div className="flex flex-col space-y-3">
-              {uniqueProjects.map(project => (
-                <SharedProjectCard 
-                  key={project.id} 
-                  project={project} 
-                  viewMode="list" // viewMode'u 'list' olarak geçiyoruz
-                />
-              ))}
+            {/* LIST MODU (4 tane) */}
+            {viewMode === 'list' && (
+              <div className="flex flex-col space-y-3">
+                {currentProjects.map(project => (
+                  <SharedProjectCard 
+                    key={project.id} 
+                    project={project} 
+                    viewMode="list" 
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* === PAGINATION BAR === */}
+          {uniqueProjects.length > projectsPerPage && (
+            <div className="flex justify-center items-center mt-2 pt-4 border-t border-gray-800">
+              <button
+                onClick={prevPage}
+                disabled={currentPage === 1}
+                className={`p-2 rounded-md border border-gray-700 ${
+                  currentPage === 1 
+                    ? 'text-gray-600 cursor-not-allowed bg-gray-800/50' 
+                    : 'text-white bg-gray-800 hover:bg-gray-700 hover:border-purple-500'
+                }`}
+              >
+                <FiChevronLeft size={20} />
+              </button>
+
+              <div className="flex space-x-1 mx-2">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
+                  <button
+                    key={number}
+                    onClick={() => paginate(number)}
+                    className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                      currentPage === number
+                        ? 'bg-purple-600 text-white shadow-lg'
+                        : 'bg-gray-800 text-gray-400 border border-gray-700 hover:bg-gray-700 hover:text-white'
+                    }`}
+                  >
+                    {number}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={nextPage}
+                disabled={currentPage === totalPages}
+                className={`p-2 rounded-md border border-gray-700 ${
+                  currentPage === totalPages 
+                    ? 'text-gray-600 cursor-not-allowed bg-gray-800/50' 
+                    : 'text-white bg-gray-800 hover:bg-gray-700 hover:border-purple-500'
+                }`}
+              >
+                <FiChevronRight size={20} />
+              </button>
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );
