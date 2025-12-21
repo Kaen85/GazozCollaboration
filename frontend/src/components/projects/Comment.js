@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useProjectContext } from '../../context/ProjectContext';
 import { 
   FiUser, FiHeart, FiCopy, FiMoreVertical, FiEdit, FiTrash, 
-  FiSave, FiX, FiLoader, FiCheck, FiAlertTriangle 
+    FiLoader, FiCheck,
 } from 'react-icons/fi';
 
 // Yeni proplar alıyoruz: projectId, onCommentUpdated, onCommentDeleted
