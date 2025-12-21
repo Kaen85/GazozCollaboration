@@ -1,4 +1,3 @@
-
 // src/context/ProjectContext.js
 
 import React, { createContext, useState, useContext } from 'react';
@@ -19,7 +18,6 @@ export const ProjectProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const { token, logout } = useAuth();
-  const [dashboardTasks, setDashboardTasks] = useState([]);
 
   // --- YARDIMCI FONKSİYONLAR ---
   const getAuthHeaders = () => {
@@ -149,21 +147,6 @@ export const ProjectProvider = ({ children }) => {
     } catch (err) { handleError(err); throw err; }
   };
   
-const fetchDashboardTasks = async () => {
-    if (!token) return;
-    setLoading(true); // İsterseniz burada ayrı bir loading state kullanabilirsiniz
-    try {
-      // Backend'deki yeni rotayı çağır
-      // (Rota yolu: /api/projects/user/all-tasks)
-      const response = await axios.get(`${API_URL}/user/all-tasks`, getAuthHeaders());
-      setDashboardTasks(response.data);
-    } catch (err) {
-      handleError(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // --- ISSUE FONKSİYONLARI ---
   const fetchIssues = async (projectId) => {
     try {
@@ -426,9 +409,7 @@ const removeMember = async (projectId, userId) => {
     updateTaskStatus,
     updateTask,
     deleteTask,
-    updateProjectDetails,
-    dashboardTasks,
-    fetchDashboardTasks
+    updateProjectDetails
   };
 
   return (

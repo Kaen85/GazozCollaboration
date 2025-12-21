@@ -61,7 +61,9 @@ const LandingPage = () => {
         {/* --- HERO SECTION --- */}
         <main className="flex-grow flex flex-col justify-center items-center text-center px-4 py-20">
           <div className="max-w-5xl mx-auto space-y-8">
-           
+            <div className="inline-block px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm font-semibold mb-4 animate-fade-in-down">
+              🚀 The Future of Project Management
+            </div>
             
             <h1 className="text-6xl md:text-8xl font-black tracking-tight leading-none mb-6 drop-shadow-2xl">
               Collaboration <br />

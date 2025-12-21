@@ -32,7 +32,7 @@ function Sidebar() {
         </Link>
         <Link to="/shared-projects" className={linkClass('/shared-projects')}>
           <FiShare2 className="mr-3" />
-          Shared By Others
+          Shared Projects
         </Link>
       </nav>
 

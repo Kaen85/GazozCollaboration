@@ -4,22 +4,13 @@ import React, { useState, useEffect } from 'react';
 import CreateProjectModal from '../components/projects/CreateProjectModal';
 import { Link } from 'react-router-dom';
 import { useProjectContext } from '../context/ProjectContext';
-
-// İkonlar
-import { 
-  FiLoader, FiPlus, FiGrid, FiList, FiClock, FiGlobe, 
-  FiChevronLeft, FiChevronRight 
-} from 'react-icons/fi'; 
+import { FiLoader, FiPlus, FiGrid, FiList, FiClock } from 'react-icons/fi'; // Yeni ikonlar
 
 function MyProjectsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false); 
-  const [viewMode, setViewMode] = useState('grid'); 
   
-  // --- PAGINATION STATE ---
-  const [currentPage, setCurrentPage] = useState(1);
-
-  // Grid ise 6, Liste ise 5 proje
-  const projectsPerPage = viewMode === 'grid' ? 6 : 5;
+  // === YENİ STATE: GÖRÜNÜM MODU ===
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' veya 'list'
 
   const { myProjects, loading, fetchMyProjects } = useProjectContext();
 
@@ -28,33 +19,13 @@ function MyProjectsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [viewMode, myProjects]);
-
-  // --- PAGINATION HESAPLAMALARI ---
-  const indexOfLastProject = currentPage * projectsPerPage;
-  const indexOfFirstProject = indexOfLastProject - projectsPerPage;
-  const currentProjects = myProjects.slice(indexOfFirstProject, indexOfLastProject);
-  const totalPages = Math.ceil(myProjects.length / projectsPerPage);
-
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
-
-  const nextPage = () => {
-    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
-  };
-
-  const prevPage = () => {
-    if (currentPage > 1) setCurrentPage(currentPage - 1);
-  };
-
   return (
     <div>
-      {/* --- HEADER --- */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
         <h1 className="text-3xl font-bold text-white">My Projects</h1>
         
         <div className="flex items-center gap-4">
+          {/* === YENİ: GÖRÜNÜM DEĞİŞTİRME BUTONLARI === */}
           <div className="bg-gray-800 p-1 rounded-lg border border-gray-700 flex">
             <button
               onClick={() => setViewMode('grid')}
@@ -90,7 +61,6 @@ function MyProjectsPage() {
         </div>
       </div>
 
-      {/* --- CONTENT --- */}
       {loading ? (
         <div className="flex justify-center items-center p-20">
           <FiLoader className="animate-spin text-blue-500" size={40} />
@@ -99,120 +69,53 @@ function MyProjectsPage() {
       ) : myProjects.length === 0 ? (
         <p className="text-gray-400">You haven't created any projects yet.</p>
       ) : (
-        // GÜNCELLEME: min-h-[600px] -> min-h-[480px] yapıldı. Daha kompakt.
-        <div className="flex flex-col min-h-[480px]">
-          
-          <div className="flex-grow">
-            {/* === GRID MODU === */}
-            {viewMode === 'grid' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {currentProjects.map(project => (
-                  <Link to={`/project/${project.id}`} key={project.id}>
-                    <div className="bg-gray-800 p-6 rounded-lg shadow-md hover:shadow-xl hover:border-blue-500 border-2 border-transparent transition-all duration-300 h-full flex flex-col justify-between">
-                      <div>
-                        <div className="flex justify-between items-start mb-2">
-                          <h3 className="text-xl font-bold text-white truncate pr-2" title={project.name}>{project.name}</h3>
-                          {project.is_public && (
-                            <div title="Public Project" className="text-green-400 bg-green-400/10 p-1 rounded-full">
-                              <FiGlobe size={16} />
-                            </div>
-                          )}
-                        </div>
-                        <p className="text-gray-400 text-sm line-clamp-3">{project.description}</p>
-                      </div>
-                      <div className="mt-4 pt-4 border-t border-gray-700 flex items-center justify-between text-xs text-gray-500">
-                        <div className="flex items-center">
-                          <FiClock className="mr-2" />
-                          Updated: {new Date(project.last_updated_at).toLocaleDateString()}
-                        </div>
-                        {project.is_public && <span className="text-green-500 font-semibold">Public</span>}
-                      </div>
+        <>
+          {/* === GÖRÜNÜM 1: GRID (IZGARA) MODU === */}
+          {viewMode === 'grid' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {myProjects.map(project => (
+                <Link to={`/project/${project.id}`} key={project.id}>
+                  <div className="bg-gray-800 p-6 rounded-lg shadow-md hover:shadow-xl hover:border-blue-500 border-2 border-transparent transition-all duration-300 h-full flex flex-col justify-between">
+                    <div>
+                      <h3 className="text-xl font-bold text-white mb-2 truncate" title={project.name}>{project.name}</h3>
+                      <p className="text-gray-400 text-sm line-clamp-3">{project.description}</p>
                     </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-
-            {/* === LIST MODU === */}
-            {viewMode === 'list' && (
-              <div className="flex flex-col space-y-3">
-                {currentProjects.map(project => (
-                  <Link to={`/project/${project.id}`} key={project.id}>
-                    <div className="bg-gray-800 p-4 rounded-lg border border-gray-700 hover:border-blue-500 transition-all flex items-center justify-between group">
-                      <div className="flex-1 min-w-0 mr-4">
-                        <div className="flex items-center">
-                          <h3 className="text-lg font-bold text-white group-hover:text-blue-400 transition-colors truncate mr-3">
-                            {project.name}
-                          </h3>
-                          {project.is_public && (
-                            <span className="flex items-center text-xs text-green-500 bg-green-900/20 px-2 py-0.5 rounded border border-green-900/30">
-                              <FiGlobe className="mr-1 w-3 h-3" /> Public
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-gray-400 text-sm truncate mt-1">
-                          {project.description || "No description provided."}
-                        </p>
-                      </div>
-                      <div className="flex-shrink-0 text-right">
-                        <span className="text-xs text-gray-500 flex items-center bg-gray-900 px-3 py-1 rounded-full">
-                          <FiClock className="mr-2" />
-                          {new Date(project.last_updated_at).toLocaleDateString()}
-                        </span>
-                      </div>
+                    <div className="mt-4 pt-4 border-t border-gray-700 flex items-center text-xs text-gray-500">
+                      <FiClock className="mr-2" />
+                      Updated: {new Date(project.last_updated_at).toLocaleDateString()}
                     </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* === PAGINATION BAR === */}
-          {/* GÜNCELLEME: mt-6 yerine mt-2 yapıldı. Çizgiye daha yakın. */}
-          {myProjects.length > projectsPerPage && (
-            <div className="flex justify-center items-center mt-2 pt-4 border-t border-gray-800">
-              <button
-                onClick={prevPage}
-                disabled={currentPage === 1}
-                className={`p-2 rounded-md border border-gray-700 ${
-                  currentPage === 1 
-                    ? 'text-gray-600 cursor-not-allowed bg-gray-800/50' 
-                    : 'text-white bg-gray-800 hover:bg-gray-700 hover:border-blue-500'
-                }`}
-              >
-                <FiChevronLeft size={20} />
-              </button>
-
-              <div className="flex space-x-1 mx-2">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
-                  <button
-                    key={number}
-                    onClick={() => paginate(number)}
-                    className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                      currentPage === number
-                        ? 'bg-blue-600 text-white shadow-lg'
-                        : 'bg-gray-800 text-gray-400 border border-gray-700 hover:bg-gray-700 hover:text-white'
-                    }`}
-                  >
-                    {number}
-                  </button>
-                ))}
-              </div>
-
-              <button
-                onClick={nextPage}
-                disabled={currentPage === totalPages}
-                className={`p-2 rounded-md border border-gray-700 ${
-                  currentPage === totalPages 
-                    ? 'text-gray-600 cursor-not-allowed bg-gray-800/50' 
-                    : 'text-white bg-gray-800 hover:bg-gray-700 hover:border-blue-500'
-                }`}
-              >
-                <FiChevronRight size={20} />
-              </button>
+                  </div>
+                </Link>
+              ))}
             </div>
           )}
-        </div>
+
+          {/* === GÖRÜNÜM 2: LIST (LİSTE) MODU === */}
+          {viewMode === 'list' && (
+            <div className="flex flex-col space-y-3">
+              {myProjects.map(project => (
+                <Link to={`/project/${project.id}`} key={project.id}>
+                  <div className="bg-gray-800 p-4 rounded-lg border border-gray-700 hover:border-blue-500 transition-all flex items-center justify-between group">
+                    <div className="flex-1 min-w-0 mr-4">
+                      <h3 className="text-lg font-bold text-white group-hover:text-blue-400 transition-colors truncate">
+                        {project.name}
+                      </h3>
+                      <p className="text-gray-400 text-sm truncate">
+                        {project.description || "No description provided."}
+                      </p>
+                    </div>
+                    <div className="flex-shrink-0 text-right">
+                      <span className="text-xs text-gray-500 flex items-center bg-gray-900 px-3 py-1 rounded-full">
+                        <FiClock className="mr-2" />
+                        {new Date(project.last_updated_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       <CreateProjectModal 
