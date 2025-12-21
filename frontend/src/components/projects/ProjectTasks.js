@@ -2,14 +2,15 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useProjectContext } from '../../context/ProjectContext';
+import api from '../../services/api'; // <--- BU SATIR EKLENDİ (ÖNEMLİ)
 import { 
   FiPlus, FiCheckCircle, FiLoader, FiClock, FiLock, 
   FiMoreVertical, FiEdit, FiTrash2, FiSave, FiX, FiUser 
 } from 'react-icons/fi';
 
 export default function ProjectTasks() {
-  // Context'ten gerekli fonksiyonları alıyoruz (deleteTask ve updateTask eklendi varsayıyoruz)
-  const { currentProject, fetchTasks, createTask, updateTaskStatus, deleteTask, updateTask } = useProjectContext();
+  // Context'ten sadece create ve delete fonksiyonlarını alıyoruz
+  const { currentProject, fetchTasks, createTask, deleteTask, updateTask } = useProjectContext();
   
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,7 +19,7 @@ export default function ProjectTasks() {
   
   const projectId = currentProject?.id;
   const userRole = currentProject?.currentUserRole;
-  const canEdit = userRole !== 'public_viewer'; // Sadece üyeler düzenleyebilir
+  const canEdit = userRole !== 'public_viewer'; 
 
   // Görevleri Yükle
   useEffect(() => {
@@ -26,7 +27,7 @@ export default function ProjectTasks() {
       setLoading(true);
       fetchTasks(projectId).then(data => {
         if (data === null) {
-          setAccessDenied(true); // Görevler gizli
+          setAccessDenied(true); 
         } else {
           setTasks(data);
           setAccessDenied(false);
@@ -58,15 +59,43 @@ export default function ProjectTasks() {
     }
   };
 
-  // Görev Durumu Değiştir (Sürükle-Bırak Mantığı)
-  const moveTask = async (task, newStatus) => {
-    // Optimistic update
+  // === DÜZELTME BURADA: Görev Taşıma ve API İsteği ===
+ const moveTask = async (task, newStatus) => {
+    // 1. DIAGNOSTIC: Check if Token exists in Browser Storage
+    const savedToken = localStorage.getItem('token');
+    
+    if (!savedToken) {
+      alert("CRITICAL ERROR: You are NOT logged in!\n\nReason: 'token' is missing from localStorage.\n\nSolution: Please Log Out and Log In again.");
+      console.error("Local Storage is empty!", localStorage);
+      return; 
+    }
+
+    // 2. Optimistic Update
+    const previousTasks = [...tasks];
     const updatedList = tasks.map(t => t.id === task.id ? { ...t, status: newStatus } : t);
     setTasks(updatedList);
+
+    // 3. Send Request
     try {
-      await updateTaskStatus(projectId, task.id, newStatus);
+        console.log(`📡 Sending Request with Token: ${savedToken.substring(0, 10)}...`);
+        
+        await api.put(`/api/projects/${projectId}/tasks/${task.id}`, {
+            status: newStatus
+        });
+
+        console.log("✅ Success!");
+
     } catch (error) {
-      console.error("Failed to move task:", error);
+      console.error("❌ Error:", error);
+      setTasks(previousTasks); // Rollback
+
+      if (error.response && error.response.status === 401) {
+         alert("ERROR 401: The token exists but is invalid or expired.\n\nPlease Log Out and Log In again.");
+      } else if (error.response) {
+         alert(`SERVER ERROR (${error.response.status}): ${JSON.stringify(error.response.data)}`);
+      } else {
+         alert(`ERROR: ${error.message}`);
+      }
     }
   };
 
@@ -104,24 +133,19 @@ export default function ProjectTasks() {
   const handleDrop = (e, newStatus) => {
     e.preventDefault();
     const taskId = e.dataTransfer.getData("taskId");
-    const task = tasks.find(t => t.id === taskId);
+    const task = tasks.find(t => t.id === Number(taskId) || t.id === taskId); // ID tip dönüşümü kontrolü
     
     if (task && task.status !== newStatus) {
       moveTask(task, newStatus);
     }
   };
 
-  // === İLERLEME DURUMU HESAPLA (GÜNCELLENDİ) ===
+  // === İLERLEME DURUMU HESAPLA ===
   const totalTasks = tasks.length;
-  
-  // Done = 1 puan, In Progress = 0.5 puan
   const doneCount = tasks.filter(t => t.status === 'done').length;
   const inProgressCount = tasks.filter(t => t.status === 'in_progress').length;
-  
   const weightedScore = doneCount + (inProgressCount * 0.5);
-  
   const progressPercentage = totalTasks === 0 ? 0 : Math.round((weightedScore / totalTasks) * 100);
-
 
   if (loading) return <div className="p-10 flex justify-center"><FiLoader className="animate-spin text-blue-500" size={30}/></div>;
 
@@ -219,7 +243,9 @@ export default function ProjectTasks() {
   );
 }
 
-// Kanban Kolonu Bileşeni
+// Kanban Kolonu ve TaskItem bileşenleri aynı kalacak...
+// Sadece TaskItem içinde Draggable özelliği için onDragStart prop'unu doğru geçirdiğimizden emin oluyoruz.
+
 function KanbanColumn({ title, status, tasks, borderColor, badgeColor, canEdit, onMove, onDelete, onUpdate, onDragOver, onDrop, onDragStart }) {
   const columnTasks = tasks.filter(t => t.status === status);
 
@@ -254,14 +280,12 @@ function KanbanColumn({ title, status, tasks, borderColor, badgeColor, canEdit, 
   );
 }
 
-// Tekil Görev Bileşeni (Task Item)
 function TaskItem({ task, canEdit, status, onMove, onDelete, onUpdate, onDragStart }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
   const menuRef = useRef(null);
 
-  // Menü dışına tıklamayı dinle
   useEffect(() => {
     function handleClickOutside(event) {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -337,13 +361,11 @@ function TaskItem({ task, canEdit, status, onMove, onDelete, onUpdate, onDragSta
           </div>
           
           <div className="flex flex-col gap-1 mt-2">
-             {/* Oluşturan Kişi Bilgisi */}
              <div className="flex items-center text-xs text-gray-400">
                <FiUser className="mr-1.5 w-3 h-3" />
                <span>Created by: <span className="text-gray-300">{task.created_by_name || 'Unknown'}</span></span>
              </div>
              
-             {/* Tarih Bilgisi */}
              <div className="flex items-center text-xs text-gray-500">
                 <FiClock className="mr-1.5 w-3 h-3"/> 
                 {new Date(task.created_at).toLocaleDateString()}

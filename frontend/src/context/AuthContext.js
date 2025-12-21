@@ -1,138 +1,57 @@
-// src/context/AuthContext.js
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import api from '../services/api';
 
-import React, { createContext, useState, useContext } from 'react';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+const AuthContext = createContext();
 
-const API_URL = 'http://localhost:5000/api/auth';
+export function useAuth() {
+  return useContext(AuthContext);
+}
 
-export const AuthContext = createContext();
-export const useAuth = () => useContext(AuthContext);
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [loading, setLoading] = useState(true);
 
-// localStorage'dan 'user' verisini güvenli bir şekilde okuyan fonksiyon
-const getInitialUser = () => {
-  try {
-    const storedUser = localStorage.getItem('authUser');
-    return storedUser ? JSON.parse(storedUser) : null;
-  } catch (error) {
-    console.error("Failed to parse authUser from localStorage", error);
-    localStorage.removeItem('authUser'); 
-    return null;
-  }
-};
+  // Sayfa yenilenince token varsa kullanıcıyı hatırla
+  useEffect(() => {
+    const storedToken = localStorage.getItem('token');
+    if (storedToken) {
+      setToken(storedToken);
+      // Backend'den kullanıcıyı çekmek yerine oturumu açık sayıyoruz (Hata riskini azaltmak için)
+      setUser({ name: "User" }); 
+    }
+    setLoading(false);
+  }, []);
 
-export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(localStorage.getItem('authToken'));
-  const [user, setUser] = useState(getInitialUser()); 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const navigate = useNavigate();
-
-  // GİRİŞ FONKSİYONU (Değişiklik yok)
   const login = async (username, password) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await axios.post(`${API_URL}/login`, {
-        username,
-        password,
-      });
-
-      const { token, user } = response.data; 
-
-      localStorage.setItem('authToken', token);
-      localStorage.setItem('authUser', JSON.stringify(user)); 
-      setToken(token);
-      setUser(user); 
-
-      navigate('/dashboard'); 
-
-    } catch (err) {
-      const message = err.response?.data?.message || 'Login failed. Please try again.';
-      setError(message);
-      console.error(err);
-      throw new Error(message); 
-    } finally {
-      setLoading(false);
+    const res = await api.post('/api/auth/login', { username, password });
+    if (res.data.token) {
+      localStorage.setItem('token', res.data.token);
+      setToken(res.data.token);
+      setUser(res.data.user);
+      return true;
     }
   };
 
-  // === KAYIT FONKSİYONU (GÜNCELLENDİ) ===
   const register = async (username, email, password) => {
-    setLoading(true);
-    setError(null);
-    try {
-      // 1. Artık 'email' verisini de gönderiyoruz
-      const response = await axios.post(`${API_URL}/register`, {
-        username,
-        email,
-        password,
-      });
-      return response.data;
-    } catch (err) {
-      const message = err.response?.data?.message || 'Registration failed. Please try again.';
-      setError(message);
-      console.error(err);
-      throw new Error(message);
-    } finally {
-      setLoading(false);
-    }
-  };
-const forgotPassword = async (email) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await axios.post(`${API_URL}/forgot-password`, { email });
-      return response.data;
-    } catch (err) {
-      const message = err.response?.data?.message || 'Failed to send reset link.';
-      setError(message);
-      throw new Error(message);
-    } finally {
-      setLoading(false);
+    const res = await api.post('/api/auth/register', { username, email, password });
+    if (res.data.token) {
+      localStorage.setItem('token', res.data.token);
+      setToken(res.data.token);
+      setUser(res.data.user);
     }
   };
 
-  const resetPassword = async (token, newPassword) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await axios.post(`${API_URL}/reset-password`, { token, newPassword });
-      return response.data;
-    } catch (err) {
-      const message = err.response?.data?.message || 'Failed to reset password.';
-      setError(message);
-      throw new Error(message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
- 
-
-
-
-  // ÇIKIŞ FONKSİYONU (Değişiklik yok)
   const logout = () => {
+    localStorage.removeItem('token');
     setToken(null);
     setUser(null);
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('authUser');
-    navigate('/login');
+    window.location.href = '/login';
   };
 
-  // Context'in tüm component'lere sağlayacağı değerler
-  const value = {
-    token,
-    user,
-    loading,
-    error,
-    login,
-    register, // Güncellenmiş 'register' fonksiyonu
-    logout,
-    forgotPassword,
-    resetPassword
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
+  return (
+    <AuthContext.Provider value={{ user, token, login, register, logout, loading }}>
+      {!loading && children}
+    </AuthContext.Provider>
+  );
+}

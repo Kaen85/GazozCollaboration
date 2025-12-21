@@ -1,10 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db'); // Database connection
+const db = require('../db'); 
 const multer = require('multer');
 const path = require('path');
+// ÖNEMLİ: Auth middleware buraya eklendi
+const auth = require('../middleware/auth'); 
 
-// === FILE UPLOAD SETTINGS (MULTER) ===
+// === MULTER AYARLARI ===
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, 'uploads/'),
   filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
@@ -12,14 +14,16 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // =================================
-// MIDDLEWARE (GATEKEEPER)
+// YETKİ KONTROLÜ (MIDDLEWARE)
 // =================================
 const checkProjectMember = async (req, res, next) => {
   try {
     const projectId = req.params.id; 
     const userId = req.user.id; 
+    // Auth middleware'den gelen rolü alıyoruz
+    const userRole = req.user.role; 
 
-    // 1. Check if project exists and is Public
+    // 1. Proje var mı diye bak
     const projectCheck = await db.query(
       'SELECT is_public, owner_id, is_tasks_public FROM projects WHERE id = $1',
       [projectId]
@@ -31,7 +35,16 @@ const checkProjectMember = async (req, res, next) => {
 
     const project = projectCheck.rows[0];
 
-    // 2. Check membership
+    // === ADMIN KONTROLÜ (YENİ) ===
+    // Eğer kullanıcı Admin ise, veritabanı üyeliğine bakmaksızın 'owner' yetkisi ver.
+    if (userRole === 'admin') {
+        req.projectId = projectId;
+        req.memberRole = 'owner'; // Admin her zaman 'owner' yetkisine sahiptir
+        req.projectSettings = project; 
+        return next(); // Direkt geçiş izni
+    }
+
+    // 2. Admin değilse normal üyelik kontrolü yap
     const memberCheck = await db.query(
       'SELECT role FROM project_members WHERE project_id = $1 AND user_id = $2',
       [projectId, userId]
@@ -39,7 +52,6 @@ const checkProjectMember = async (req, res, next) => {
 
     const memberRole = memberCheck.rows[0]?.role; 
 
-    // === PERMISSION LOGIC ===
     if (memberRole) {
       req.projectId = projectId;
       req.memberRole = memberRole;
@@ -60,61 +72,36 @@ const checkProjectMember = async (req, res, next) => {
 };
 
 // =================================
-// 1. PROJECT MANAGEMENT (MAIN ROUTES)
+// 1. PROJE YÖNETİMİ
 // =================================
 
-// @route   POST /api/projects
-// @desc    Create new project
-router.post('/', async (req, res) => {
-  const { name, description } = req.body;
-  const ownerId = req.user.id; 
+// ÖNEMLİ: Çakışmayı önlemek için özel rotaları en üste koyduk.
 
+// @route   GET /api/projects/user/all-tasks
+router.get('/user/all-tasks', auth, async (req, res) => {
+  const userId = req.user.id;
   try {
-    const existingProject = await db.query('SELECT id FROM projects WHERE name = $1', [name]);
-    if (existingProject.rows.length > 0) {
-      return res.status(400).json({ message: 'A project with this name already exists.' });
-    }
-
-    await db.query('BEGIN'); 
-    
-    const newProjectQuery = `
-      INSERT INTO projects (name, description, owner_id)
-      VALUES ($1, $2, $3)
-      RETURNING * `; 
-    const newProject = await db.query(newProjectQuery, [name, description, ownerId]);
-    const projectId = newProject.rows[0].id;
-    
-    await db.query(
-      'INSERT INTO project_members (project_id, user_id, role) VALUES ($1, $2, $3)',
-      [projectId, ownerId, 'owner']
-    );
-    
-    await db.query('COMMIT'); 
-    res.status(201).json(newProject.rows[0]);
-  } catch (err) {
-    await db.query('ROLLBACK'); 
-    console.error(err.message);
-    res.status(500).send('Server error');
-  }
-});
-
-// @route   GET /api/projects (All Projects I am a member of)
-router.get('/', async (req, res) => {
-  try {
-    const projects = await db.query(`
-      SELECT p.* FROM projects p
+    const query = `
+      SELECT 
+        t.id, t.title, t.status, t.due_date, t.created_at,
+        p.id as project_id, p.name as project_name
+      FROM project_tasks t
+      JOIN projects p ON t.project_id = p.id
       JOIN project_members pm ON p.id = pm.project_id
       WHERE pm.user_id = $1
-      ORDER BY p.last_updated_at DESC
-    `, [req.user.id]);
-    res.json(projects.rows);
-  } catch (err) { 
-    res.status(500).send('Server error');
+      ORDER BY t.created_at DESC
+      LIMIT 10
+    `;
+    const result = await db.query(query, [userId]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
   }
 });
 
-// @route   GET /api/projects/my-projects (Projects I Own)
-router.get('/my-projects', async (req, res) => {
+// @route   GET /api/projects/my-projects
+router.get('/my-projects', auth, async (req, res) => {
   try {
     const projects = await db.query(`
       SELECT * FROM projects
@@ -127,13 +114,26 @@ router.get('/my-projects', async (req, res) => {
   }
 });
 
-// @route   GET /api/projects/shared-projects (Shared + Public)
-// === GÜNCELLEME BURADA: Public projeler için 'created_at' tarihini 'joined_at' olarak gönderiyoruz ===
-router.get('/shared-projects', async (req, res) => {
+// @route   GET /api/projects/shared-projects
+router.get('/shared-projects', auth, async (req, res) => {
   try {
+    // EĞER ADMIN İSE: Kendi oluşturmadığı TÜM projeleri "Shared" gibi görsün
+    if (req.user.role === 'admin') {
+      const projects = await db.query(`
+        SELECT p.id, p.name, p.description, p.owner_id, p.created_at, p.last_updated_at, p.is_public,
+          p.created_at as joined_at,
+          u.username as owner_name
+        FROM projects p
+        JOIN users u ON p.owner_id = u.id
+        WHERE p.owner_id != $1 -- Kendisinin olmayanlar
+        ORDER BY p.last_updated_at DESC
+      `, [req.user.id]);
+      return res.json(projects.rows);
+    }
+
+    // NORMAL KULLANICI İÇİN (Eski kodun aynısı)
     const projects = await db.query(`
       (
-        -- 1. Private Shared (Joined date exists)
         SELECT p.id, p.name, p.description, p.owner_id, p.created_at, p.last_updated_at, p.is_public,
           pm.joined_at,
           u.username as owner_name
@@ -144,9 +144,8 @@ router.get('/shared-projects', async (req, res) => {
       )
       UNION
       (
-        -- 2. Public Projects (Use created_at as joined_at)
         SELECT p.id, p.name, p.description, p.owner_id, p.created_at, p.last_updated_at, p.is_public,
-          p.created_at as joined_at, -- NULL yerine created_at kullanıyoruz
+          p.created_at as joined_at,
           u.username as owner_name
         FROM projects p
         JOIN users u ON p.owner_id = u.id
@@ -160,8 +159,76 @@ router.get('/shared-projects', async (req, res) => {
   }
 });
 
-// @route   GET /api/projects/:id (Details)
-router.get('/:id', checkProjectMember, async (req, res) => {
+// @route   POST /api/projects (Yeni Proje)
+router.post('/', auth, async (req, res) => {
+  const { name, description } = req.body;
+  const ownerId = req.user.id; 
+
+  try {
+    const existingProject = await db.query('SELECT id FROM projects WHERE name = $1', [name]);
+    if (existingProject.rows.length > 0) {
+      return res.status(400).json({ message: 'A project with this name already exists.' });
+    }
+
+    await db.query('BEGIN'); 
+    
+    const newProject = await db.query(`
+      INSERT INTO projects (name, description, owner_id)
+      VALUES ($1, $2, $3)
+      RETURNING * `, [name, description, ownerId]);
+      
+    const projectId = newProject.rows[0].id;
+    
+    await db.query(
+      'INSERT INTO project_members (project_id, user_id, role) VALUES ($1, $2, $3)',
+      [projectId, ownerId, 'owner']
+    );
+    
+    await db.query('COMMIT'); 
+    res.status(201).json(newProject.rows[0]);
+  } catch (err) {
+    await db.query('ROLLBACK'); 
+    res.status(500).send('Server error');
+  }
+});
+
+// @route   GET /api/projects (Tüm projeler)
+router.get('/', auth, async (req, res) => {
+  try {
+    let query;
+    let params;
+
+    // EĞER ADMIN İSE: Veritabanındaki BÜTÜN projeleri getir
+    if (req.user.role === 'admin') {
+      query = `
+        SELECT p.*, 'owner' as user_role 
+        FROM projects p 
+        ORDER BY p.last_updated_at DESC
+      `;
+      params = [];
+    } 
+    // EĞER NORMAL KULLANICI İSE: Sadece üye olduklarını getir
+    else {
+      query = `
+        SELECT p.*, pm.role as user_role 
+        FROM projects p 
+        JOIN project_members pm ON p.id = pm.project_id 
+        WHERE pm.user_id = $1 
+        ORDER BY p.last_updated_at DESC
+      `;
+      params = [req.user.id];
+    }
+
+    const projects = await db.query(query, params);
+    res.json(projects.rows);
+  } catch (err) { 
+    console.error(err);
+    res.status(500).send('Server error');
+  }
+});
+
+// @route   GET /api/projects/:id (Detay)
+router.get('/:id', auth, checkProjectMember, async (req, res) => {
   try {
     const project = await db.query('SELECT * FROM projects WHERE id = $1', [req.projectId]);
     const data = project.rows[0];
@@ -172,47 +239,40 @@ router.get('/:id', checkProjectMember, async (req, res) => {
   }
 });
 
-// @route   PUT /api/projects/:id (Update)
-router.put('/:id', checkProjectMember, async (req, res) => {
+// @route   PUT /api/projects/:id (Güncelle)
+router.put('/:id', auth, checkProjectMember, async (req, res) => {
   if (req.memberRole !== 'owner') {
     return res.status(403).json({ message: 'Only the project owner can update details.' });
   }
-
   const { name, description, long_description } = req.body;
-
   try {
     const updatedProject = await db.query(
       'UPDATE projects SET name = $1, description = $2, long_description = $3, last_updated_at = NOW() WHERE id = $4 RETURNING *',
       [name, description, long_description, req.projectId]
     );
-    
     const projectData = updatedProject.rows[0];
     projectData.currentUserRole = req.memberRole;
-    
     res.json(projectData);
   } catch (err) {
-    console.error(err.message);
     res.status(500).send('Server Error');
   }
 });
 
-// @route   DELETE /api/projects/:id (Delete)
-router.delete('/:id', checkProjectMember, async (req, res) => {
+// @route   DELETE /api/projects/:id
+router.delete('/:id', auth, checkProjectMember, async (req, res) => {
   if (req.memberRole !== 'owner') {
-    return res.status(403).json({ message: 'Only the project owner can delete the project.' });
+    return res.status(403).json({ message: 'Only owner can delete.' });
   }
-
   try {
     await db.query('DELETE FROM projects WHERE id = $1', [req.projectId]);
     res.json({ message: 'Project deleted successfully' });
   } catch (err) {
-    console.error(err.message);
     res.status(500).send('Server Error');
   }
 });
 
-// @route   PUT /visibility (Public/Private)
-router.put('/:id/visibility', checkProjectMember, async (req, res) => {
+// @route   PUT /visibility
+router.put('/:id/visibility', auth, checkProjectMember, async (req, res) => {
   if (req.memberRole !== 'owner') return res.status(403).json({ message: 'Only owner.' });
   try {
     const upd = await db.query(
@@ -229,7 +289,7 @@ router.put('/:id/visibility', checkProjectMember, async (req, res) => {
 // 2. TASKS (KANBAN)
 // =================================
 
-router.put('/:id/settings/tasks-visibility', checkProjectMember, async (req, res) => {
+router.put('/:id/settings/tasks-visibility', auth, checkProjectMember, async (req, res) => {
   if (req.memberRole !== 'owner') return res.status(403).json({ message: 'Only owner.' });
   try {
     const upd = await db.query('UPDATE projects SET is_tasks_public = $1 WHERE id = $2 RETURNING is_tasks_public', [req.body.is_tasks_public, req.projectId]);
@@ -237,7 +297,7 @@ router.put('/:id/settings/tasks-visibility', checkProjectMember, async (req, res
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
-router.get('/:id/tasks', checkProjectMember, async (req, res) => {
+router.get('/:id/tasks', auth, checkProjectMember, async (req, res) => {
   if (req.memberRole === 'public_viewer' && !req.projectSettings.is_tasks_public) {
     return res.status(403).json({ message: 'Tasks are private.' });
   }
@@ -250,7 +310,7 @@ router.get('/:id/tasks', checkProjectMember, async (req, res) => {
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
-router.post('/:id/tasks', checkProjectMember, async (req, res) => {
+router.post('/:id/tasks', auth, checkProjectMember, async (req, res) => {
   if (req.memberRole === 'public_viewer') return res.status(403).json({ message: 'Read-only.' });
   const { title, description, status, due_date } = req.body;
   try {
@@ -265,7 +325,7 @@ router.post('/:id/tasks', checkProjectMember, async (req, res) => {
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
-router.put('/:id/tasks/:taskId', checkProjectMember, async (req, res) => {
+router.put('/:id/tasks/:taskId', auth, checkProjectMember, async (req, res) => {
   if (req.memberRole === 'public_viewer') return res.status(403).json({ message: 'Read-only.' });
   const { title, status } = req.body;
   const { taskId } = req.params;
@@ -282,7 +342,7 @@ router.put('/:id/tasks/:taskId', checkProjectMember, async (req, res) => {
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
-router.delete('/:id/tasks/:taskId', checkProjectMember, async (req, res) => {
+router.delete('/:id/tasks/:taskId', auth, checkProjectMember, async (req, res) => {
   if (req.memberRole === 'public_viewer') return res.status(403).json({ message: 'Read-only.' });
   try {
     await db.query('DELETE FROM project_tasks WHERE id = $1', [req.params.taskId]);
@@ -290,39 +350,11 @@ router.delete('/:id/tasks/:taskId', checkProjectMember, async (req, res) => {
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
-router.get('/user/all-tasks', async (req, res) => {
-  const userId = req.user.id;
-  try {
-    // Bu sorgu şunları yapar:
-    // 1. project_tasks tablosundan görevleri al (t)
-    // 2. projects tablosuyla birleştir (p) -> Proje adını almak için
-    // 3. project_members tablosuyla birleştir (pm) -> SADECE kullanıcının üye olduğu projeleri filtrelemek için
-    // 4. Son 10 görevi, en yeniye göre sırala
-    const query = `
-      SELECT 
-        t.id, t.title, t.status, t.due_date, t.created_at,
-        p.id as project_id, p.name as project_name
-      FROM project_tasks t
-      JOIN projects p ON t.project_id = p.id
-      JOIN project_members pm ON p.id = pm.project_id
-      WHERE pm.user_id = $1
-      ORDER BY t.created_at DESC
-      LIMIT 10
-    `;
-    
-    const result = await db.query(query, [userId]);
-    res.json(result.rows);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
-  }
-});
-
 // =================================
 // 3. ISSUES
 // =================================
 
-router.get('/:id/issues', checkProjectMember, async (req, res) => {
+router.get('/:id/issues', auth, checkProjectMember, async (req, res) => {
   try {
     const issues = await db.query(
       'SELECT pi.*, u.username as created_by_name FROM project_issues pi JOIN users u ON pi.created_by_id = u.id WHERE pi.project_id = $1 ORDER BY pi.created_at DESC',
@@ -332,7 +364,7 @@ router.get('/:id/issues', checkProjectMember, async (req, res) => {
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
-router.post('/:id/issues', checkProjectMember, async (req, res) => {
+router.post('/:id/issues', auth, checkProjectMember, async (req, res) => {
   if (req.memberRole === 'viewer' || req.memberRole === 'public_viewer') return res.status(403).json({ message: 'No permission.' });
   try {
     const newIssue = await db.query(
@@ -346,7 +378,7 @@ router.post('/:id/issues', checkProjectMember, async (req, res) => {
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
-router.put('/:id/issues/:issueId', checkProjectMember, async (req, res) => {
+router.put('/:id/issues/:issueId', auth, checkProjectMember, async (req, res) => {
   if (req.memberRole !== 'owner' && req.memberRole !== 'editor') return res.status(403).json({ message: 'No permission.' });
   const { text, status } = req.body;
   try {
@@ -365,7 +397,7 @@ router.put('/:id/issues/:issueId', checkProjectMember, async (req, res) => {
 // 4. COMMENTS
 // =================================
 
-router.get('/:id/comments', checkProjectMember, async (req, res) => {
+router.get('/:id/comments', auth, checkProjectMember, async (req, res) => {
   try {
     const comments = await db.query(
       'SELECT c.*, u.username as author_name, c.likes_user_ids FROM comments c JOIN users u ON c.author_id = u.id WHERE c.project_id = $1 AND c.issue_id IS NULL ORDER BY c.created_at ASC',
@@ -375,7 +407,7 @@ router.get('/:id/comments', checkProjectMember, async (req, res) => {
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
-router.post('/:id/comments', checkProjectMember, async (req, res) => {
+router.post('/:id/comments', auth, checkProjectMember, async (req, res) => {
   try {
     const newComment = await db.query(
       'INSERT INTO comments (project_id, author_id, text) VALUES ($1, $2, $3) RETURNING *',
@@ -389,7 +421,7 @@ router.post('/:id/comments', checkProjectMember, async (req, res) => {
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
-router.get('/:id/issues/:issueId/comments', checkProjectMember, async (req, res) => {
+router.get('/:id/issues/:issueId/comments', auth, checkProjectMember, async (req, res) => {
   try {
     const comments = await db.query(
       'SELECT c.*, u.username as author_name, c.likes_user_ids FROM comments c JOIN users u ON c.author_id = u.id WHERE c.issue_id = $1 ORDER BY c.created_at ASC',
@@ -399,7 +431,7 @@ router.get('/:id/issues/:issueId/comments', checkProjectMember, async (req, res)
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
-router.post('/:id/issues/:issueId/comments', checkProjectMember, async (req, res) => {
+router.post('/:id/issues/:issueId/comments', auth, checkProjectMember, async (req, res) => {
   try {
     const issueCheck = await db.query('SELECT status FROM project_issues WHERE id = $1', [req.params.issueId]);
     if (issueCheck.rows[0].status === 'Closed') return res.status(403).json({ message: 'Issue is closed.' });
@@ -415,7 +447,7 @@ router.post('/:id/issues/:issueId/comments', checkProjectMember, async (req, res
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
-router.put('/:id/comments/:commentId', checkProjectMember, async (req, res) => {
+router.put('/:id/comments/:commentId', auth, checkProjectMember, async (req, res) => {
   try {
     let q = 'UPDATE comments SET text = $1 WHERE id = $2 AND author_id = $3 RETURNING *';
     let p = [req.body.text, req.params.commentId, req.user.id];
@@ -429,7 +461,7 @@ router.put('/:id/comments/:commentId', checkProjectMember, async (req, res) => {
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
-router.delete('/:id/comments/:commentId', checkProjectMember, async (req, res) => {
+router.delete('/:id/comments/:commentId', auth, checkProjectMember, async (req, res) => {
   try {
     let q = 'DELETE FROM comments WHERE id = $1 AND author_id = $2 RETURNING *';
     let p = [req.params.commentId, req.user.id];
@@ -440,7 +472,7 @@ router.delete('/:id/comments/:commentId', checkProjectMember, async (req, res) =
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
-router.post('/:id/comments/:commentId/like', checkProjectMember, async (req, res) => {
+router.post('/:id/comments/:commentId/like', auth, checkProjectMember, async (req, res) => {
    try {
      const c = await db.query('SELECT likes_user_ids FROM comments WHERE id = $1', [req.params.commentId]);
      if(c.rows.length===0) return res.status(404).json({message:'Not found'});
@@ -456,14 +488,14 @@ router.post('/:id/comments/:commentId/like', checkProjectMember, async (req, res
 // =================================
 // 5. MEMBERS
 // =================================
-router.get('/:id/members', checkProjectMember, async (req, res) => {
+router.get('/:id/members', auth, checkProjectMember, async (req, res) => {
   try {
     const m = await db.query('SELECT u.id, u.username, pm.role FROM project_members pm LEFT JOIN users u ON pm.user_id = u.id WHERE pm.project_id = $1', [req.projectId]);
     res.json(m.rows);
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
-router.post('/:id/members', checkProjectMember, async (req, res) => {
+router.post('/:id/members', auth, checkProjectMember, async (req, res) => {
   if (req.memberRole !== 'owner' && req.memberRole !== 'editor') return res.status(403).json({message:'Denied'});
   const { username, role } = req.body;
   try {
@@ -477,7 +509,7 @@ router.post('/:id/members', checkProjectMember, async (req, res) => {
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
-router.delete('/:id/members/:userId', checkProjectMember, async (req, res) => {
+router.delete('/:id/members/:userId', auth, checkProjectMember, async (req, res) => {
   if (req.memberRole !== 'owner') return res.status(403).json({message:'Denied'});
   if (req.params.userId === req.user.id) return res.status(400).json({message:'Cannot remove owner'});
   try {
@@ -490,14 +522,14 @@ router.delete('/:id/members/:userId', checkProjectMember, async (req, res) => {
 // =================================
 // 6. FILES
 // =================================
-router.get('/:id/files', checkProjectMember, async (req, res) => {
+router.get('/:id/files', auth, checkProjectMember, async (req, res) => {
   try {
     const f = await db.query('SELECT pf.*, u.username as uploader_name FROM project_files pf JOIN users u ON pf.uploader_id = u.id WHERE pf.project_id = $1 ORDER BY pf.created_at DESC', [req.projectId]);
     res.json(f.rows);
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
-router.post('/:id/files', checkProjectMember, upload.single('file'), async (req, res) => {
+router.post('/:id/files', auth, checkProjectMember, upload.single('file'), async (req, res) => {
   if(req.memberRole!=='owner' && req.memberRole!=='editor') return res.status(403).json({message:'Denied'});
   if(!req.file) return res.status(400).json({message:'No file'});
   try {
@@ -509,7 +541,7 @@ router.post('/:id/files', checkProjectMember, upload.single('file'), async (req,
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
-router.delete('/:id/files/:fileId', checkProjectMember, async (req, res) => {
+router.delete('/:id/files/:fileId', auth, checkProjectMember, async (req, res) => {
   if(req.memberRole!=='owner' && req.memberRole!=='editor') return res.status(403).json({message:'Denied'});
   try {
     await db.query('DELETE FROM project_files WHERE id=$1', [req.params.fileId]);

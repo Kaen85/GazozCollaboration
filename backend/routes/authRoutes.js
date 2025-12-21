@@ -1,60 +1,62 @@
-// backend/routes/authRoutes.js
-
 const express = require('express');
 const router = express.Router();
 const db = require('../db'); // Veritabanı bağlantısı
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const auth = require('../middleware/auth'); // <--- EKLENDİ: Middleware importu şart
 require('dotenv').config();
 
-// --- 1. USER REGISTRATION API (HATA KONTROLLÜ) ---
-// @route   POST /api/auth/register
-// @desc    Register a new user
+// --- 1. USER REGISTRATION API ---
 router.post('/register', async (req, res) => {
   const { username, email, password } = req.body;
 
-  // Alanların dolu olup olmadığını kontrol et
   if (!username || !email || !password) {
     return res.status(400).json({ message: 'Please enter all fields' });
   }
 
   try {
-    // === İSTEDİĞİNİZ HATA KONTROLÜ BURADA ===
-    // 1. Veritabanında bu 'username' VEYA 'email' ile eşleşen bir kayıt ara
     const userCheck = await db.query('SELECT * FROM users WHERE username = $1 OR email = $2', [username, email]);
 
-    // 2. Eğer bir kayıt bulunduysa (rows.length > 0)
     if (userCheck.rows.length > 0) {
-      // 3. Bulunan kayıt 'username' ile mi eşleşti?
       if (userCheck.rows[0].username === username) {
-        // Evet -> Kullanıcıyı bilgilendir
         return res.status(400).json({ message: 'Username already exists' });
       }
-      // 4. Bulunan kayıt 'email' ile mi eşleşti?
       if (userCheck.rows[0].email === email) {
-        // Evet -> Kullanıcıyı bilgilendir
         return res.status(400).json({ message: 'Email already in use' });
       }
     }
-    
 
-
-    // Şifreyi hash'le
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    // Yeni kullanıcıyı (email dahil) veritabanına ekle
+    // Varsayılan rol 'student' olarak kaydediliyor
     const newUser = await db.query(
-      'INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id, username, email',
-      [username, email, passwordHash]
+      'INSERT INTO users (username, email, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, username, email, role',
+      [username, email, passwordHash, 'student']
     );
 
-    // Başarı mesajı döndür
-    res.status(201).json({
-      message: 'User registered successfully',
-      user: newUser.rows[0]
-    });
+    // Token oluştururken rolü de ekliyoruz
+    const payload = {
+      user: {
+        id: newUser.rows[0].id,
+        role: newUser.rows[0].role // <--- TOKEN İÇİNE ROL EKLENDİ
+      }
+    };
+
+    jwt.sign(
+      payload,
+      process.env.JWT_SECRET || 'mysecrettoken',
+      { expiresIn: '30d' },
+      (err, token) => {
+        if (err) throw err;
+        res.status(201).json({
+          message: 'User registered successfully',
+          token,
+          user: newUser.rows[0]
+        });
+      }
+    );
 
   } catch (err) {
     console.error(err.message);
@@ -64,7 +66,6 @@ router.post('/register', async (req, res) => {
 
 
 // --- 2. USER LOGIN API ---
-// (Bu rota aynı kalır)
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
@@ -85,16 +86,17 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Invalid username or password' });
     }
 
+    // === İŞTE BURASI EKSİKTİ ===
     const payload = {
       user: {
         id: user.id,
-        name: user.username
+        role: user.role // <--- TOKEN OLUŞTURULURKEN ARTIK ROL BİLGİSİ İÇİNDE OLACAK
       }
     };
 
     jwt.sign(
       payload,
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || 'mysecrettoken',
       { expiresIn: '30d' }, 
       (err, token) => {
         if (err) throw err;
@@ -103,7 +105,9 @@ router.post('/login', async (req, res) => {
           token,
           user: {
             id: user.id,
-            username: user.username
+            username: user.username,
+            email: user.email,
+            role: user.role
           } 
         });
       }
@@ -114,30 +118,37 @@ router.post('/login', async (req, res) => {
     res.status(500).send('Server error');
   }
 });
-// @route   POST /api/auth/forgot-password
+
+// --- 3. GET USER (SAYFA YENİLENİNCE KULLANICIYI HATIRLAMAK İÇİN) ---
+router.get('/user', auth, async (req, res) => {
+    try {
+      const user = await db.query('SELECT id, username, email, role FROM users WHERE id = $1', [req.user.id]);
+      res.json(user.rows[0]);
+    } catch (err) {
+      console.error(err.message);
+      res.status(500).send('Server Error');
+    }
+});
+
+// --- 4. FORGOT PASSWORD ---
 router.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ message: 'Please provide an email.' });
 
   try {
-    // 1. Kullanıcıyı bul
     const user = await db.query('SELECT * FROM users WHERE email = $1', [email]);
     if (user.rows.length === 0) {
       return res.status(404).json({ message: 'User not found with this email.' });
     }
 
-    // 2. Rastgele bir token oluştur
     const resetToken = crypto.randomBytes(20).toString('hex');
-    // 3. Token'ın geçerlilik süresi (1 saat)
-    const resetExpires = new Date(Date.now() + 3600000); // 1 saat sonra
+    const resetExpires = new Date(Date.now() + 3600000); 
 
-    // 4. Veritabanına kaydet
     await db.query(
       'UPDATE users SET reset_token = $1, reset_token_expires = $2 WHERE email = $3',
       [resetToken, resetExpires, email]
     );
 
-    // 5. E-posta Gönderme Simülasyonu (Gerçek projede burada nodemailer kullanılır)
     const resetUrl = `http://localhost:3000/reset-password?token=${resetToken}`;
     
     console.log("---------------------------------------------------");
@@ -154,8 +165,7 @@ router.post('/forgot-password', async (req, res) => {
   }
 });
 
-// === YENİ: ŞİFREYİ GÜNCELLEME ===
-// @route   POST /api/auth/reset-password
+// --- 5. RESET PASSWORD ---
 router.post('/reset-password', async (req, res) => {
   const { token, newPassword } = req.body;
 
@@ -164,7 +174,6 @@ router.post('/reset-password', async (req, res) => {
   }
 
   try {
-    // 1. Token'ı ve süresini kontrol et
     const user = await db.query(
       'SELECT * FROM users WHERE reset_token = $1 AND reset_token_expires > NOW()',
       [token]
@@ -174,11 +183,9 @@ router.post('/reset-password', async (req, res) => {
       return res.status(400).json({ message: 'Invalid or expired token.' });
     }
 
-    // 2. Yeni şifreyi hash'le
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(newPassword, salt);
 
-    // 3. Şifreyi güncelle ve token'ı temizle
     await db.query(
       'UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expires = NULL WHERE id = $2',
       [passwordHash, user.rows[0].id]

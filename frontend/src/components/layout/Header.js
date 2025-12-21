@@ -1,5 +1,5 @@
 // src/components/layout/Header.js
-
+import api from '../../services/api';
 import React, { useState, useEffect, useRef } from 'react';
 // FiInfo ikonunu ekledik
 import { FiBell, FiChevronDown, FiInfo } from 'react-icons/fi'; 
@@ -12,7 +12,7 @@ import LogoImage from '../../assets/logo.png';
 function Header({ onToggleRightSidebar }) {
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -45,7 +45,7 @@ function Header({ onToggleRightSidebar }) {
 
         <div className="flex items-center space-x-4">
           
-          {/* === YENİ EKLENEN INFO BUTONU === */}
+         
           <button 
             onClick={onToggleRightSidebar}
             className="p-2 rounded-full hover:bg-white/10 transition text-gray-300 hover:text-white"
@@ -53,7 +53,7 @@ function Header({ onToggleRightSidebar }) {
           >
             <FiInfo size={22} />
           </button>
-          {/* ================================ */}
+        
 
           <button className="p-2 rounded-full hover:bg-white/10 transition">
             <FiBell size={20} />
@@ -64,7 +64,13 @@ function Header({ onToggleRightSidebar }) {
               onClick={() => setDropdownOpen(!isDropdownOpen)} 
               className="flex items-center space-x-2 p-2 rounded-full hover:bg-white/10 transition"
             >
-              <span className="font-medium">{user ? user.username : 'Guest'}</span>
+              <span className="font-medium">{user ? user.username : 'Guest'}
+                {user.role === 'admin' && (
+                <span className="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded border border-red-400">
+                  ADMIN
+                </span>
+              )}
+              </span>
               <FiChevronDown size={16} />
             </button>
             
