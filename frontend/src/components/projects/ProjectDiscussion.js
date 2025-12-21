@@ -1,4 +1,4 @@
-// src/components/projects/ProjectDiscussion.js (Kural Hatası Düzeltildi)
+// src/components/projects/ProjectDiscussion.js
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useProjectContext } from '../../context/ProjectContext';
@@ -7,191 +7,142 @@ import { FiSend, FiLoader, FiLock, FiUser } from 'react-icons/fi';
 
 export default function ProjectDiscussion() {
   
-  // === 1. ADIM: TÜM HOOK'LAR EN ÜSTE TAŞINDI ===
-  // Tüm hook'lar (useState, useEffect, useContext, useRef)
-  // herhangi bir 'if' bloğundan veya 'return'den önce çağrılmalıdır.
+  const { currentProject, fetchComments, addComment, loading: contextLoading } = useProjectContext();
+  const { user } = useAuth();
 
-  // Context'ten gerekli verileri al
-  const { 
-    currentProject, 
-    fetchComments, // Proje yorumlarını (eski->yeni) çeker
-    addComment,    // Projeye yeni yorum ekler
-    loading: contextLoading 
-  } = useProjectContext();
-  
-  const { user } = useAuth(); // 'user.id'yi, mesajın "bana mı" ait olduğunu bilmek için kullan
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSending, setIsSending] = useState(false);
+  const chatEndRef = useRef(null);
 
-  // State'leri (Durumları) tanımla
-  const [messages, setMessages] = useState([]); // Sohbet mesajlarının listesi
-  const [newMessage, setNewMessage] = useState(''); // Yazı kutusundaki metin
-  const [isLoading, setIsLoading] = useState(true); // Sadece ilk yükleme için
-  const [isSending, setIsSending] = useState(false); // Mesaj gönderirken
-
-  const chatEndRef = useRef(null); // Sohbetin en altına otomatik kaydırmak için
-
-  // İzin (Permission) Kontrolü
   const userRole = currentProject?.currentUserRole;
 
-  // --- useEffect Hook'ları (Artık en üst seviyedeler) ---
-
-  // 4. Mesajları Yükleme Fonksiyonu (Sayfa açıldığında)
   useEffect(() => {
-    // Eğer 'public_viewer' ise veya proje yoksa, mesajları çekme
-    // (Kontrolü Hook'un İÇİNDE yapmak güvenlidir)
     if (userRole === 'public_viewer' || !currentProject?.id) {
-      setIsLoading(false); // Yüklemeyi durdur
-      return; // Bu effect'ten çık
+      setIsLoading(false);
+      return;
     }
-
     const loadMessages = async () => {
       setIsLoading(true);
       try {
-        // Backend'den 'ASC' (eskiden yeniye) sıralı yorumları çek
         const fetchedMessages = await fetchComments(currentProject.id);
         setMessages(fetchedMessages || []);
       } catch (error) {
-        console.error("Failed to load discussion messages:", error);
+        console.error("Error loading messages:", error);
       } finally {
         setIsLoading(false);
       }
     };
-    
     loadMessages();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProject?.id, userRole]); // userRole'ü de bağımlılığa ekle
+  }, [currentProject?.id, userRole]);
 
-  // 5. Mesaj gönderildiğinde en alta kaydır
   useEffect(() => {
-    // Sadece mesajlar yüklendiyse çalış
     if (messages.length > 0) {
       chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages]); // 'messages' dizisi her değiştiğinde tetiklenir
+  }, [messages]);
 
-
-  // === 2. ADIM: FONKSİYONLAR ===
-  
-  // 6. Mesaj Gönderme Fonksiyonu
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim() || isSending) return; // Boşsa veya zaten gönderiyorsa dur
-
+    if (!newMessage.trim() || isSending) return;
     const text = newMessage;
-    setNewMessage(''); // Formu anında temizle
+    setNewMessage('');
     setIsSending(true);
-
     try {
-      // Context'teki 'addComment'i (projeye genel yorum) çağır
       const newComment = await addComment(currentProject.id, text);
-      
-      // Başarılı olursa, backend'den dönen tam mesajı state'e ekle
-      setMessages(prevMessages => [...prevMessages, newComment]);
+      setMessages(prev => [...prev, newComment]);
     } catch (error) {
-      console.error("Failed to send message:", error);
-      setNewMessage(text); // Hata olursa, yazıyı kutuya geri koy
+      console.error("Error sending:", error);
+      setNewMessage(text);
     } finally {
       setIsSending(false);
     }
   };
 
-  // === 3. ADIM: KOŞULLU RENDER ===
-  // (Artık tüm hook'lar çağrıldığı için 'return'ü güvenle kullanabiliriz)
-  
-  // Eğer 'public_viewer' (Herkese açık) ise bu sekmeyi gösterme
   if (userRole === 'public_viewer') {
     return (
-      <div className="flex flex-col items-center justify-center p-10 bg-gray-800 rounded-lg">
+      <div className="flex flex-col items-center justify-center p-10 bg-gray-800 rounded-lg h-64 border border-gray-700">
         <FiLock size={40} className="text-yellow-500 mb-4" />
         <h3 className="text-xl font-semibold text-white">Members Only Chat</h3>
-        <p className="text-gray-400 mt-2">
-          This chat room is only visible to project members.
-        </p>
+        <p className="text-gray-400 mt-2">This chat room is only visible to project members.</p>
       </div>
     );
   }
 
-  // === 4. ADIM: NORMAL RENDER (SOHBET ARAYÜZÜ) ===
   return (
-    <div className="flex flex-col h-[70vh] bg-gray-800 rounded-lg shadow-lg">
+    // === GÜNCELLEME: h-[65vh] ile yüksekliği ekranın %65'ine sabitledik ===
+    // Bu sayede kesinlikle daha kısa olacak ve taşma yapmayacak.
+    <div className="flex flex-col h-[55vh] bg-gray-800 rounded-lg shadow-lg border border-gray-700">
       
-      {/* Mesajların Listelendiği Alan */}
-      <div className="flex-1 p-4 space-y-4 overflow-y-auto">
+      {/* Mesaj Listesi */}
+      <div className="flex-1 p-3 space-y-3 overflow-y-auto custom-scrollbar">
         {isLoading ? (
           <div className="flex justify-center items-center h-full">
-            <FiLoader className="animate-spin text-blue-500" size={30} />
+            <FiLoader className="animate-spin text-blue-500" size={24} />
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex justify-center items-center h-full">
-            <p className="text-gray-500">Be the first to say hello!</p>
+          <div className="flex justify-center items-center h-full flex-col opacity-50">
+             <div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center mb-2">
+                <FiSend size={20} className="text-gray-400" />
+             </div>
+            <p className="text-gray-400 text-sm">No messages yet.</p>
           </div>
         ) : (
           messages.map(msg => {
-            // Mesajın 'benim' olup olmadığını kontrol et (ID ile)
             const isMine = msg.author_id === user.id;
-            
             return (
-              <div 
-                key={msg.id} 
-                className={`flex items-start ${isMine ? 'justify-end' : 'justify-start'}`}
-              >
-                {/* Avatar (Benim değilse) */}
+              <div key={msg.id} className={`flex items-start ${isMine ? 'justify-end' : 'justify-start'} animate-fade-in`}>
                 {!isMine && (
-                  <div className="flex-shrink-0 mr-2">
-                    <FiUser className="w-8 h-8 text-gray-400 bg-gray-700 rounded-full p-1" />
+                  <div className="flex-shrink-0 mr-2 mt-1">
+                    <div className="w-6 h-6 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-[10px] font-bold shadow-sm">
+                        {msg.author_name?.charAt(0).toUpperCase() || <FiUser />}
+                    </div>
                   </div>
                 )}
                 
-                {/* Mesaj Balonu */}
-                <div 
-                  className={`max-w-xs lg:max-w-md p-3 rounded-lg ${
+                {/* Mesaj Balonu (Daha kompakt padding: p-2) */}
+                <div className={`max-w-[80%] lg:max-w-[70%] p-2 rounded-2xl shadow-sm ${
                     isMine 
-                      ? 'bg-blue-600 text-white' 
-                      : 'bg-gray-700 text-gray-200'
+                      ? 'bg-blue-600 text-white rounded-tr-none' 
+                      : 'bg-gray-700 text-gray-200 rounded-tl-none'
                   }`}
                 >
-                  {/* Yazar Adı (Benim değilse) */}
                   {!isMine && (
-                    <p className="text-xs font-semibold text-blue-300 mb-1">
+                    <p className="text-[10px] font-bold text-blue-300 mb-0.5 opacity-90">
                       {msg.author_name}
                     </p>
                   )}
-                  <p className="text-sm break-words">{msg.text}</p>
-                  <p className={`text-xs mt-1 ${isMine ? 'text-blue-200' : 'text-gray-500'}`}>
-                    {new Date(msg.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                  <p className="text-sm break-words leading-snug">{msg.text}</p>
+                  <p className={`text-[9px] mt-1 text-right ${isMine ? 'text-blue-200' : 'text-gray-400'}`}>
+                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
-                
-                {/* Avatar (Benimse) */}
-                {isMine && (
-                  <div className="flex-shrink-0 ml-2">
-                    <FiUser className="w-8 h-8 text-gray-400 bg-gray-700 rounded-full p-1" />
-                  </div>
-                )}
               </div>
             );
           })
         )}
-        {/* En alta kaydırmak için görünmez div */}
         <div ref={chatEndRef} />
       </div>
 
       {/* Mesaj Yazma Kutusu */}
-      <div className="p-4 border-t border-gray-700">
+      <div className="p-3 border-t border-gray-700 bg-gray-800/50 rounded-b-lg">
         <form onSubmit={handleSendMessage} className="flex space-x-2">
           <input
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            className="flex-grow py-2 px-3 text-gray-200 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-grow py-2 px-3 text-sm text-gray-200 bg-gray-900 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder-gray-500"
             placeholder="Type your message..."
             disabled={isSending || contextLoading}
           />
           <button
             type="submit"
             disabled={isSending || contextLoading}
-            className="flex items-center justify-center w-16 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-3 rounded-lg transition-colors disabled:opacity-50"
+            className="flex items-center justify-center w-10 h-auto bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all disabled:opacity-50"
           >
-            {isSending ? <FiLoader className="animate-spin" /> : <FiSend size={18} />}
+            {isSending ? <FiLoader className="animate-spin text-xs" /> : <FiSend size={16} />}
           </button>
         </form>
       </div>

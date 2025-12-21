@@ -12,7 +12,7 @@ function DashboardLayout() {
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
   
   // Sağ Sidebar: Varsayılan açık
-  const [isRightOpen, setIsRightOpen] = useState(true);
+  const [isRightOpen, setIsRightOpen] = useState(false);
 
   return (
     // 1. ANA KAPSAYICI: flex-col yaparak alt alta dizilim sağladık (Header üstte, gövde altta)
