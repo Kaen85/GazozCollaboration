@@ -1,120 +1,89 @@
 // src/components/layout/RightSidebar.js
 
-import React, { useEffect } from 'react';
-import { useProjectContext } from '../../context/ProjectContext';
-import { 
-  FiUser, FiLoader, FiCalendar, FiClock, FiUsers, FiShare2
-} from 'react-icons/fi';
-import { useLocation, useParams } from 'react-router-dom'; 
+import React from 'react';
+import { FiClock, FiCheckCircle, FiChevronsRight } from 'react-icons/fi';
 
-function RightSidebar() {
-  const { id: projectIdFromUrl } = useParams(); 
-  const location = useLocation();
+function RightSidebar({ isOpen, toggleSidebar }) {
+  
+  // Örnek veriler
+  const upcomingDeadlines = [
+    { id: 1, title: 'Database Design', date: 'Due Tomorrow', color: 'text-red-400' },
+    { id: 2, title: 'Frontend Setup', date: 'Due in 2 days', color: 'text-yellow-400' },
+  ];
 
-  const { 
-    currentProject, 
-    currentMembers, 
-    fetchMembers, 
-    loading,
-    // İstatistikler için gereken veriler ve fonksiyonlar kaldırıldı
-  } = useProjectContext();
-
-  const isProjectDetailPage = location.pathname.startsWith('/project/');
-
-  useEffect(() => {
-    if (isProjectDetailPage && projectIdFromUrl) {
-      fetchMembers(projectIdFromUrl);
-    } 
-    // Dashboard için istatistik çekme işlemleri kaldırıldı
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isProjectDetailPage, projectIdFromUrl, fetchMembers]); 
-
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-US', { 
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
-  };
+  const recentActivity = [
+    { id: 1, user: 'Ali', action: 'completed a task', time: '2h ago' },
+    { id: 2, user: 'Ayse', action: 'commented on API', time: '4h ago' },
+    { id: 3, user: 'Mehmet', action: 'uploaded file', time: '1d ago' },
+  ];
 
   return (
-    <aside className="w-72 bg-black bg-opacity-30 backdrop-blur-md p-4 border-l border-white/10 flex-shrink-0 hidden md:block">
-      
-      {isProjectDetailPage && currentProject ? (
+    <div 
+      className={`${
+        isOpen ? 'w-80 border-l px-6' : 'w-0 px-0 border-none'
+      } bg-gray-800 border-gray-700 flex flex-col transition-all duration-300 ease-in-out overflow-hidden relative`}
+    >
+      {/* İÇERİK WRAPPER (Genişlik 0 olunca içeriğin bozulmaması için sabit genişlikli div) */}
+      <div className="w-80 pt-6">
         
-        // --- A: PROJE DETAY SAYFASI ---
-        <div className="text-white">
-          <h2 className="text-xl font-bold mb-4 pb-4 border-b border-white/10">
-            {currentProject.name}
-          </h2>
-          
-          <div className="mb-2 pb-2 border-b border-white/10">
-            <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">
-              <FiUsers className="inline mr-1" />
-              Group Members
-            </h3>
-            {loading && currentMembers.length === 0 ? (
-              <div className="flex justify-center p-4">
-                <FiLoader className="animate-spin text-blue-400" />
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="font-bold text-lg text-white">Activity & Tasks</h3>
+          {/* Kapatma Butonu (Activity başlığının yanında opsiyonel) */}
+        </div>
+
+        {/* Deadlines Section */}
+        <div className="mb-8">
+          <h4 className="flex items-center text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">
+            <FiClock className="mr-2" /> Upcoming Deadlines
+          </h4>
+          <div className="space-y-3">
+            {upcomingDeadlines.map((item) => (
+              <div key={item.id} className="p-3 bg-gray-700 rounded-lg hover:bg-gray-650 transition cursor-pointer">
+                <p className="font-medium text-gray-200">{item.title}</p>
+                <p className={`text-xs mt-1 ${item.color}`}>{item.date}</p>
               </div>
-            ) : currentMembers.length > 0 ? (
-              <ul className="space-y-3">
-                {currentMembers.map(member => (
-                  <li key={member.id} className="flex items-center">
-                    <FiUser className="w-5 h-5 text-gray-400" />
-                    <div className="ml-3">
-                      <p className="text-sm font-medium text-white">{member.username}</p>
-                      <p className="text-xs text-gray-400 capitalize">{member.role}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-gray-400">No members found.</p>
-            )}
-          </div>
-
-          <div className="space-y-3 mt-4"> 
-            <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
-              Project Info
-            </h3>
-            
-            {/* Son Güncelleme */}
-            <div className="flex items-center text-sm text-gray-300">
-              <FiClock className="mr-2 flex-shrink-0" />
-              <span>Last Updated: {formatDate(currentProject.last_updated_at)}</span>
-            </div>
-            
-            {/* Oluşturulma Tarihi (Her zaman görünür) */}
-            <div className="flex items-center text-sm text-gray-300">
-              <FiCalendar className="mr-2 flex-shrink-0" />
-              <span>Project Created: {formatDate(currentProject.created_at)}</span>
-            </div>
-
-            {/* Paylaşılma Tarihi (Sadece Public ise ayrıca görünür) */}
-            {currentProject.is_public && (
-              <div className="flex items-center text-sm text-gray-300">
-                <FiShare2 className="mr-2 flex-shrink-0" />
-                <span>Shared Date: {formatDate(currentProject.created_at)}</span>
-              </div>
-            )}
-
+            ))}
           </div>
         </div>
 
-      ) : (
-
-        // --- B: DASHBOARD (İSTATİSTİKLER KALDIRILDI) ---
-        <div className="text-white">
-          <h3 className="font-bold text-lg mb-4">Quick Info</h3>
-          <p className="text-sm text-gray-400">
-            This panel will show notifications or other relevant info in the future.
-          </p>
+        {/* Activity Feed */}
+        <div>
+          <h4 className="flex items-center text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">
+            <FiCheckCircle className="mr-2" /> Recent Activity
+          </h4>
+          <div className="space-y-4">
+            {recentActivity.map((act) => (
+              <div key={act.id} className="flex items-start pb-3 border-b border-gray-700 last:border-0">
+                <div className="w-8 h-8 rounded-full bg-blue-900 flex items-center justify-center text-xs font-bold text-blue-200 mr-3 flex-shrink-0">
+                  {act.user.substring(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-sm text-gray-300">
+                    <span className="font-semibold text-white">{act.user}</span> {act.action}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">{act.time}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
-      )}
-    </aside>
+      </div>
+
+      {/* --- ALT KISIMDAKİ OK İŞARETİ (KAPATMA) --- */}
+      {/* Absolute positioning ile en alta sabitliyoruz */}
+      <div className="absolute bottom-0 left-0 w-full p-4 border-t border-gray-700 bg-gray-800">
+        <button
+          onClick={toggleSidebar}
+          className="w-full flex items-center justify-center py-2 text-gray-500 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
+          title="Close Sidebar"
+        >
+          {/* Sağa doğru ok (Dışarı doğru) */}
+          <FiChevronsRight size={24} />
+        </button>
+      </div>
+
+    </div>
   );
 }
 

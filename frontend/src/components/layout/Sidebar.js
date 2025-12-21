@@ -1,44 +1,69 @@
-// src/components/layout/Sidebar.js
-
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { FiGrid, FiFolder, FiShare2 } from 'react-icons/fi';
-// Logout butonu kaldırıldığı için useAuth ve FiLogOut importları silindi
+import { NavLink } from 'react-router-dom';
+import { 
+  FiHome, FiBox, FiUsers, 
+  FiChevronsLeft, FiChevronsRight 
+} from 'react-icons/fi';
 
-function Sidebar() {
-  const location = useLocation();
+function Sidebar({ isCollapsed, toggleSidebar }) {
   
-  // Aktif linki vurgulamak için helper
-  const isActive = (path) => location.pathname === path;
-  const linkClass = (path) => `
-    flex items-center px-4 py-3 my-1 transition-colors rounded-lg
-    ${isActive(path) 
-      ? 'bg-blue-600 text-white shadow-lg' 
-      : 'text-gray-300 hover:bg-white/10 hover:text-white'}
-  `;
+  // Settings menüden tamamen çıkarıldı
+  const navItems = [
+    { name: 'Dashboard', icon: <FiHome size={20} />, path: '/dashboard' },
+    { name: 'My Projects', icon: <FiBox size={20} />, path: '/my-projects' },
+    { name: 'Shared', icon: <FiUsers size={20} />, path: '/shared-projects' },
+  ];
 
   return (
-    // bg-black bg-opacity-30 backdrop-blur-md ile şeffaflık korunuyor
-    <aside className="w-64 bg-black bg-opacity-30 backdrop-blur-md flex flex-col border-r border-white/10 hidden md:flex">
-      
-      <nav className="flex-1 px-2 py-6 space-y-2">
-        <Link to="/dashboard" className={linkClass('/dashboard')}>
-          <FiGrid className="mr-3" />
-          Dashboard
-        </Link>
-        <Link to="/my-projects" className={linkClass('/my-projects')}>
-          <FiFolder className="mr-3" />
-          My Projects
-        </Link>
-        <Link to="/shared-projects" className={linkClass('/shared-projects')}>
-          <FiShare2 className="mr-3" />
-          Shared By Others
-        </Link>
+    <div 
+      className={`${
+        isCollapsed ? 'w-20' : 'w-64'
+      } bg-gray-800 border-r border-gray-700 flex flex-col transition-all duration-300 relative shadow-xl pt-4`}
+    >
+      {/* LOGO ve HUB YAZISI BURADAN SİLİNDİ */}
+
+      {/* MENU LİSTESİ */}
+      <nav className="flex-1 space-y-2 overflow-y-auto overflow-x-hidden mt-2">
+        {navItems.map((item) => (
+          <NavLink
+            key={item.name}
+            to={item.path}
+            className={({ isActive }) =>
+              `flex items-center px-4 py-3 mx-2 rounded-lg transition-colors group relative ${
+                isActive
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-400 hover:bg-gray-700 hover:text-white'
+              } ${isCollapsed ? 'justify-center' : ''}`
+            }
+          >
+            {/* İkon */}
+            <span className="flex-shrink-0">{item.icon}</span>
+
+            {/* Metin (Collapsed ise gizle) */}
+            {!isCollapsed && (
+              <span className="ml-3 font-medium whitespace-nowrap">{item.name}</span>
+            )}
+            
+            {/* Menü kapalıyken üzerine gelince çıkan yazı (Tooltip) */}
+            {isCollapsed && (
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                {item.name}
+              </div>
+            )}
+          </NavLink>
+        ))}
       </nav>
 
-      {/* Logout butonu buradan kaldırıldı. Artık sadece Header'daki profil menüsünde olacak. */}
-
-    </aside>
+      {/* ALT KISIM: SADECE SAĞ/SOL OK İŞARETİ KALDI (Logout silindi) */}
+      <div className="p-4 border-t border-gray-700">
+        <button
+          onClick={toggleSidebar}
+          className="w-full flex items-center justify-center py-2 text-gray-500 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
+        >
+          {isCollapsed ? <FiChevronsRight size={24} /> : <FiChevronsLeft size={24} />}
+        </button>
+      </div>
+    </div>
   );
 }
 
