@@ -103,7 +103,7 @@ const LandingPage = () => {
           </div>
 
           {/* --- FEATURES GRID --- */}
-          <div className="mt-32 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl w-full px-4">
+          <div className="mt-[40vh] grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl w-full px-4">
             <FeatureCard 
               icon={<FiLayout className="w-8 h-8" />} 
               title="Kanban Boards" 

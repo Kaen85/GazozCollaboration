@@ -33,22 +33,27 @@ import ProjectEditPage from './components/projects/ProjectEditPage';
 
 function App() {
   return (
-    // 1. Theme, Auth ve Project Context'leri ile uygulamayı sarmalıyoruz.
-    // Sıralama önemlidir: Theme > Auth > Project
     <ThemeProvider>
       <AuthProvider>
         <ProjectProvider>
           
           <Routes>
-            {/* === PUBLIC ROUTES (Giriş yapmadan erişilenler) === */}
-            <Route path="/" element={<LandingPage />} />
+            {/* === DEĞİŞİKLİK BURADA BAŞLIYOR === */}
+            
+            {/* 1. Eğer kullanıcı kök dizine (localhost:3000/) gelirse, /home'a yönlendir */}
+            <Route path="/" element={<Navigate to="/home" replace />} />
+
+            {/* 2. LandingPage artık /home adresinde çalışıyor */}
+            <Route path="/home" element={<LandingPage />} />
+
+            {/* === DEĞİŞİKLİK BURADA BİTİYOR === */}
+
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
 
             {/* === PROTECTED ROUTES (Giriş yapılması zorunlu) === */}
-            {/* DashboardLayout içinde Sidebar ve Header var */}
             <Route 
               path="/*" 
               element={
@@ -57,19 +62,14 @@ function App() {
                 </ProtectedRoute>
               }
             >
-              {/* DashboardLayout'un içindeki 'Outlet' kısmına gelecek sayfalar: */}
               <Route path="dashboard" element={<DashboardOverviewPage />} />
               <Route path="my-projects" element={<MyProjectsPage />} />
               <Route path="shared-projects" element={<SharedProjectsPage />} />
               <Route path="settings" element={<SettingsPage />} />
 
-              {/* === PROJECT DETAIL ROUTES (Nested Routes) === */}
-              {/* ProjectDetailPage içinde de bir 'Outlet' var (Sekmeler için) */}
+              {/* Project Detail Routes */}
               <Route path="project/:id" element={<ProjectDetailPage />}>
-                {/* /project/:id adresine gidince varsayılan olarak Files açılır */}
                 <Route index element={<ProjectFiles />} /> 
-                
-                {/* Sekmeler */}
                 <Route path="tasks" element={<ProjectTasks />} />
                 <Route path="issues" element={<ProjectIssues />} />
                 <Route path="discussions" element={<ProjectDiscussion />} />

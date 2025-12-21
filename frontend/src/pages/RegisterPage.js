@@ -2,10 +2,9 @@
 
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { FiUser, FiLock, FiMail } from 'react-icons/fi';
-import { useAuth } from '../context/AuthContext'; 
-
-// 1. Fotoğrafı buraya da import et
+// 1. FiArrowLeft'i ekle
+import { FiUser, FiLock, FiMail, FiArrowLeft } from 'react-icons/fi';
+import { useAuth } from '../context/AuthContext';
 import BackgroundImage from '../assets/background.jpg';
 
 function RegisterPage() {
@@ -14,15 +13,14 @@ function RegisterPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  
   const { register, loading } = useAuth(); 
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
+    // ... submit kodları aynı ...
     e.preventDefault();
     setError(null);
     setSuccess(null);
-    
     if (!username || !email || !password) {
       setError("Please enter all fields.");
       return;
@@ -40,23 +38,26 @@ function RegisterPage() {
   };
 
   return (
-    // 2. Arka plan stilini uygula
     <div 
       className="relative flex items-center justify-center min-h-screen bg-cover bg-center"
       style={{ backgroundImage: `url(${BackgroundImage})` }}
     >
-      {/* 3. Siyah Perde */}
       <div className="absolute inset-0 bg-black bg-opacity-60"></div>
 
-      {/* 4. Ortadaki Kutucuk */}
+      {/* 2. BURAYA EKLE: Geri Dön Butonu */}
+      <Link 
+        to="/home" 
+        className="absolute top-8 left-8 z-20 flex items-center text-gray-300 hover:text-white transition-colors"
+      >
+        <FiArrowLeft className="mr-2" size={24} />
+        <span className="font-semibold text-lg">Back to Home</span>
+      </Link>
+
       <div className="relative z-10 w-full max-w-md p-8 space-y-8 bg-gray-800 bg-opacity-90 rounded-2xl shadow-2xl backdrop-blur-sm">
-        <div className="text-center">
-          <h2 className="text-3xl font-bold text-white">
-            Create Account
-          </h2>
-          <p className="mt-2 text-sm text-gray-400">
-            Join the Project Hub
-          </p>
+         {/* ... Form Kodları Aynı ... */}
+         <div className="text-center">
+          <h2 className="text-3xl font-bold text-white">Create Account</h2>
+          <p className="mt-2 text-sm text-gray-400">Join the Project Hub</p>
         </div>
         <form className="space-y-6" onSubmit={handleSubmit}>
           
@@ -105,16 +106,8 @@ function RegisterPage() {
             />
           </div>
 
-          {error && (
-            <p className="text-sm text-red-400 text-center">
-              {error}
-            </p>
-          )}
-          {success && (
-            <p className="text-sm text-green-400 text-center">
-              {success}
-            </p>
-          )}
+          {error && <p className="text-sm text-red-400 text-center">{error}</p>}
+          {success && <p className="text-sm text-green-400 text-center">{success}</p>}
 
           <div>
             <button
@@ -135,7 +128,6 @@ function RegisterPage() {
             </Link>
           </p>
         </div>
-        
       </div>
     </div>
   );

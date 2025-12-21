@@ -1,8 +1,12 @@
 // src/pages/ForgotPasswordPage.js
+
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
-import { FiMail, FiLoader } from 'react-icons/fi';
+// 1. FiArrowLeft ikonunu ekle
+import { FiMail, FiLoader, FiArrowLeft } from 'react-icons/fi';
+// 2. Arka plan resmini import et (Görsel bütünlük için buraya da ekleyelim)
+import BackgroundImage from '../assets/background.jpg';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -10,6 +14,7 @@ export default function ForgotPasswordPage() {
   const { forgotPassword, loading, error } = useAuth();
 
   const handleSubmit = async (e) => {
+    // ... kodlar aynı ...
     e.preventDefault();
     try {
       await forgotPassword(email);
@@ -20,8 +25,23 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-900">
-      <div className="w-full max-w-md p-8 bg-gray-800 rounded-xl shadow-2xl">
+    // 3. Arka planı LoginPage ile aynı yapıyoruz
+    <div 
+      className="relative flex items-center justify-center min-h-screen bg-cover bg-center"
+      style={{ backgroundImage: `url(${BackgroundImage})` }}
+    >
+      <div className="absolute inset-0 bg-black bg-opacity-60"></div>
+
+      {/* 4. BURAYA EKLE: Geri Dön Butonu */}
+      <Link 
+        to="/home" 
+        className="absolute top-8 left-8 z-20 flex items-center text-gray-300 hover:text-white transition-colors"
+      >
+        <FiArrowLeft className="mr-2" size={24} />
+        <span className="font-semibold text-lg">Back to Home</span>
+      </Link>
+
+      <div className="relative z-10 w-full max-w-md p-8 bg-gray-800 bg-opacity-90 rounded-xl shadow-2xl backdrop-blur-sm">
         <h2 className="text-2xl font-bold text-white text-center mb-4">Reset Password</h2>
         <p className="text-gray-400 text-center mb-6">Enter your email to receive a reset link.</p>
         
