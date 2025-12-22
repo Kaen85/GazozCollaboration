@@ -172,7 +172,7 @@ function RightSidebar({ isOpen, toggleSidebar }) {
     </div>
   );
 
-  // --- RENDER: USERS İSTATİSTİKLERİ (YENİ - Seçenek 1) ---
+  
   const renderUsersContent = () => (
     <div className="animate-fade-in flex flex-col h-full">
         
@@ -251,16 +251,7 @@ function RightSidebar({ isOpen, toggleSidebar }) {
       
       {/* Arka plan gradient */}
       <div className="absolute inset-0 bg-gradient-to-b from-gray-800/50 to-gray-900 pointer-events-none" />
-
-      {/* --- HEADER (Kapatma Butonu) --- */}
-      <div className="relative z-10 w-full pt-5 px-6 flex justify-end">
-        <button 
-          onClick={toggleSidebar}
-          className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-full transition-colors"
-        >
-          <FiX size={20} />
-        </button>
-      </div>
+      
 
       {/* --- İÇERİK ALANI --- */}
       <div className="relative z-10 flex-1 overflow-y-auto px-6 pb-20 custom-scrollbar">
