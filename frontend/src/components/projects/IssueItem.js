@@ -41,7 +41,7 @@ function IssueItem({ issue, projectId, onIssueUpdated }) {
   // 'issue' prop'u değiştiğinde yerel state'i güncelle
   useEffect(() => {
     setLocalIssue(issue);
-  }, [issue]); 
+  }, [issue]);
 
   // Menü dışına tıklamayı dinle
   useEffect(() => {
@@ -55,7 +55,7 @@ function IssueItem({ issue, projectId, onIssueUpdated }) {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [menuRef]);
-  
+
   // === 3. FONKSİYONLAR ===
 
   // Yorumları aç/kapat
@@ -100,7 +100,7 @@ function IssueItem({ issue, projectId, onIssueUpdated }) {
       setMenuOpen(false);
     }
   };
-  
+
   // "Edit" (Düzenleme) Modu Fonksiyonları
   const handleEditClick = () => {
     setEditText(localIssue.text); 
@@ -116,7 +116,7 @@ function IssueItem({ issue, projectId, onIssueUpdated }) {
 
   const handleSaveEdit = async () => {
     if (editText.trim() === '' || editText === localIssue.text) {
-      setIsEditing(false); 
+      setIsEditing(false);
       return;
     }
     setIsSaving(true); 
@@ -133,13 +133,14 @@ function IssueItem({ issue, projectId, onIssueUpdated }) {
       setIsSaving(false); 
     }
   };
-  
+
   // Yorum listesi için güncelleme fonksiyonları
   const handleCommentUpdated = (updatedComment) => {
     setComments(prev => 
       prev.map(c => c.id === updatedComment.id ? updatedComment : c)
     );
   };
+  
   const handleCommentDeleted = (deletedCommentId) => {
     setComments(prev => 
       prev.filter(c => c.id !== deletedCommentId)
@@ -148,11 +149,20 @@ function IssueItem({ issue, projectId, onIssueUpdated }) {
 
   // === 4. RENDER (GÖRÜNÜM) ===
   const isDone = localIssue.status === 'Closed';
-  const issueTextStyle = isDone ? "text-gray-500 line-through" : "text-white";
-  const issueAuthorStyle = isDone ? "text-gray-600" : "text-gray-400";
+  
+  // Stiller: Light/Dark uyumlu
+  // isDone ise biraz daha silik ve üstü çizili
+  const containerClass = `rounded-md border transition-colors ${
+    isDone 
+      ? 'bg-app/50 border-border/50 opacity-75' 
+      : 'bg-app border-border hover:border-primary/30'
+  }`;
+  
+  const issueTextStyle = isDone ? "text-text-secondary line-through" : "text-text-main";
+  const issueAuthorStyle = "text-text-secondary";
 
   return (
-    <div className={`bg-gray-700 rounded-md ${isDone ? 'bg-opacity-70' : ''}`}>
+    <div className={containerClass}>
       <div className="flex justify-between items-center p-3">
         
         {isEditing ? (
@@ -164,21 +174,21 @@ function IssueItem({ issue, projectId, onIssueUpdated }) {
                 value={editText}
                 autoFocus
                 onChange={(e) => setEditText(e.target.value)}
-                className="flex-grow py-1 px-2 text-white bg-gray-600 border border-blue-500 rounded-md focus:outline-none"
+                className="flex-grow py-1.5 px-3 text-text-main bg-surface border border-primary rounded-md focus:outline-none text-sm shadow-sm"
               />
               <button 
                 onClick={handleSaveEdit} 
                 disabled={isSaving} 
-                className="p-2 text-green-400 hover:text-green-300 disabled:opacity-50"
+                className="p-2 text-green-500 hover:text-green-600 disabled:opacity-50 transition-colors"
               >
                 {isSaving ? <FiLoader className="animate-spin" /> : <FiSave size={18} />}
               </button>
-              <button onClick={handleCancelEdit} className="p-2 text-red-400 hover:text-red-300">
+              <button onClick={handleCancelEdit} className="p-2 text-red-500 hover:text-red-600 transition-colors">
                 <FiX size={18} />
               </button>
             </div>
             {editError && (
-              <p className="text-xs text-red-400 mt-1 ml-1 flex items-center">
+              <p className="text-xs text-red-500 mt-1 ml-1 flex items-center">
                 <FiAlertTriangle size={14} className="mr-1" />
                 {editError}
               </p>
@@ -190,16 +200,19 @@ function IssueItem({ issue, projectId, onIssueUpdated }) {
           <>
             <button 
               onClick={toggleComments}
-              className="flex-1 flex items-center text-left"
+              className="flex-1 flex items-center text-left group"
             >
-              {isOpen ? <FiChevronDown size={20} className="mr-2" /> : <FiChevronRight size={20} className="mr-2" />}
+              {isOpen 
+                ? <FiChevronDown size={20} className="mr-2 text-text-secondary" /> 
+                : <FiChevronRight size={20} className="mr-2 text-text-secondary group-hover:text-text-main" />
+              }
               <div className="flex-1">
                 <p className={`font-medium ${issueTextStyle}`}>{localIssue.text}</p>
                 <span className={`text-xs ${issueAuthorStyle}`}>
-                  Opened by {localIssue.created_by_name || '...'}
+                  Opened by <span className="font-semibold">{localIssue.created_by_name || '...'}</span>
                   {isDone && (
-                    <span className="italic">
-                      : Closed by {user?.username || '...'}
+                    <span className="italic ml-1">
+                      (Closed by {user?.username || '...'})
                     </span>
                   )}
                 </span>
@@ -207,53 +220,52 @@ function IssueItem({ issue, projectId, onIssueUpdated }) {
             </button>
             
             <div className="flex items-center">
-              <FiMessageSquare size={16} className={`mr-3 ${issueAuthorStyle}`} />
+              <div className="flex items-center mr-3 text-text-secondary" title="Comments">
+                 <FiMessageSquare size={16} className="mr-1" />
+                 {/* Eğer comment sayısı varsa buraya eklenebilir */}
+              </div>
               
               {/* 3-NOKTA MENÜ (SADECE 'viewer' veya 'public_viewer' DEĞİLSE GÖSTER) */}
               {(userRole === 'owner' || userRole === 'editor') && (
                 <div className="relative" ref={menuRef}>
                   <button 
                     onClick={(e) => {
-                      e.stopPropagation(); // Düzeltme: Tıklamanın yayılmasını engelle
+                      e.stopPropagation();
                       setMenuOpen(prev => !prev);
                     }}
-                    className="p-1 text-gray-400 hover:text-white rounded-full"
+                    className="p-1.5 text-text-secondary hover:text-text-main hover:bg-surface-hover rounded-full transition-colors"
                   >
                     <FiMoreVertical size={18} />
                   </button>
                   
                   {isMenuOpen && (
-                    // Düzeltme: z-index 50 yapıldı
-                    <div className="absolute right-0 top-8 w-48 bg-gray-800 border border-gray-600 rounded-md shadow-lg z-50">
-                      <ul className="py-1">
-                        <li>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditClick();
-                            }}
-                            className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
-                          >
-                            <FiEdit size={14} className="mr-2" />
-                            Edit Issue
-                          </button>
-                        </li>
-                        <li>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleToggleStatus();
-                            }}
-                            className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
-                          >
-                            {isDone ? (
-                              <><FiCircle size={14} className="mr-2 text-yellow-500" />Mark as Open</>
-                            ) : (
-                              <><FiCheckCircle size={14} className="mr-2 text-green-500" />Mark as Done</>
-                            )}
-                          </button>
-                        </li>
-                      </ul>
+                    <div className="absolute right-0 top-8 w-44 bg-surface border border-border rounded-lg shadow-xl z-50 animate-fade-in origin-top-right overflow-hidden">
+                      <div className="py-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditClick();
+                          }}
+                          className="w-full text-left flex items-center px-4 py-2.5 text-sm text-text-main hover:bg-surface-hover transition-colors"
+                        >
+                          <FiEdit size={14} className="mr-3 text-text-secondary" />
+                          Edit Issue
+                        </button>
+                        
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleStatus();
+                          }}
+                          className="w-full text-left flex items-center px-4 py-2.5 text-sm text-text-main hover:bg-surface-hover transition-colors"
+                        >
+                          {isDone ? (
+                            <><FiCircle size={14} className="mr-3 text-yellow-500" /> Re-open Issue</>
+                          ) : (
+                            <><FiCheckCircle size={14} className="mr-3 text-green-500" /> Mark as Done</>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -265,17 +277,18 @@ function IssueItem({ issue, projectId, onIssueUpdated }) {
 
       {/* Yorum Bölümü */}
       {isOpen && !isEditing && (
-        <div className="p-4 border-t border-gray-600">
+        // border-t border-border
+        <div className="p-4 border-t border-border bg-surface/30">
           
           {/* Yorum Listesi */}
           {loadingComments ? (
             <div className="flex justify-center p-3">
-              <FiLoader className="animate-spin text-blue-400" />
+              <FiLoader className="animate-spin text-primary" />
             </div>
           ) : (
             <div className="space-y-4 mb-4">
               {comments.length === 0 ? (
-                <p className="text-gray-500 text-sm text-center">No comments yet.</p>
+                <p className="text-text-secondary text-sm text-center py-2">No comments yet.</p>
               ) : (
                 comments.map(comment => (
                   <Comment 
@@ -292,8 +305,9 @@ function IssueItem({ issue, projectId, onIssueUpdated }) {
           
           {/* Yorum Formu veya Kapalı Mesajı */}
           {isDone ? (
-            <div className="p-3 bg-gray-800 rounded-md text-center">
-              <p className="text-sm text-gray-400">
+            <div className="p-3 bg-surface border border-border rounded-md text-center">
+              <p className="text-sm text-text-secondary flex items-center justify-center">
+                <FiCheckCircle className="mr-2 text-green-500" />
                 This issue is closed. No new comments can be added.
               </p>
             </div>

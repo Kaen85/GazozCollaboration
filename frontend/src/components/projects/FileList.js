@@ -1,4 +1,4 @@
-// src/components/projects/FileList.js
+/*// src/components/projects/FileList.js
 import React from 'react';
 import { FiFileText, FiFile, FiImage } from 'react-icons/fi'; // Icons for file types
 
@@ -34,4 +34,4 @@ function FileList({ files, loading }) {
     </div>
   );
 }
-export default FileList;
+export default FileList;*/

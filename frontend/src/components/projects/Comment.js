@@ -11,7 +11,8 @@ import {
 // Yeni proplar alıyoruz: projectId, onCommentUpdated, onCommentDeleted
 function Comment({ comment, projectId, onCommentUpdated, onCommentDeleted }) {
   
-  const { user } = useAuth(); // Mevcut giriş yapmış kullanıcı (artık {id, username} içeriyor)
+  const { user } = useAuth();
+  // Mevcut giriş yapmış kullanıcı
   const { 
     likeComment, 
     editComment, 
@@ -19,10 +20,10 @@ function Comment({ comment, projectId, onCommentUpdated, onCommentDeleted }) {
     currentProject // Proje sahibini kontrol etmek için
   } = useProjectContext();
 
-  // 'comment' prop'unu yerel state'e alıyoruz, böylece "Beğen" sayısı anında güncellenir
+  // 'comment' prop'unu yerel state'e alıyoruz
   const [localComment, setLocalComment] = useState(comment);
-
-  // Yorumu düzenleme (edit) modu için state'ler
+  
+  // State'ler
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(comment.text);
   const [isSaving, setIsSaving] = useState(false);
@@ -30,10 +31,9 @@ function Comment({ comment, projectId, onCommentUpdated, onCommentDeleted }) {
   // 3-nokta menü state'i
   const [isMenuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
-
-  // Kopyalama state'i
+  
+  // Diğer state'ler
   const [copied, setCopied] = useState(false);
-  // Beğenme (like) state'i
   const [isLiking, setIsLiking] = useState(false);
 
   // === GÜVENLİK KONTROLLERİ ===
@@ -41,16 +41,12 @@ function Comment({ comment, projectId, onCommentUpdated, onCommentDeleted }) {
   const currentUserId = user?.id;
   const projectOwnerId = currentProject?.owner_id;
 
-  // Kullanıcı bu yorumun sahibi mi?
   const isOwner = currentUserId === authorId;
-  // Kullanıcı proje sahibi mi?
   const isProjectOwner = currentUserId === projectOwnerId;
-  // Kullanıcı bu yorumu beğenmiş mi?
   const hasLiked = localComment?.likes_user_ids?.includes(currentUserId);
-  // Beğeni sayısı
   const likeCount = localComment?.likes_user_ids?.length || 0;
 
-  // Ebeveynden 'comment' prop'u değişirse, yerel state'i güncelle
+  // Prop değişirse state güncelle
   useEffect(() => {
     setLocalComment(comment);
   }, [comment]);
@@ -69,11 +65,10 @@ function Comment({ comment, projectId, onCommentUpdated, onCommentDeleted }) {
 
   // --- BEĞEN (LIKE) FONKSİYONU ---
   const handleLike = async () => {
-    if (isLiking) return; 
+    if (isLiking) return;
     setIsLiking(true);
     try {
       const updatedLikes = await likeComment(projectId, localComment.id);
-      // === "BEĞEN" DÜZELTMESİ: Yerel state'i güncelle ===
       setLocalComment(prev => ({ ...prev, likes_user_ids: updatedLikes.likes_user_ids }));
     } catch (error) {
       console.error("Failed to like comment:", error);
@@ -87,10 +82,12 @@ function Comment({ comment, projectId, onCommentUpdated, onCommentDeleted }) {
     setIsEditing(true);
     setMenuOpen(false);
   };
+
   const handleCancelEdit = () => {
     setIsEditing(false);
     setEditText(localComment.text); // Değişiklikleri iptal et
   };
+
   const handleSaveEdit = async () => {
     if (editText.trim() === '' || editText === localComment.text) {
       return handleCancelEdit();
@@ -98,15 +95,14 @@ function Comment({ comment, projectId, onCommentUpdated, onCommentDeleted }) {
     setIsSaving(true);
     try {
       const updatedComment = await editComment(projectId, localComment.id, editText);
-      // === "EDIT" DÜZELTMESİ: Yerel state'i ve ebeveyni güncelle ===
-      setLocalComment(updatedComment); // Yerel state'i güncelle
+      setLocalComment(updatedComment);
       setIsEditing(false);
       if (onCommentUpdated) {
-        onCommentUpdated(updatedComment); // Ebeveyni (CommentList/IssueItem) uyar
+        onCommentUpdated(updatedComment);
       }
     } catch (error) {
       console.error("Failed to save edit:", error);
-      alert("Hata: " + error.message); // Backend'den gelen hatayı göster
+      alert("Hata: " + error.message);
     } finally {
       setIsSaving(false);
     }
@@ -117,19 +113,18 @@ function Comment({ comment, projectId, onCommentUpdated, onCommentDeleted }) {
     if (window.confirm('Are you sure you want to delete this comment?')) {
       try {
         await deleteComment(projectId, localComment.id);
-        // === "DELETE" DÜZELTMESİ: Ebeveyni uyar ===
         if (onCommentDeleted) {
           onCommentDeleted(localComment.id);
         }
       } catch (error) {
         console.error("Failed to delete comment:", error);
-        alert("Hata: " + error.message); // Backend'den gelen hatayı göster
+        alert("Hata: " + error.message);
       }
     }
     setMenuOpen(false);
   };
   
-  // 3-nokta menüsü dışına tıklamayı dinle
+  // Menü dışına tıklamayı dinle
   useEffect(() => {
     function handleClickOutside(event) {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -142,13 +137,15 @@ function Comment({ comment, projectId, onCommentUpdated, onCommentDeleted }) {
     };
   }, [menuRef]);
 
-
   return (
-    // Yorumları ayırmak için üst çizgi
-    <div className="flex space-x-3 pt-4 border-t border-gray-600">
+    // Yorumları ayırmak için üst çizgi: border-gray-600 -> border-border
+    <div className="flex space-x-3 pt-4 border-t border-border/50 first:pt-0 first:border-0">
       {/* Avatar/İkon */}
       <div className="flex-shrink-0">
-        <FiUser className="w-8 h-8 text-gray-400 bg-gray-700 rounded-full p-1" />
+        {/* bg-gray-700 -> bg-app, text-gray-400 -> text-text-secondary */}
+        <div className="w-8 h-8 rounded-full bg-app flex items-center justify-center border border-border">
+            <FiUser className="w-5 h-5 text-text-secondary" />
+        </div>
       </div>
       
       {/* Yorum İçeriği */}
@@ -160,15 +157,15 @@ function Comment({ comment, projectId, onCommentUpdated, onCommentDeleted }) {
             <textarea
               value={editText}
               onChange={(e) => setEditText(e.target.value)}
-              className="w-full py-2 px-3 text-gray-200 bg-gray-600 border border-blue-500 rounded-lg focus:outline-none"
+              className="w-full py-2 px-3 text-text-main bg-surface border border-primary rounded-lg focus:outline-none focus:ring-1 focus:ring-primary shadow-sm"
               rows="3"
             />
             <div className="flex justify-end space-x-2">
-              <button onClick={handleCancelEdit} className="text-gray-400 hover:text-white text-sm">Cancel</button>
+              <button onClick={handleCancelEdit} className="text-text-secondary hover:text-text-main text-sm transition-colors">Cancel</button>
               <button 
                 onClick={handleSaveEdit} 
                 disabled={isSaving}
-                className="flex items-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded-lg text-sm"
+                className="flex items-center bg-primary hover:bg-primary-hover text-white font-semibold py-1 px-3 rounded-lg text-sm transition-colors disabled:opacity-50"
               >
                 {isSaving ? <FiLoader className="animate-spin" /> : 'Save'}
               </button>
@@ -176,64 +173,65 @@ function Comment({ comment, projectId, onCommentUpdated, onCommentDeleted }) {
           </div>
         ) : (
           // --- NORMAL GÖRÜNÜM MODU ---
-          <div className="bg-gray-700 rounded-lg p-3">
+          // bg-gray-700 -> bg-surface, border ekledik
+          <div className="bg-surface border border-border rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between mb-1">
-              <span className="font-semibold text-white text-sm">
+              <span className="font-semibold text-text-main text-sm">
                 {localComment.author_name || 'User'} 
               </span>
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-text-secondary">
                 {new Date(localComment.created_at).toLocaleString()}
               </span>
             </div>
-            <p className="text-gray-300 text-sm break-words">
+            <p className="text-text-main text-sm break-words leading-relaxed">
               {localComment.text}
             </p>
             
-            {/* YORUM ALTINDAKİ BUTONLAR (BEĞEN, KOPYALA, 3-NOKTA) */}
+            {/* YORUM ALTINDAKİ BUTONLAR */}
             <div className="flex items-center space-x-3 mt-3">
               
               {/* BEĞEN BUTONU */}
               <button 
                 onClick={handleLike} 
                 disabled={isLiking}
-                className={`flex items-center text-xs ${hasLiked ? 'text-red-500' : 'text-gray-400 hover:text-white'}`}
+                className={`flex items-center text-xs transition-colors ${hasLiked ? 'text-red-500' : 'text-text-secondary hover:text-red-500'}`}
               >
                 <FiHeart fill={hasLiked ? 'currentColor' : 'none'} size={14} className="mr-1" />
                 {likeCount}
               </button>
               
               {/* KOPYALA BUTONU */}
-              <button onClick={handleCopy} className="text-xs text-gray-400 hover:text-white">
+              <button onClick={handleCopy} className="text-xs text-text-secondary hover:text-text-main transition-colors">
                 {copied ? <FiCheck size={14} className="text-green-500" /> : <FiCopy size={14} />}
               </button>
               
-              {/* 3-NOKTA MENÜ (SADECE YORUMUN SAHİBİ VEYA PROJE SAHİBİ GÖRÜR) */}
+              {/* 3-NOKTA MENÜ */}
               {(isOwner || isProjectOwner) && (
                 <div className="relative" ref={menuRef}>
-                  <button onClick={() => setMenuOpen(p => !p)} className="text-xs text-gray-400 hover:text-white">
+                  <button onClick={() => setMenuOpen(p => !p)} className="text-xs text-text-secondary hover:text-text-main transition-colors">
                     <FiMoreVertical size={14} />
                   </button>
                   
                   {isMenuOpen && (
-                    <div className="absolute right-0 top-6 w-36 bg-gray-800 border border-gray-600 rounded-md shadow-lg z-10">
+                    <div className="absolute right-0 top-6 w-36 bg-surface border border-border rounded-md shadow-xl z-20 overflow-hidden">
                       <ul className="py-1">
-                        {/* Sadece YORUM SAHİBİ düzenleyebilir */}
+                        {/* EDIT */}
                         {isOwner && (
                           <li>
                             <button
                               onClick={handleEdit}
-                              className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
+                              className="w-full text-left flex items-center px-4 py-2 text-sm text-text-main hover:bg-surface-hover transition-colors"
                             >
-                              <FiEdit size={14} className="mr-2" />
+                              <FiEdit size={14} className="mr-2 text-text-secondary" />
                               Edit
                             </button>
                           </li>
                         )}
-                        {/* Yorum sahibi VEYA Proje sahibi silebilir */}
+                        {/* DELETE */}
                         <li>
                           <button
                             onClick={handleDelete}
-                            className="w-full text-left flex items-center px-4 py-2 text-sm text-red-500 hover:bg-gray-700"
+                            className="w-full text-left flex items-center px-4 py-2 text-sm text-red-500 hover:bg-surface-hover transition-colors"
                           >
                             <FiTrash size={14} className="mr-2" />
                             Delete

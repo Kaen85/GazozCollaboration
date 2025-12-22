@@ -38,7 +38,7 @@ function Header({ onToggleRightSidebar }) {
           <img 
             src={LogoImage} 
             alt="Logo" 
-            className="h-10 w-10 object-contain mr-3 group-hover:scale-105 transition-transform duration-300" 
+            className="h-20 w-20 object-contain drop-shadow-lg brightness-0 dark:brightness-100 transition-all duration-300" 
           />
           <div className="flex flex-col">
             <span className="text-xl font-bold tracking-wide text-text-main group-hover:text-primary transition-colors">

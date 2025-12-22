@@ -66,7 +66,7 @@ function CreateProjectModal({ isOpen, onClose }) {
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
             
-            {/* Proje Adı */}
+           
             <div>
               <label htmlFor="projectName" className="block text-sm font-medium text-gray-300 mb-1">
                 Project Name
@@ -81,7 +81,7 @@ function CreateProjectModal({ isOpen, onClose }) {
               />
             </div>
             
-            {/* Proje Açıklaması */}
+            
             <div>
               <label htmlFor="projectDescription" className="block text-sm font-medium text-gray-300 mb-1">
                 Description (Optional)
@@ -97,14 +97,14 @@ function CreateProjectModal({ isOpen, onClose }) {
             </div>
           </div>
           
-          {/* Hata Mesajı Alanı */}
+         
           {error && (
             <p className="text-sm text-red-400 text-center mt-4">
               {error}
             </p>
           )}
 
-          {/* Butonlar */}
+          
           <div className="flex justify-end space-x-3 mt-6">
             <button
               type="button"

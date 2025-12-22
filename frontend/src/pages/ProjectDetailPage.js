@@ -22,14 +22,14 @@ function ProjectDetailPage() {
   if (loading || (!currentProject && !error)) {
     return (
       <div className="p-20 flex justify-center">
-        <FiLoader className="animate-spin text-blue-500" size={40} />
+        <FiLoader className="animate-spin text-primary" size={40} />
       </div>
     );
   }
 
   if (error && !currentProject) {
     return (
-      <div className="p-20 flex justify-center text-red-400">
+      <div className="p-20 flex justify-center text-red-500">
         <FiAlertTriangle size={40} />
         <span className="ml-4">Error: {error}</span>
       </div>
@@ -43,24 +43,27 @@ function ProjectDetailPage() {
   const showDiscussionsTab = userRole !== 'public_viewer';
   const showEditTab = userRole === 'owner';
 
-  // === DÜZELTME BURADA ===
-  // Eski "grid hesaplama" kodlarını sildik.
-  // Yerine Flexbox kullanıyoruz.
-
+  // --- TAB NAVIGASYON STİLİ ---
   const navLinkStyle = ({ isActive }) =>
-    // 'flex-1': Tüm sekmeler eşit genişlikte olsun ve yan yana dolsun
     `flex-1 flex items-center justify-center px-4 py-3 font-semibold border-b-2 transition-colors ` +
     (isActive 
-      ? 'text-white border-blue-500' 
-      : 'text-gray-400 border-transparent hover:text-gray-200 hover:bg-gray-800');
+      ? 'text-primary border-primary bg-primary/5' // Aktif: Marka rengi ve çok hafif zemin
+      : 'text-text-secondary border-transparent hover:text-text-main hover:bg-surface-hover'); // Pasif: Gri ve hover efekti
 
   return (
-    <div className="p-4 text-white">
-      <h1 className="text-4xl font-bold mb-2">{currentProject.name}</h1>
-      <p className="text-lg text-gray-400 mb-6">{currentProject.description}</p>
+    // text-white -> text-text-main
+    <div className="p-4 text-text-main h-full flex flex-col">
       
-      {/* <nav> kısmını 'grid' yerine 'flex' yaptık */}
-      <nav className="flex border-b border-gray-700 mb-6">
+      {/* BAŞLIK ALANI */}
+      <h1 className="text-4xl font-bold mb-2 text-text-main">{currentProject.name}</h1>
+      
+      {/* AÇIKLAMA: text-gray-400 -> text-text-secondary */}
+      <p className="text-lg text-text-secondary mb-6 leading-relaxed">
+        {currentProject.description || "No description provided."}
+      </p>
+      
+      {/* NAVIGASYON: border-gray-700 -> border-border */}
+      <nav className="flex border-b border-border mb-6">
         
         <NavLink to="" end className={navLinkStyle}> 
           <FiFile className="mr-2" />
@@ -94,7 +97,10 @@ function ProjectDetailPage() {
         )}
       </nav>
 
-      <Outlet />
+      {/* İÇERİK ALANI (Diğer sayfaların yükleneceği yer) */}
+      <div className="flex-1 min-h-0">
+        <Outlet />
+      </div>
     </div>
   );
 }

@@ -10,14 +10,19 @@ const LandingPage = () => {
   const { user } = useAuth();
 
   return (
-    <div className="min-h-screen font-sans text-white relative">
+    // text-white -> text-text-main (Temaya göre renk alır)
+    <div className="min-h-screen font-sans text-text-main relative transition-colors duration-300">
+      
       {/* Background Image with Overlay */}
       <div 
-        className="absolute inset-0 bg-cover bg-center z-0"
+        className="absolute inset-0 bg-cover bg-center z-0 fixed"
         style={{ backgroundImage: `url(${BackgroundImage})` }}
       >
-        {/* Daha modern bir gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-900/90 to-black/80"></div>
+        {/* Overlay: 
+            Light Mode: bg-white/90 (Resmi çok silikleştirir, metin okunur)
+            Dark Mode: dark:bg-gray-900/90 (Karanlık mod atmosferi)
+        */}
+        <div className="absolute inset-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-[2px] transition-colors duration-500"></div>
       </div>
 
       {/* Content Wrapper */}
@@ -26,16 +31,18 @@ const LandingPage = () => {
         {/* --- HEADER --- */}
         <header className="container mx-auto px-6 py-6 flex justify-between items-center">
           <div className="flex items-center gap-3">
-             {/* Logo Büyütüldü: h-12 -> h-20 */}
-             <img src={LogoImage} alt="GazozHub Logo" className="h-20 w-20 object-contain drop-shadow-lg" />
-             <span className="text-3xl font-extrabold tracking-tight text-white">GazozHub</span>
+             {/* Logo */}
+             <img src={LogoImage} alt="GazozHub Logo" className="h-20 w-20 object-contain drop-shadow-lg brightness-0 dark:brightness-100 transition-all duration-300" />
+             {/* text-white -> text-text-main */}
+             <span className="text-3xl font-extrabold tracking-tight text-text-main">GazozHub</span>
           </div>
           
           <div className="hidden md:flex items-center gap-4">
             {user ? (
               <Link 
                 to="/dashboard" 
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-full transition-all shadow-lg hover:shadow-blue-500/30 flex items-center"
+                // bg-blue-600 -> bg-primary
+                className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white font-semibold rounded-full transition-all shadow-lg hover:shadow-primary/30 flex items-center"
               >
                 Go to Dashboard <FiArrowRight className="ml-2" />
               </Link>
@@ -43,13 +50,15 @@ const LandingPage = () => {
               <>
                 <Link 
                   to="/login" 
-                  className="px-4 py-2 text-gray-300 hover:text-white font-medium transition-colors"
+                  // text-gray-300 -> text-text-secondary, hover:text-white -> hover:text-text-main
+                  className="px-4 py-2 text-text-secondary hover:text-text-main font-medium transition-colors"
                 >
                   Sign In
                 </Link>
                 <Link 
                   to="/register" 
-                  className="px-6 py-2.5 bg-white text-gray-900 hover:bg-gray-100 font-bold rounded-full transition-all shadow-lg transform hover:-translate-y-0.5"
+                  // bg-white -> bg-primary, text-gray-900 -> text-white (Vurgulu buton)
+                  className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-full transition-all shadow-lg transform hover:-translate-y-0.5"
                 >
                   Get Started
                 </Link>
@@ -62,15 +71,16 @@ const LandingPage = () => {
         <main className="flex-grow flex flex-col justify-center items-center text-center px-4 py-20">
           <div className="max-w-5xl mx-auto space-y-8">
            
-            
-            <h1 className="text-6xl md:text-8xl font-black tracking-tight leading-none mb-6 drop-shadow-2xl">
+            <h1 className="text-6xl md:text-8xl font-black tracking-tight leading-none mb-6 drop-shadow-2xl text-text-main">
               Collaboration <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400">
+              {/* Gradient metin aynen kalabilir, her iki temada da güzel durur */}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500">
                 Reimagined.
               </span>
             </h1>
             
-            <p className="text-xl md:text-2xl text-gray-400 max-w-3xl mx-auto leading-relaxed font-light mb-10">
+            {/* text-gray-400 -> text-text-secondary */}
+            <p className="text-xl md:text-2xl text-text-secondary max-w-3xl mx-auto leading-relaxed font-light mb-10">
               GazozHub connects students, teams, and advisors in one seamless workspace. 
               Manage tasks, track issues, and build amazing things together.
             </p>
@@ -79,7 +89,8 @@ const LandingPage = () => {
               {user ? (
                 <Link 
                   to="/dashboard" 
-                  className="px-10 py-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white text-xl font-bold rounded-2xl transition-all transform hover:scale-105 shadow-xl shadow-blue-900/20 flex items-center justify-center"
+                  // Gradient yerine bg-primary kullanarak tema tutarlılığı sağladık
+                  className="px-10 py-4 bg-primary hover:bg-primary-hover text-white text-xl font-bold rounded-2xl transition-all transform hover:scale-105 shadow-xl shadow-primary/20 flex items-center justify-center"
                 >
                   Launch Dashboard <FiArrowRight className="ml-3" />
                 </Link>
@@ -87,13 +98,15 @@ const LandingPage = () => {
                 <>
                   <Link 
                     to="/register" 
-                    className="px-10 py-4 bg-white text-gray-900 hover:bg-gray-50 text-xl font-bold rounded-2xl transition-all transform hover:scale-105 shadow-xl flex items-center justify-center"
+                    // bg-white -> bg-primary
+                    className="px-10 py-4 bg-primary hover:bg-primary-hover text-white text-xl font-bold rounded-2xl transition-all transform hover:scale-105 shadow-xl flex items-center justify-center"
                   >
                     Get Started <FiArrowRight className="ml-3" size={24} />
                   </Link>
                   <Link 
                     to="/login" 
-                    className="px-10 py-4 bg-gray-800/50 hover:bg-gray-800 border border-gray-700 text-white text-xl font-bold rounded-2xl transition-all flex items-center justify-center backdrop-blur-sm"
+                    // bg-gray-800 -> bg-surface, border-gray-700 -> border-border
+                    className="px-10 py-4 bg-surface hover:bg-surface-hover border border-border text-text-main text-xl font-bold rounded-2xl transition-all flex items-center justify-center backdrop-blur-sm"
                   >
                     Login
                   </Link>
@@ -103,7 +116,7 @@ const LandingPage = () => {
           </div>
 
           {/* --- FEATURES GRID --- */}
-          <div className="mt-[40vh] grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl w-full px-4">
+          <div className="mt-[20vh] grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl w-full px-4">
             <FeatureCard 
               icon={<FiLayout className="w-8 h-8" />} 
               title="Kanban Boards" 
@@ -134,20 +147,24 @@ const LandingPage = () => {
               desc="Keep your projects private or share them publicly with granular visibility settings."
               color="bg-yellow-500"
             />
-             <div className="p-8 rounded-3xl border border-gray-800 bg-gray-900/40 backdrop-blur-md flex flex-col justify-center items-center text-center">
-                <h3 className="text-2xl font-bold text-white mb-2">And much more...</h3>
-                <p className="text-gray-400">Join GazozHub today to explore all features.</p>
+             
+             {/* "And much more" Kartı */}
+             <div className="p-8 rounded-3xl border border-border bg-surface/60 backdrop-blur-md flex flex-col justify-center items-center text-center">
+                <h3 className="text-2xl font-bold text-text-main mb-2">And much more...</h3>
+                <p className="text-text-secondary">Join GazozHub today to explore all features.</p>
              </div>
           </div>
         </main>
 
         {/* --- FOOTER --- */}
-        <footer className="py-8 text-center border-t border-gray-800/50 bg-gray-900/50 backdrop-blur-sm mt-auto">
+        {/* border-gray-800 -> border-border, bg-gray-900 -> bg-surface/50 */}
+        <footer className="py-8 text-center border-t border-border bg-surface/50 backdrop-blur-sm mt-auto">
            <div className="flex items-center justify-center gap-2 mb-2">
-             <img src={LogoImage} alt="Logo" className="h-6 w-6 opacity-50" />
-             <span className="text-gray-500 font-semibold">GazozHub</span>
+             <img src={LogoImage} alt="Logo" className="h-6 w-6 opacity-80" />
+             {/* text-gray-500 -> text-text-secondary */}
+             <span className="text-text-secondary font-semibold">GazozHub</span>
            </div>
-           <p className="text-gray-600 text-sm">
+           <p className="text-text-secondary text-sm">
              &copy; {new Date().getFullYear()} GazozHub. Designed for modern teams.
            </p>
         </footer>
@@ -157,13 +174,21 @@ const LandingPage = () => {
 };
 
 // Alt Bileşen: Özellik Kartı
+// Renkler ve backgroundlar temaya uyarlandı
 const FeatureCard = ({ icon, title, desc, color }) => (
-  <div className="group p-8 rounded-3xl border border-gray-800 bg-gray-900/60 backdrop-blur-md hover:bg-gray-800/80 hover:border-gray-700 transition-all duration-300">
-    <div className={`w-14 h-14 rounded-2xl ${color} bg-opacity-20 flex items-center justify-center text-${color.split('-')[1]}-400 mb-6 group-hover:scale-110 transition-transform duration-300`}>
-      {icon}
+  // bg-gray-900/60 -> bg-surface/80, border-gray-800 -> border-border
+  <div className="group p-8 rounded-3xl border border-border bg-surface/80 backdrop-blur-md hover:bg-surface hover:border-primary/50 transition-all duration-300 shadow-sm hover:shadow-lg">
+    {/* İkon Kutusu */}
+    <div className={`w-14 h-14 rounded-2xl ${color} bg-opacity-10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
+      {/* İkon rengini dinamik olarak text-COLOR-500 yaptık, 'text-' + color class'ı React'te bazen sorun olabilir o yüzden style veya inline class daha güvenlidir ama burada basitçe text-primary gibi davranabiliriz veya color prop'unu kullanabiliriz */}
+      <div className={`${color.replace('bg-', 'text-')}`}>{icon}</div> 
     </div>
-    <h3 className="text-2xl font-bold text-white mb-3">{title}</h3>
-    <p className="text-gray-400 leading-relaxed">{desc}</p>
+    
+    {/* Başlık: text-white -> text-text-main */}
+    <h3 className="text-2xl font-bold text-text-main mb-3">{title}</h3>
+    
+    {/* Açıklama: text-gray-400 -> text-text-secondary */}
+    <p className="text-text-secondary leading-relaxed">{desc}</p>
   </div>
 );
 
