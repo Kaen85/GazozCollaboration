@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import { 
   FiMail, FiUserPlus, FiMoreVertical, FiEdit2, FiTrash2, 
-  FiEye, FiChevronLeft, FiChevronRight, FiX, FiUser, FiCheck, FiSearch
+  FiEye, FiChevronLeft, FiChevronRight, FiX, FiUser, FiCheck, FiSearch, FiLock
 } from 'react-icons/fi';
 
 function Users() {
