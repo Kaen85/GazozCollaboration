@@ -1,45 +1,62 @@
 // src/components/layout/ProfileDropdown.js
 
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { FiSettings, FiLogOut } from 'react-icons/fi';
+import { FiUser, FiSettings, FiLogOut } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 function ProfileDropdown({ isOpen }) {
   const { logout } = useAuth();
   const navigate = useNavigate();
 
+  if (!isOpen) {
+    return null;
+  }
+
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate('/'); 
   };
 
-  if (!isOpen) return null;
+  const handleNavigate = (path) => {
+    navigate(path);
+  };
 
   return (
-    <div className="absolute right-0 top-full mt-2 w-48 bg-gray-800 border border-gray-700 rounded-xl shadow-2xl overflow-hidden animate-fade-in z-50">
+    // DROPDOWN KUTUSU
+    // bg-surface: Temaya göre Beyaz veya Koyu Gri
+    // border-border: Temaya göre kenarlık rengi
+    <div className="absolute top-full right-0 mt-2 w-56 bg-surface rounded-xl shadow-xl border border-border z-50 overflow-hidden animate-fade-in-up origin-top-right">
       
-      {/* Menü Linkleri */}
-      <div className="py-2">
-        {/* Profile ve Help linkleri kaldırıldı */}
-        
-        <Link 
-          to="/settings" 
-          className="flex items-center px-4 py-3 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
-        >
-          <FiSettings className="mr-3 text-gray-400" size={16} />
-          Settings
-        </Link>
-      </div>
-
-      {/* Logout Kısmı */}
-      <div className="border-t border-gray-700 py-2">
+      <div className="py-1">
+        {/* Profil Linki */}
         <button 
-          onClick={handleLogout}
-          className="w-full flex items-center px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors text-left"
+          onClick={() => handleNavigate('/settings')} 
+          className="w-full text-left flex items-center px-4 py-3 text-sm text-text-main hover:bg-surface-hover transition-colors group"
         >
-          <FiLogOut className="mr-3" size={16} />
-          Sign Out
+          <FiUser className="mr-3 text-text-secondary group-hover:text-primary transition-colors" />
+          Profile
+        </button>
+        
+        {/* Ayarlar Linki */}
+        <button 
+          onClick={() => handleNavigate('/settings')} 
+          className="w-full text-left flex items-center px-4 py-3 text-sm text-text-main hover:bg-surface-hover transition-colors group"
+        >
+          <FiSettings className="mr-3 text-text-secondary group-hover:text-primary transition-colors" />
+          Settings
+        </button>
+
+        {/* Ayırıcı Çizgi */}
+        <div className="border-t border-border my-1 mx-2"></div>
+        
+        {/* Çıkış Yap Butonu */}
+        <button
+          onClick={handleLogout}
+          className="w-full text-left flex items-center px-4 py-3 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+        >
+          <FiLogOut className="mr-3" />
+          Logout
         </button>
       </div>
     </div>

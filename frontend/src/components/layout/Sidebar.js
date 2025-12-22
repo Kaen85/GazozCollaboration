@@ -24,7 +24,7 @@ function Sidebar({ isCollapsed, toggleSidebar }) {
     <div 
       className={`${
         isCollapsed ? 'w-20' : 'w-64'
-      } bg-gray-800 border-r border-gray-700 flex flex-col transition-all duration-300 relative shadow-xl pt-4`}
+      } bg-surface border-border flex flex-col transition-all duration-300 relative shadow-xl pt-4`}
     >
       
       {/* MENU LİSTESİ */}

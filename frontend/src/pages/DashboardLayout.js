@@ -16,7 +16,7 @@ function DashboardLayout() {
 
   return (
     // 1. ANA KAPSAYICI: flex-col yaparak alt alta dizilim sağladık (Header üstte, gövde altta)
-    <div className="flex h-screen flex-col bg-gray-900 text-gray-100 overflow-hidden font-sans">
+    <div className="flex h-screen flex-col bg-app text-text-main overflow-hidden font-sans">
       
       {/* 2. HEADER: En tepede, tam genişlikte */}
       <div className="z-50 shadow-md">

@@ -76,7 +76,7 @@ function DashboardOverviewPage() {
                     ))}
                 </div>
             ) : recentProjects.length === 0 ? (
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 text-center text-gray-500">
+                <div className="bg-surface p-6 rounded-xl border border-border shadow-sm text-center text-gray-500">
                     No projects found. Create one to get started!
                 </div>
             ) : (
@@ -118,7 +118,7 @@ function DashboardOverviewPage() {
         {/* === BÖLÜM 2: GÖREV ÖZETİ (TASK SUMMARY) === */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
           <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center">
+            <h2 className="text-xl font-bold text-text-main dark:text-white flex items-center">
               <FiActivity className="mr-2 text-blue-500" />
               Active Priority Tasks
             </h2>
@@ -133,7 +133,7 @@ function DashboardOverviewPage() {
                   <FiCheckSquare size={32} />
                 </div>
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">All caught up!</h3>
-                <p className="text-gray-500 dark:text-gray-400 mt-1 max-w-sm">
+                <p className="text-text-secondary dark:text-gray-400 mt-1 max-w-sm">
                   You have no active tasks. Completed tasks are hidden from this view.
                 </p>
               </div>

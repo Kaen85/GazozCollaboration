@@ -4,7 +4,6 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { FiUser, FiCalendar, FiShare2, FiGlobe } from 'react-icons/fi'; 
 
-// Tarih formatlama helper fonksiyonu
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -22,45 +21,42 @@ function SharedProjectCard({ project, viewMode = 'grid' }) {
 
   const ownerName = project.owner_name || 'Unknown';
   const createdDate = project.created_at; 
-  const sharedDate = project.joined_at; // Public projeler için null'dır
+  const sharedDate = project.joined_at;
 
-  // === LISTE GÖRÜNÜMÜ (Tarihler Eklendi) ===
+  // === LISTE GÖRÜNÜMÜ ===
   if (viewMode === 'list') {
     return (
       <Link to={`/project/${project.id}`} className="block">
-        <div className="bg-gray-800 p-4 rounded-lg border border-gray-700 hover:border-purple-500 transition-all flex flex-col md:flex-row md:items-center justify-between group gap-4">
+        {/* bg-gray-800 -> bg-surface, border-gray-700 -> border-border, hover:border-purple-500 -> hover:border-primary */}
+        <div className="bg-surface p-4 rounded-lg border border-border hover:border-primary transition-all flex flex-col md:flex-row md:items-center justify-between group gap-4">
           
-          {/* Sol Kısım: Başlık ve Bilgiler */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center mb-2">
-               <h3 className="text-lg font-bold text-white group-hover:text-purple-400 transition-colors truncate mr-3">
+              {/* text-white -> text-text-main, group-hover:text-purple-400 -> group-hover:text-primary */}
+              <h3 className="text-lg font-bold text-text-main group-hover:text-primary transition-colors truncate mr-3">
                 {project.name}
               </h3>
             </div>
             
-            {/* Bilgi Satırı (Owner, Created, Shared) */}
-            <div className="flex flex-wrap items-center text-xs text-gray-400 gap-x-6 gap-y-2">
+            <div className="flex flex-wrap items-center text-xs text-text-secondary gap-x-6 gap-y-2">
                
-               {/* 1. Sahip */}
                <span className="flex items-center" title="Project Owner">
-                 <FiUser className="mr-1.5 w-3 h-3 text-gray-500" />
-                 <span className="font-semibold text-gray-300">{ownerName}</span>
+                 <FiUser className="mr-1.5 w-3 h-3 text-text-secondary" />
+                 <span className="font-semibold text-text-main">{ownerName}</span>
                </span>
 
-               {/* 2. Oluşturulma Tarihi (BURASI EKLENDİ) */}
                <span className="flex items-center" title="Created Date">
-                 <FiCalendar className="mr-1.5 w-3 h-3 text-gray-500" />
+                 <FiCalendar className="mr-1.5 w-3 h-3 text-text-secondary" />
                  Created: {formatDate(createdDate)}
                </span>
 
-               {/* 3. Paylaşılma Durumu */}
                {sharedDate ? (
                  <span className="flex items-center" title="Shared Date">
-                   <FiShare2 className="mr-1.5 w-3 h-3 text-gray-500" />
+                   <FiShare2 className="mr-1.5 w-3 h-3 text-text-secondary" />
                    Shared: {formatDate(sharedDate)}
                  </span>
                ) : (
-                 <span className="flex items-center text-green-400 font-medium">
+                 <span className="flex items-center text-green-500 font-medium">
                    <FiGlobe className="mr-1.5 w-3 h-3" />
                    Public Project
                  </span>
@@ -68,8 +64,7 @@ function SharedProjectCard({ project, viewMode = 'grid' }) {
             </div>
           </div>
           
-          {/* Sağ Kısım: Açıklama (Masaüstünde görünür) */}
-          <div className="flex-shrink-0 text-gray-500 text-sm max-w-md truncate hidden md:block">
+          <div className="flex-shrink-0 text-text-secondary text-sm max-w-md truncate hidden md:block">
             {project.description}
           </div>
 
@@ -78,55 +73,54 @@ function SharedProjectCard({ project, viewMode = 'grid' }) {
     );
   }
 
-  // === GRID GÖRÜNÜMÜ (Varsayılan) ===
+  // === GRID GÖRÜNÜMÜ ===
   return (
     <Link to={`/project/${project.id}`} className="block h-full">
-      <div className="bg-gray-800 p-6 rounded-lg shadow-md hover:shadow-xl hover:border-blue-500 border-2 border-transparent transition-all duration-300 h-full flex flex-col justify-between">
+      {/* bg-gray-800 -> bg-surface, hover:border-blue-500 -> hover:border-primary */}
+      <div className="bg-surface p-6 rounded-lg shadow-md hover:shadow-xl hover:border-primary border-2 border-transparent transition-all duration-300 h-full flex flex-col justify-between">
         
-        {/* Üst Kısım */}
         <div>
-          <h3 className="text-xl font-bold text-white mb-2 truncate" title={project.name}>
+          {/* text-white -> text-text-main */}
+          <h3 className="text-xl font-bold text-text-main mb-2 truncate" title={project.name}>
             {project.name}
           </h3>
-          <p className="text-gray-400 text-sm line-clamp-2">
+          {/* text-gray-400 -> text-text-secondary */}
+          <p className="text-text-secondary text-sm line-clamp-2">
             {project.description}
           </p>
         </div>
         
-        {/* Alt Kısım */}
         <div>
-          <div className="border-t border-gray-700 my-4"></div>
+          {/* border-gray-700 -> border-border */}
+          <div className="border-t border-border my-4"></div>
           
           <div className="space-y-2">
-            {/* 1. Sahip */}
             <div className="flex items-center">
-              <FiUser className="w-4 h-4 text-gray-500 mr-2 flex-shrink-0" />
-              <span className="text-xs text-gray-400 truncate">
-                Owner: <span className="font-semibold text-gray-300">{ownerName}</span>
+              <FiUser className="w-4 h-4 text-text-secondary mr-2 flex-shrink-0" />
+              <span className="text-xs text-text-secondary truncate">
+                Owner: <span className="font-semibold text-text-main">{ownerName}</span>
               </span>
             </div>
 
-            {/* 2. Oluşturulma Tarihi */}
             <div className="flex items-center">
-              <FiCalendar className="w-4 h-4 text-gray-500 mr-2 flex-shrink-0" />
-              <span className="text-xs text-gray-400">
+              <FiCalendar className="w-4 h-4 text-text-secondary mr-2 flex-shrink-0" />
+              <span className="text-xs text-text-secondary">
                 Created: {formatDate(createdDate)}
               </span>
             </div>
 
-             {/* 3. Paylaşılma Durumu */}
              <div className="flex items-center">
               {sharedDate ? (
                 <>
-                  <FiShare2 className="w-4 h-4 text-gray-500 mr-2 flex-shrink-0" />
-                  <span className="text-xs text-gray-400">
+                  <FiShare2 className="w-4 h-4 text-text-secondary mr-2 flex-shrink-0" />
+                  <span className="text-xs text-text-secondary">
                     Shared: {formatDate(sharedDate)}
                   </span>
                 </>
               ) : (
                 <>
                   <FiGlobe className="w-4 h-4 text-green-500 mr-2 flex-shrink-0" />
-                  <span className="text-xs font-semibold text-green-400">
+                  <span className="text-xs font-semibold text-green-500">
                     Public Project
                   </span>
                 </>

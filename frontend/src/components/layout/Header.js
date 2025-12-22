@@ -1,7 +1,7 @@
 // src/components/layout/Header.js
-import api from '../../services/api';
+
 import React, { useState, useEffect, useRef } from 'react';
-import { FiBell, FiChevronDown, FiInfo } from 'react-icons/fi'; 
+import { FiBell, FiChevronDown, FiInfo } from 'react-icons/fi'; // İkonlar
 import { Link } from 'react-router-dom';
 import ProfileDropdown from './ProfileDropdown';
 import { useAuth } from '../../context/AuthContext';
@@ -12,6 +12,7 @@ function Header({ onToggleRightSidebar }) {
   const dropdownRef = useRef(null);
   const { user } = useAuth();
 
+  // Dropdown dışına tıklanınca kapatma mantığı
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -25,55 +26,71 @@ function Header({ onToggleRightSidebar }) {
   }, [dropdownRef]);
 
   return (
-    <header className="bg-black bg-opacity-40 backdrop-blur-md text-white shadow-sm border-b border-white/10 z-30 relative">
+    // HEADER KONTEYNERİ
+    // bg-surface/80 ve backdrop-blur-md: Buzlu cam efekti verir.
+    // border-b border-border: Altına ince bir çizgi çeker (temaya duyarlı).
+    <header className="sticky top-0 z-40 w-full border-b border-border bg-surface/80 backdrop-blur-md transition-colors duration-300">
+      
       <div className="px-6 py-3 flex justify-between items-center">
         
-        {/* Logo ve Marka Alanı */}
-        <Link to="/dashboard" className="flex items-center hover:text-gray-300 transition-colors group">
+        {/* SOL: LOGO VE MARKA */}
+        <Link to="/dashboard" className="flex items-center group">
           <img 
             src={LogoImage} 
             alt="Logo" 
-            className="h-12 w-12 object-contain mr-3" 
+            className="h-10 w-10 object-contain mr-3 group-hover:scale-105 transition-transform duration-300" 
           />
-          <div className="flex items-baseline">
-            <span className="text-xl font-bold tracking-wide">GazozHub</span>
+          <div className="flex flex-col">
+            <span className="text-xl font-bold tracking-wide text-text-main group-hover:text-primary transition-colors">
+              GazozHub
+            </span>
           </div>
         </Link>
 
-        <div className="flex items-center space-x-4">
+        {/* SAĞ: BUTONLAR VE PROFİL */}
+        <div className="flex items-center space-x-2 md:space-x-4">
           
+          {/* Info Butonu (Right Sidebar Toggle) */}
           <button 
             onClick={onToggleRightSidebar}
-            className="p-2 rounded-full hover:bg-white/10 transition text-gray-300 hover:text-white"
+            className="p-2 rounded-full text-text-secondary hover:text-text-main hover:bg-surface-hover transition-all"
             title="Toggle Info Panel"
           >
             <FiInfo size={22} />
           </button>
-        
-
-          <button className="p-2 rounded-full hover:bg-white/10 transition">
+  
+          {/* Bildirim Butonu */}
+          <button className="p-2 rounded-full text-text-secondary hover:text-text-main hover:bg-surface-hover transition-all relative">
             <FiBell size={20} />
+            {/* Bildirim noktası örneği (İsteğe bağlı) */}
+            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-surface"></span>
           </button>
           
+          {/* Profil Dropdown */}
           <div className="relative" ref={dropdownRef}>
             <button 
               onClick={() => setDropdownOpen(!isDropdownOpen)} 
-              className="flex items-center space-x-2 p-2 rounded-full hover:bg-white/10 transition"
+              className="flex items-center space-x-2 p-1.5 pr-3 rounded-full hover:bg-surface-hover border border-transparent hover:border-border transition-all group"
             >
-              <span className="font-medium flex items-center gap-2">
-                {/* DÜZELTME 1: user?.username (Kullanıcı yoksa Guest yazar, hata vermez) */}
-                {user?.username || 'Guest'}
+              {/* Avatar Yerine Baş harf veya resim */}
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white text-sm font-bold shadow-sm">
+                 {user?.username?.charAt(0).toUpperCase() || 'U'}
+              </div>
 
-                {/* DÜZELTME 2: user?.role (Kullanıcı null ise hata vermez, geçer) */}
-                {user?.role === 'admin' && (
-                  <span className="bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded border border-red-400 ml-1">
-                    ADMIN
-                  </span>
-                )}
+              <span className="font-medium text-sm text-text-main hidden md:block">
+                {user ? user.username : 'Guest'}
               </span>
-              <FiChevronDown size={16} />
+              
+              {user?.role === 'admin' && (
+                <span className="hidden md:inline-block bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[10px] font-bold px-1.5 py-0.5 rounded border border-red-200 dark:border-red-800 ml-1">
+                  ADMIN
+                </span>
+              )}
+              
+              <FiChevronDown size={16} className="text-text-secondary group-hover:text-text-main transition-colors" />
             </button>
             
+            {/* Dropdown Bileşeni */}
             <ProfileDropdown isOpen={isDropdownOpen} />
           </div>
         </div>

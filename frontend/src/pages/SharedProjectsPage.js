@@ -7,18 +7,12 @@ import SharedProjectCard from '../components/projects/SharedProjectCard';
 
 function SharedProjectsPage() {
   const { sharedProjects, loading, fetchSharedProjects } = useProjectContext();
-  
-  // === GÖRÜNÜM MODU ===
+
   const [viewMode, setViewMode] = useState(() => {
     return localStorage.getItem('sharedProjectsViewMode') || 'grid';
   });
 
-  // --- PAGINATION STATE ---
   const [currentPage, setCurrentPage] = useState(1);
-  
-  // !!! DÜZELTME BURADA !!!
-  // Liste görünümünde butonların oynamaması için sayıyı 5'ten 4'e indirdik.
-  // Grid: 6 adet, List: 4 adet. (Yükseklikleri birbirine daha yakın olur)
   const projectsPerPage = viewMode === 'grid' ? 6 : 4;
 
   const changeViewMode = (mode) => {
@@ -28,10 +22,8 @@ function SharedProjectsPage() {
 
   useEffect(() => {
     fetchSharedProjects();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // === PROJELERİ TEKİLLEŞTİRME ===
   const uniqueProjects = useMemo(() => {
     const projectMap = new Map();
     sharedProjects.forEach(project => {
@@ -47,23 +39,19 @@ function SharedProjectsPage() {
     return Array.from(projectMap.values());
   }, [sharedProjects]);
 
-  // Görünüm veya veri değişirse 1. sayfaya dön
   useEffect(() => {
     setCurrentPage(1);
   }, [uniqueProjects, viewMode]);
 
-  // --- PAGINATION HESAPLAMALARI ---
   const indexOfLastProject = currentPage * projectsPerPage;
   const indexOfFirstProject = indexOfLastProject - projectsPerPage;
   const currentProjects = uniqueProjects.slice(indexOfFirstProject, indexOfLastProject);
   const totalPages = Math.ceil(uniqueProjects.length / projectsPerPage);
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
-
   const nextPage = () => {
     if (currentPage < totalPages) setCurrentPage(currentPage + 1);
   };
-
   const prevPage = () => {
     if (currentPage > 1) setCurrentPage(currentPage - 1);
   };
@@ -73,17 +61,20 @@ function SharedProjectsPage() {
       {/* --- HEADER --- */}
       <div className="flex justify-between items-end mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-white">Shared by Others</h1>
-          <p className="text-gray-400 mt-2 text-sm">
+          {/* text-white -> text-text-main */}
+          <h1 className="text-3xl font-bold text-text-main">Shared by Others</h1>
+          {/* text-gray-400 -> text-text-secondary */}
+          <p className="text-text-secondary mt-2 text-sm">
             Projects shared with you or available publicly.
           </p>
         </div>
 
-        <div className="bg-gray-800 p-1 rounded-lg border border-gray-700 flex">
+        {/* bg-gray-800 -> bg-surface, border-gray-700 -> border-border */}
+        <div className="bg-surface p-1 rounded-lg border border-border flex">
           <button
             onClick={() => changeViewMode('grid')}
             className={`p-2 rounded-md transition-all ${
-              viewMode === 'grid' ? 'bg-purple-600 text-white shadow' : 'text-gray-400 hover:text-white'
+              viewMode === 'grid' ? 'bg-primary text-white shadow' : 'text-text-secondary hover:text-text-main hover:bg-surface-hover'
             }`}
             title="Grid View"
           >
@@ -92,7 +83,7 @@ function SharedProjectsPage() {
           <button
             onClick={() => changeViewMode('list')}
             className={`p-2 rounded-md transition-all ${
-              viewMode === 'list' ? 'bg-purple-600 text-white shadow' : 'text-gray-400 hover:text-white'
+              viewMode === 'list' ? 'bg-primary text-white shadow' : 'text-text-secondary hover:text-text-main hover:bg-surface-hover'
             }`}
             title="List View"
           >
@@ -104,19 +95,16 @@ function SharedProjectsPage() {
       {/* --- CONTENT --- */}
       {loading ? (
         <div className="flex justify-center items-center p-20">
-          <FiLoader className="animate-spin text-purple-500" size={40} />
-          <span className="ml-4 text-xl text-gray-300">Loading Shared Projects...</span>
+          <FiLoader className="animate-spin text-primary" size={40} />
+          <span className="ml-4 text-xl text-text-secondary">Loading Shared Projects...</span>
         </div>
       ) : uniqueProjects.length === 0 ? (
-        <p className="text-gray-400">No projects have been shared with you yet.</p>
+        <p className="text-text-secondary">No projects have been shared with you yet.</p>
       ) : (
-        // !!! SABİT YÜKSEKLİK GÜNCELLEMESİ !!!
-        // min-h-[500px]: 4 liste elemanı için tam ideal yükseklik.
-        // Bu sayede butonlar ne yukarı zıplar ne de ekranı taşırır.
         <div className="flex flex-col min-h-[500px]">
           
           <div className="flex-grow">
-            {/* GRID MODU (6 tane) */}
+            {/* GRID MODU */}
             {viewMode === 'grid' && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {currentProjects.map(project => (
@@ -129,7 +117,7 @@ function SharedProjectsPage() {
               </div>
             )}
 
-            {/* LIST MODU (4 tane) */}
+            {/* LIST MODU */}
             {viewMode === 'list' && (
               <div className="flex flex-col space-y-3">
                 {currentProjects.map(project => (
@@ -145,14 +133,14 @@ function SharedProjectsPage() {
 
           {/* === PAGINATION BAR === */}
           {uniqueProjects.length > projectsPerPage && (
-            <div className="flex justify-center items-center mt-2 pt-4 border-t border-gray-800">
+            <div className="flex justify-center items-center mt-2 pt-4 border-t border-border">
               <button
                 onClick={prevPage}
                 disabled={currentPage === 1}
-                className={`p-2 rounded-md border border-gray-700 ${
+                className={`p-2 rounded-md border border-border ${
                   currentPage === 1 
-                    ? 'text-gray-600 cursor-not-allowed bg-gray-800/50' 
-                    : 'text-white bg-gray-800 hover:bg-gray-700 hover:border-purple-500'
+                    ? 'text-text-secondary cursor-not-allowed bg-surface/50' 
+                    : 'text-text-main bg-surface hover:bg-surface-hover hover:border-primary'
                 }`}
               >
                 <FiChevronLeft size={20} />
@@ -165,8 +153,8 @@ function SharedProjectsPage() {
                     onClick={() => paginate(number)}
                     className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
                       currentPage === number
-                        ? 'bg-purple-600 text-white shadow-lg'
-                        : 'bg-gray-800 text-gray-400 border border-gray-700 hover:bg-gray-700 hover:text-white'
+                        ? 'bg-primary text-white shadow-lg'
+                        : 'bg-surface text-text-secondary border border-border hover:bg-surface-hover hover:text-text-main'
                     }`}
                   >
                     {number}
@@ -177,10 +165,10 @@ function SharedProjectsPage() {
               <button
                 onClick={nextPage}
                 disabled={currentPage === totalPages}
-                className={`p-2 rounded-md border border-gray-700 ${
+                className={`p-2 rounded-md border border-border ${
                   currentPage === totalPages 
-                    ? 'text-gray-600 cursor-not-allowed bg-gray-800/50' 
-                    : 'text-white bg-gray-800 hover:bg-gray-700 hover:border-purple-500'
+                    ? 'text-text-secondary cursor-not-allowed bg-surface/50' 
+                    : 'text-text-main bg-surface hover:bg-surface-hover hover:border-primary'
                 }`}
               >
                 <FiChevronRight size={20} />
