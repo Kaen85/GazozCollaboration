@@ -2,4 +2,46 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 🎨 TEMA SİSTEMİ 
+  Light Mode (Varsayılan): Modern Indigo
+  Dark Mode (.dark class'ı gelince): Senin Mevcut Teman
+*/
 
+@layer base {
+  :root {
+    /* --- LIGHT MODE (Modern Indigo) --- */
+    --bg-app: #F8FAFC;        /* Slate-50: Ferah arka plan */
+    --bg-surface: #FFFFFF;    /* Beyaz kartlar */
+    --bg-surface-hover: #F1F5F9; 
+    
+    --text-main: #1E293B;     /* Koyu Gri/Lacivert Metin */
+    --text-secondary: #64748B; /* Orta Gri Metin */
+    --text-inverted: #FFFFFF;  /* Buton içi yazı vb. */
+
+    --border-color: #E2E8F0;  /* İnce çizgiler */
+    
+    --primary: #4F46E5;       /* Indigo-600 */
+    --primary-hover: #4338CA; /* Indigo-700 */
+  }
+
+  /* --- DARK MODE (Mevcut Teman) --- */
+  /* ThemeContext 'dark' class'ını eklediğinde burası devreye girer */
+  .dark {
+    --bg-app: #111827;        /* Gray-900 (Mevcut body rengin) */
+    --bg-surface: #1F2937;    /* Gray-800 (Mevcut kart rengin) */
+    --bg-surface-hover: #374151; /* Gray-700 */
+
+    --text-main: #F9FAFB;     /* Gray-50 (Beyazımsı) */
+    --text-secondary: #9CA3AF; /* Gray-400 */
+    --text-inverted: #FFFFFF;
+
+    --border-color: #374151;  /* Gray-700 */
+
+    --primary: #6366F1;       /* Indigo-500 (Karanlıkta daha parlak durur) */
+    --primary-hover: #4F46E5;
+  }
+
+  body {
+    @apply bg-app text-text-main transition-colors duration-300;
+  }
+}

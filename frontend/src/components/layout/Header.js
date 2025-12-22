@@ -1,18 +1,16 @@
 // src/components/layout/Header.js
 import api from '../../services/api';
 import React, { useState, useEffect, useRef } from 'react';
-// FiInfo ikonunu ekledik
 import { FiBell, FiChevronDown, FiInfo } from 'react-icons/fi'; 
 import { Link } from 'react-router-dom';
 import ProfileDropdown from './ProfileDropdown';
 import { useAuth } from '../../context/AuthContext';
 import LogoImage from '../../assets/logo.png';
 
-// Props'a onToggleRightSidebar eklendi
 function Header({ onToggleRightSidebar }) {
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -39,13 +37,11 @@ function Header({ onToggleRightSidebar }) {
           />
           <div className="flex items-baseline">
             <span className="text-xl font-bold tracking-wide">GazozHub</span>
-            
           </div>
         </Link>
 
         <div className="flex items-center space-x-4">
           
-         
           <button 
             onClick={onToggleRightSidebar}
             className="p-2 rounded-full hover:bg-white/10 transition text-gray-300 hover:text-white"
@@ -64,12 +60,16 @@ function Header({ onToggleRightSidebar }) {
               onClick={() => setDropdownOpen(!isDropdownOpen)} 
               className="flex items-center space-x-2 p-2 rounded-full hover:bg-white/10 transition"
             >
-              <span className="font-medium">{user ? user.username : 'Guest'}
-                {user.role === 'admin' && (
-                <span className="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded border border-red-400">
-                  ADMIN
-                </span>
-              )}
+              <span className="font-medium flex items-center gap-2">
+                {/* DÜZELTME 1: user?.username (Kullanıcı yoksa Guest yazar, hata vermez) */}
+                {user?.username || 'Guest'}
+
+                {/* DÜZELTME 2: user?.role (Kullanıcı null ise hata vermez, geçer) */}
+                {user?.role === 'admin' && (
+                  <span className="bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded border border-red-400 ml-1">
+                    ADMIN
+                  </span>
+                )}
               </span>
               <FiChevronDown size={16} />
             </button>

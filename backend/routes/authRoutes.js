@@ -1,18 +1,19 @@
+// backend/routes/authRoutes.js
+
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const db = require('../db'); 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const auth = require('../middleware/auth'); // Token kontrolü için şart
+const auth = require('../middleware/auth');
 require('dotenv').config();
 
 // =========================================================
-// 1. TÜM KULLANICILARI LİSTELE (BU EKSİKTİ)
+// 1. KULLANICI LİSTELEME
 // URL: /api/auth/users
 // =========================================================
 router.get('/users', auth, async (req, res) => {
   try {
-    // Şifre hariç, en yeniden eskiye doğru kullanıcıları çek
     const result = await db.query(
       'SELECT id, username, email, role, created_at FROM users ORDER BY created_at DESC'
     );
@@ -36,18 +37,12 @@ router.post('/register', async (req, res) => {
 
   try {
     const userCheck = await db.query('SELECT * FROM users WHERE username = $1 OR email = $2', [username, email]);
-
     if (userCheck.rows.length > 0) {
-      if (userCheck.rows[0].username === username) {
-        return res.status(400).json({ message: 'Username already exists' });
-      }
-      return res.status(400).json({ message: 'Email already in use' });
+       return res.status(400).json({ message: 'Username or Email already exists' });
     }
 
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
-    
-    // Admin panelinden rol gelmezse varsayılan 'student' olsun
     const userRole = role || 'student';
 
     const newUser = await db.query(
@@ -55,32 +50,66 @@ router.post('/register', async (req, res) => {
       [username, email, passwordHash, userRole]
     );
 
-    const payload = {
-      user: { id: newUser.rows[0].id, role: newUser.rows[0].role }
-    };
+    const payload = { user: { id: newUser.rows[0].id, role: newUser.rows[0].role } };
 
-    jwt.sign(
-      payload,
-      process.env.JWT_SECRET || 'mysecrettoken',
-      { expiresIn: '30d' },
-      (err, token) => {
+    jwt.sign(payload, process.env.JWT_SECRET || 'mysecrettoken', { expiresIn: '30d' }, (err, token) => {
         if (err) throw err;
-        res.status(201).json({
-          message: 'User registered successfully',
-          token,
-          user: newUser.rows[0]
-        });
-      }
-    );
-
+        res.status(201).json({ message: 'User registered successfully', token, user: newUser.rows[0] });
+    });
   } catch (err) {
-    console.error("Register Error:", err.message);
+    console.error("Register Hatası:", err.message);
     res.status(500).send('Server error');
   }
 });
 
 // =========================================================
-// 3. LOGİN, USER ve ŞİFRE İŞLEMLERİ (MEVCUT KODLARIN)
+// 3. KULLANICI GÜNCELLEME (UPDATE) - YENİ EKLENDİ
+// URL: /api/auth/users/:id
+// =========================================================
+router.put('/users/:id', auth, async (req, res) => {
+  const { id } = req.params;
+  const { username, email, role, password } = req.body;
+
+  console.log(`Update isteği geldi: ID=${id}, User=${username}, Role=${role}`);
+
+  try {
+    // 1. Kullanıcı var mı?
+    const userCheck = await db.query('SELECT * FROM users WHERE id = $1', [id]);
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // 2. Sorguyu Hazırla
+    let query = 'UPDATE users SET username = $1, email = $2, role = $3';
+    let values = [username, email, role];
+    let counter = 4;
+
+    // Şifre varsa güncelle, yoksa dokunma
+    if (password && password.trim() !== '') {
+      const salt = await bcrypt.genSalt(10);
+      const passwordHash = await bcrypt.hash(password, salt);
+      query += `, password_hash = $${counter}`;
+      values.push(passwordHash);
+      counter++;
+    }
+
+    query += ` WHERE id = $${counter} RETURNING id, username, email, role`;
+    values.push(id);
+
+    // 3. Veritabanını Güncelle
+    const updatedUser = await db.query(query, values);
+    
+    console.log("Kullanıcı güncellendi:", updatedUser.rows[0]);
+    res.json(updatedUser.rows[0]);
+
+  } catch (err) {
+    console.error("Update Error:", err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// =========================================================
+// 4. GİRİŞ (LOGIN)
 // =========================================================
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
@@ -102,6 +131,9 @@ router.post('/login', async (req, res) => {
   } catch (err) { res.status(500).send('Server error'); }
 });
 
+// =========================================================
+// 5. USER INFO, FORGOT & RESET PASSWORD
+// =========================================================
 router.get('/user', auth, async (req, res) => {
     try {
       const user = await db.query('SELECT id, username, email, role FROM users WHERE id = $1', [req.user.id]);
@@ -109,14 +141,7 @@ router.get('/user', auth, async (req, res) => {
     } catch (err) { res.status(500).send('Server Error'); }
 });
 
-router.post('/forgot-password', async (req, res) => {
-  /* ... Mevcut kodunuz kalsın ... */
-  res.json({ message: 'Password reset link sent' });
-});
-
-router.post('/reset-password', async (req, res) => {
-  /* ... Mevcut kodunuz kalsın ... */
-  res.json({ message: 'Password updated' });
-});
+router.post('/forgot-password', async (req, res) => { /* ... Mevcut kodunuz ... */ res.json({msg: 'Link sent'}); });
+router.post('/reset-password', async (req, res) => { /* ... Mevcut kodunuz ... */ res.json({msg: 'Password updated'}); });
 
 module.exports = router;

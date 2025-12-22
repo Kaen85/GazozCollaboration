@@ -1,3 +1,57 @@
+/* ☀️ Varsayılan (LIGHT MODE) */
+:root {
+  /* Arka Planlar */
+  --bg-app: #F8FAFC;        /* Soft Slate */
+  --bg-surface: #FFFFFF;    /* Beyaz */
+  
+  /* Metinler */
+  --text-main: #1E293B;     /* Koyu Gri/Mavi */
+  --text-secondary: #64748B; /* Orta Gri */
+  
+  /* Marka Rengi */
+  --primary: #4F46E5;       /* İndigo */
+  --primary-text: #FFFFFF;  /* Buton yazı rengi */
+  
+  /* Çizgiler */
+  --border-color: #E2E8F0;  /* Açık Gri */
+}
+
+/* 🌙 Karanlık Mod (DARK MODE) */
+body.dark-mode {
+  /* Arka Planlar - Light'ın tam tersi koyu tonlar */
+  --bg-app: #0F172A;        /* Çok koyu lacivert (Slate 900) */
+  --bg-surface: #1E293B;    /* Kartlar için biraz daha açık (Slate 800) */
+  
+  /* Metinler - Koyu zemin üzerinde açık renkler */
+  --text-main: #F1F5F9;     /* Kırık Beyaz */
+  --text-secondary: #94A3B8; /* Açık Gri (Slate 400) */
+  
+  /* Marka Rengi */
+  --primary: #6366F1;       /* İndigo'nun bir tık parlağı (Karanlıkta daha iyi okunur) */
+  --primary-text: #FFFFFF;
+  
+  /* Çizgiler */
+  --border-color: #334155;  /* Koyu Gri çizgi */
+}
+
+/* GENEL AYARLAR ve GEÇİŞ EFEKTİ */
+body {
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  
+  /* Renk değişiminde yumuşak geçiş (Animasyon) */
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Kartlar ve Kutular için genel sınıf */
+.card, .box, .navbar {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
 .App {
   text-align: center;
 }

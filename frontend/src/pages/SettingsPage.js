@@ -1,130 +1,153 @@
 // src/pages/SettingsPage.js
 
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-// 1. Theme hook'unu import et
-import { useTheme } from '../context/ThemeContext';
-import { FiUser, FiMail, FiLock, FiSettings, FiGlobe, FiBell, FiShield, FiMoon, FiSun } from 'react-icons/fi';
+import { FiUser, FiLock, FiMonitor, FiSave, FiSun, FiMoon } from 'react-icons/fi';
+import { useTheme } from '../context/ThemeContext'; // YENİ: Context'i çekiyoruz
 
 export default function SettingsPage() {
-  const { user } = useAuth();
-  
-  // 2. Tema verisini al
-  const { theme, toggleTheme } = useTheme();
-  
   const [activeTab, setActiveTab] = useState('profile');
+  const { theme, toggleTheme } = useTheme(); // Tema fonksiyonlarını al
 
-  // Ortak stil sınıfları (Dark/Light uyumlu)
-  const cardClass = "bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 transition-colors duration-300";
-  const textPrimary = "text-gray-900 dark:text-white";
-  const textSecondary = "text-gray-500 dark:text-gray-400";
-  const inputClass = "bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 w-full";
+  // Tab İçerikleri
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'profile':
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
+              Profile Details
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">Full Name</label>
+                    <input type="text" className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 text-gray-900 dark:text-white focus:border-blue-500 outline-none transition-colors" placeholder="Your Name" />
+                </div>
+                <div>
+                    <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">Email</label>
+                    <input type="email" className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 text-gray-900 dark:text-white focus:border-blue-500 outline-none transition-colors" placeholder="email@example.com" disabled />
+                </div>
+                <div className="md:col-span-2">
+                    <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">Bio</label>
+                    <textarea className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 text-gray-900 dark:text-white focus:border-blue-500 outline-none h-24 transition-colors" placeholder="Tell us about yourself..." />
+                </div>
+            </div>
+          </div>
+        );
+      case 'security':
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
+              Security & Password
+            </h3>
+            <div className="space-y-4 max-w-md">
+                <div>
+                    <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">Current Password</label>
+                    <input type="password" className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 text-gray-900 dark:text-white focus:border-blue-500 outline-none transition-colors" />
+                </div>
+                <div>
+                    <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">New Password</label>
+                    <input type="password" className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 text-gray-900 dark:text-white focus:border-blue-500 outline-none transition-colors" />
+                </div>
+                <div>
+                    <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">Confirm New Password</label>
+                    <input type="password" className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 text-gray-900 dark:text-white focus:border-blue-500 outline-none transition-colors" />
+                </div>
+            </div>
+          </div>
+        );
+      case 'appearance':
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
+              Appearance Settings
+            </h3>
+            <div className="space-y-4">
+                <p className="text-gray-600 dark:text-gray-400 text-sm">Choose how GazozHub looks to you.</p>
+                
+                <div className="grid grid-cols-2 gap-4 max-w-md">
+                  {/* LIGHT MODE BUTONU */}
+                  <button 
+                    onClick={() => toggleTheme('light')}
+                    className={`flex items-center justify-center p-4 rounded-xl border-2 transition-all ${
+                      theme === 'light' 
+                      ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    <FiSun className="mr-2" size={20}/>
+                    <span className="font-semibold">Light Mode</span>
+                  </button>
+
+                  {/* DARK MODE BUTONU */}
+                  <button 
+                    onClick={() => toggleTheme('dark')}
+                    className={`flex items-center justify-center p-4 rounded-xl border-2 transition-all ${
+                      theme === 'dark' 
+                      ? 'border-blue-500 bg-gray-800 text-white' 
+                      : 'border-gray-200 bg-gray-100 text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    <FiMoon className="mr-2" size={20}/>
+                    <span className="font-semibold">Dark Mode</span>
+                  </button>
+                </div>
+            </div>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
-    <div className="max-w-5xl mx-auto pb-10 px-4 md:px-0">
-      
-      {/* Başlık */}
-      <div className="border-b border-gray-200 dark:border-gray-700 pb-4 mb-8">
-        <h2 className={`text-3xl font-bold flex items-center ${textPrimary}`}>
-          <FiSettings className="mr-3 text-gray-400" />
-          Settings
-        </h2>
-        <p className={`${textSecondary} mt-1`}>Manage your account and preferences.</p>
+    <div className="container mx-auto px-4 py-8 max-w-4xl h-[calc(100vh-100px)]">
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6 transition-colors">Settings</h1>
+
+      {/* --- TAB MENÜSÜ --- */}
+      <div className="flex space-x-2 border-b border-gray-200 dark:border-gray-700 mb-8 overflow-x-auto transition-colors">
+        <button 
+            onClick={() => setActiveTab('profile')} 
+            className={`flex items-center px-6 py-3 text-sm font-medium transition-colors border-b-2 ${
+                activeTab === 'profile' 
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400' 
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-600'
+            }`}
+        >
+            <FiUser className="mr-2" /> Profile
+        </button>
+        
+        <button 
+            onClick={() => setActiveTab('security')} 
+            className={`flex items-center px-6 py-3 text-sm font-medium transition-colors border-b-2 ${
+                activeTab === 'security' 
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400' 
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-600'
+            }`}
+        >
+            <FiLock className="mr-2" /> Security
+        </button>
+
+        <button 
+            onClick={() => setActiveTab('appearance')} 
+            className={`flex items-center px-6 py-3 text-sm font-medium transition-colors border-b-2 ${
+                activeTab === 'appearance' 
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400' 
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-600'
+            }`}
+        >
+            <FiMonitor className="mr-2" /> Appearance
+        </button>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-8">
-        
-        {/* SOL MENÜ */}
-        <div className="w-full md:w-64 flex-shrink-0">
-          <nav className="flex flex-row md:flex-col space-x-2 md:space-x-0 md:space-y-2 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
-            {/* ... (Butonlar aynı, sadece renk sınıfları güncellenebilir) ... */}
-            <button
-              onClick={() => setActiveTab('profile')}
-              className={`flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors w-full ${
-                activeTab === 'profile'
-                  ? 'bg-blue-600 text-white shadow-lg'
-                  : `${textSecondary} hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white`
-              }`}
-            >
-              <FiUser className="mr-3 text-lg" /> Profile
-            </button>
-
-            <button
-              onClick={() => setActiveTab('general')}
-              className={`flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors w-full ${
-                activeTab === 'general'
-                  ? 'bg-blue-600 text-white shadow-lg'
-                  : `${textSecondary} hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white`
-              }`}
-            >
-              <FiSettings className="mr-3 text-lg" /> General
-            </button>
-          </nav>
-        </div>
-
-        {/* İÇERİK ALANI */}
-        <div className="flex-1">
+      {/* --- İÇERİK ALANI --- */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8 shadow-sm dark:shadow-xl min-h-[400px] transition-colors duration-300">
+          {renderContent()}
           
-          {/* --- 1. PROFIL AYARLARI --- */}
-          {activeTab === 'profile' && (
-            <div className="space-y-6 animate-fade-in-up">
-              <div className={cardClass}>
-                <h3 className={`text-xl font-bold mb-6 flex items-center border-b border-gray-200 dark:border-gray-700 pb-4 ${textPrimary}`}>
-                  Profile Information
-                </h3>
-                {/* ... (Profil içeriği aynı, sadece renkler textPrimary/Secondary ile güncellendi) ... */}
-                 <div className="space-y-6">
-                   <div>
-                    <label className={`block text-sm font-medium mb-1 ${textSecondary}`}>Username</label>
-                    <div className="flex items-center bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3">
-                      <FiUser className="text-gray-400 mr-3" />
-                      <span className={textPrimary}>{user?.username}</span>
-                    </div>
-                  </div>
-                 </div>
-              </div>
-            </div>
-          )}
-
-          {/* --- 2. GENEL (GENERAL) AYARLAR --- */}
-          {activeTab === 'general' && (
-            <div className="space-y-6 animate-fade-in-up">
-              <div className={cardClass}>
-                <h3 className={`text-xl font-bold mb-6 flex items-center border-b border-gray-200 dark:border-gray-700 pb-4 ${textPrimary}`}>
-                  App Preferences
-                </h3>
-                
-                <div className="space-y-6">
-                  
-                  {/* === TEMA AYARI (BURASI EKLENDİ) === */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      {theme === 'dark' ? <FiMoon className="text-purple-400 mr-3" size={24}/> : <FiSun className="text-yellow-500 mr-3" size={24}/>}
-                      <div>
-                        <h4 className={`${textPrimary} font-medium`}>Appearance</h4>
-                        <p className={`text-sm ${textSecondary}`}>Switch between Dark and Light mode.</p>
-                      </div>
-                    </div>
-                    
-                    <select 
-                      value={theme}
-                      onChange={(e) => toggleTheme(e.target.value)}
-                      className={inputClass.replace('w-full', 'w-40')}
-                    >
-                      <option value="dark">Dark Mode</option>
-                      <option value="light">Light Mode</option>
-                    </select>
-                  </div>
-
-                  <hr className="border-gray-200 dark:border-gray-700" />
-
-                 
-                </div>
-              </div>
-            </div>
-          )}
-
-        </div>
+          <div className="mt-10 pt-6 border-t border-gray-200 dark:border-gray-700 flex justify-end transition-colors">
+              <button className="flex items-center px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition-colors shadow-lg">
+                  <FiSave className="mr-2" /> Save Changes
+              </button>
+          </div>
       </div>
     </div>
   );
