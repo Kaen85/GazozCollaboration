@@ -1,19 +1,21 @@
-// frontend/src/services/api.js
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000', // Backend adresiniz
+  baseURL: 'http://localhost:5000',
   headers: {
     'Content-Type': 'application/json'
   }
 });
 
-// HER İSTEKTE TOKEN'I OTOMATİK EKLE
+// TOKEN EKLEME INTERCEPTOR'I
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token'); // Login olurken kaydettiğimiz token
+    const token = localStorage.getItem('token');
     if (token) {
-      config.headers['x-auth-token'] = token; // Backend bu başlığı bekliyor
+      // Backend'in beklediği header anahtarı: 'x-auth-token'
+      // Eğer backend middleware'inde 'Authorization' bekliyorsan burayı değiştirmen gerekir.
+      // Senin backend/middleware/auth.js dosyan 'x-auth-token' bekliyor.
+      config.headers['x-auth-token'] = token;
     }
     return config;
   },

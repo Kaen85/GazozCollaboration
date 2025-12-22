@@ -5,7 +5,7 @@ import { useProjectContext } from '../context/ProjectContext';
 import { Link } from 'react-router-dom';
 import { 
   FiFolder, FiShare2, FiLayers, FiCheckSquare, 
-  FiClock, FiArrowRight, FiActivity, FiBriefcase, FiAlertCircle 
+  FiClock, FiArrowRight, FiActivity, FiBriefcase, FiAlertCircle, FiGlobe, FiLock
 } from 'react-icons/fi';
 
 function DashboardOverviewPage() {
@@ -17,53 +17,31 @@ function DashboardOverviewPage() {
   } = useProjectContext();
 
   useEffect(() => {
-    // Tüm gerekli verileri çek
     fetchMyProjects();
     fetchSharedProjects();
     fetchDashboardTasks(); 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // --- FİLTRELEME VE LİMİTLEME MANTIĞI ---
-  // 1. Adım: Tamamlanmış (done) görevleri filtrele
+  // --- 1. RECENT PROJECTS MANTIĞI (YENİ EKLENDİ) ---
+  // Hem benim hem paylaşılan projeleri birleştir
+  const allProjects = [...myProjects, ...sharedProjects];
+  
+  // Tarihe göre sırala (En yeni tarihli en başa) ve ilk 4 tanesini al
+  const recentProjects = allProjects
+    .sort((a, b) => new Date(b.last_updated_at || b.created_at) - new Date(a.last_updated_at || a.created_at))
+    .slice(0, 4);
+
+
+  // --- 2. GÖREV FİLTRELEME MANTIĞI (MEVCUT) ---
   const activeTasks = dashboardTasks ? dashboardTasks.filter(task => task.status !== 'done') : [];
-
-  // 2. Adım: Sadece ilk 10 tanesini göster
   const visibleTasks = activeTasks.slice(0, 10);
-
-  // 3. Adım: Gizlenen görev sayısını hesapla
   const hiddenCount = activeTasks.length - visibleTasks.length;
 
-  // İstatistik Kartları
-  const stats = [
-    {
-      title: "My Projects",
-      count: myProjects?.length || 0,
-      icon: <FiBriefcase size={24} />,
-      color: "bg-blue-600",
-      desc: "Owned by you"
-    },
-    {
-      title: "Shared With Me",
-      count: sharedProjects?.length || 0,
-      icon: <FiShare2 size={24} />,
-      color: "bg-purple-600",
-      desc: "Collaboration"
-    },
-    {
-      title: "Active Tasks",
-      count: activeTasks.length, // Toplam aktif görev sayısı (gizliler dahil)
-      icon: <FiCheckSquare size={24} />,
-      color: "bg-green-600",
-      desc: "Pending items"
-    }
-  ];
-
-  // Görev Durumu için Renk ve İkon Helper'ı
+  // Helper: Görev Durumu Badge'i
   const getStatusBadge = (status) => {
     switch (status) {
       case 'done':
-        // Filtreleme yapıldığı için bu teorik olarak görünmeyecek ama kod güvenliği için kalsın
         return <span className="px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs font-semibold border border-green-900/50">Done</span>;
       case 'in_progress':
         return <span className="px-2 py-1 bg-blue-900/30 text-blue-400 rounded text-xs font-semibold border border-blue-900/50">In Progress</span>;
@@ -73,30 +51,71 @@ function DashboardOverviewPage() {
   };
 
   return (
-    <div className="transition-colors duration-300">
-      <div className="flex justify-between items-center mb-8">
+    <div className="transition-colors duration-300 pb-10">
+      <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white transition-colors duration-300">Dashboard</h1>
       </div>
       
-      {/* İSTATİSTİK KARTLARI */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        {stats.map((stat, index) => (
-          <div key={index} className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 flex items-center transition-all duration-300 hover:shadow-lg">
-            <div className={`p-4 rounded-lg ${stat.color} text-white mr-4 shadow-md`}>
-              {stat.icon}
-            </div>
-            <div>
-              <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">{stat.title}</p>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{stat.count}</h3>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{stat.desc}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
       <div className="space-y-8">
-        
-        {/* === GÖREV ÖZETİ (Task Summary) === */}
+
+        {/* === BÖLÜM 1: RECENT PROJECTS (SON PROJELER) === */}
+        <div>
+            <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center">
+                    <FiClock className="mr-2 text-purple-500" /> Recent Projects
+                </h2>
+                <Link to="/my-projects" className="text-sm text-blue-500 hover:text-blue-400 font-medium flex items-center">
+                    View All Projects <FiArrowRight className="ml-1"/>
+                </Link>
+            </div>
+
+            {loading ? (
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    {[1,2,3,4].map(i => (
+                        <div key={i} className="h-32 bg-gray-200 dark:bg-gray-800 rounded-xl animate-pulse"></div>
+                    ))}
+                </div>
+            ) : recentProjects.length === 0 ? (
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 text-center text-gray-500">
+                    No projects found. Create one to get started!
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {recentProjects.map(project => (
+                        <Link key={project.id} to={`/project/${project.id}`} className="group">
+                            <div className="bg-white dark:bg-gray-800 h-full p-5 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-lg transition-all duration-200 flex flex-col justify-between">
+                                <div>
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                            <FiFolder size={20} />
+                                        </div>
+                                        {project.is_public ? (
+                                            <FiGlobe className="text-gray-400" size={14} title="Public"/>
+                                        ) : (
+                                            <FiLock className="text-gray-400" size={14} title="Private"/>
+                                        )}
+                                    </div>
+                                    <h3 className="font-bold text-gray-900 dark:text-white mb-1 truncate" title={project.name}>
+                                        {project.name}
+                                    </h3>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 h-8">
+                                        {project.description || "No description."}
+                                    </p>
+                                </div>
+                                <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between text-xs text-gray-400">
+                                    <span>{new Date(project.last_updated_at || project.created_at).toLocaleDateString()}</span>
+                                    <span className="group-hover:translate-x-1 transition-transform text-blue-500">
+                                        <FiArrowRight />
+                                    </span>
+                                </div>
+                            </div>
+                        </Link>
+                    ))}
+                </div>
+            )}
+        </div>
+
+        {/* === BÖLÜM 2: GÖREV ÖZETİ (TASK SUMMARY) === */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
           <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center">
@@ -167,7 +186,7 @@ function DashboardOverviewPage() {
             )}
           </div>
           
-          {/* Footer Info: Toplam gösterilen ve gizlenen sayısı */}
+          {/* Footer Info */}
           <div className="p-4 bg-gray-50 dark:bg-gray-900/30 border-t border-gray-200 dark:border-gray-700 flex justify-center items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
              <span>Showing top {visibleTasks.length} active tasks.</span>
              {hiddenCount > 0 && (
