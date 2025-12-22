@@ -152,9 +152,9 @@ router.post('/forgot-password', async (req, res) => {
     const resetUrl = `http://localhost:3000/reset-password?token=${resetToken}`;
     
     console.log("---------------------------------------------------");
-    console.log("E-POSTA GÖNDERİLDİ (SİMÜLASYON):");
-    console.log(`Kullanıcı: ${email}`);
-    console.log(`Sıfırlama Linki: ${resetUrl}`);
+    console.log("Email Sent :");
+    console.log(`Email: ${email}`);
+    console.log(`Reset Link: ${resetUrl}`);
     console.log("---------------------------------------------------");
 
     res.json({ message: 'Password reset link sent (Check server console).' });

@@ -22,6 +22,7 @@ import DashboardOverviewPage from './pages/DashboardOverviewPage';
 import MyProjectsPage from './pages/MyProjectsPage';
 import SharedProjectsPage from './pages/SharedProjectsPage';
 import SettingsPage from './pages/SettingsPage';
+import Users from './pages/Users';
 
 // Pages - Project Details & Tabs
 import ProjectDetailPage from './pages/ProjectDetailPage';
@@ -66,6 +67,7 @@ function App() {
               <Route path="my-projects" element={<MyProjectsPage />} />
               <Route path="shared-projects" element={<SharedProjectsPage />} />
               <Route path="settings" element={<SettingsPage />} />
+              
 
               {/* Project Detail Routes */}
               <Route path="project/:id" element={<ProjectDetailPage />}>
@@ -75,7 +77,8 @@ function App() {
                 <Route path="discussions" element={<ProjectDiscussion />} />
                 <Route path="edit" element={<ProjectEditPage />} />
               </Route>
-
+              <Route path="users" element={<Users />} />
+              
               {/* Tanımsız bir rota girilirse dashboard'a yönlendir */}
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Route>

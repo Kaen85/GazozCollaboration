@@ -1,20 +1,29 @@
 // src/components/layout/RightSidebar.js
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useProjectContext } from '../../context/ProjectContext';
+import api from '../../services/api'; // Veri çekmek için api servisi
 import { 
   FiX, FiCalendar, FiClock, FiUser, FiUsers, 
-  FiChevronsRight, FiZap, FiTarget, FiLayers
+  FiChevronsRight, FiTarget, FiActivity, FiTrendingUp, 
+  FiShield, FiUserPlus, FiDownload
 } from 'react-icons/fi';
 
 function RightSidebar({ isOpen, toggleSidebar }) {
   const location = useLocation();
   const { currentProject, currentMembers, fetchMembers } = useProjectContext();
 
+  // --- SAYFA KONTROLLERİ ---
   const isProjectPage = location.pathname.startsWith('/project/');
+  const isUsersPage = location.pathname === '/users'; // Users sayfası kontrolü
   const showProjectDetails = isProjectPage && currentProject;
 
+  // --- STATELER ---
+  // Users sayfası için istatistik state'i
+  const [stats, setStats] = useState({ total: 0, admins: 0, users: 0, newThisMonth: 0, loading: false });
+
+  // --- EFFECT: PROJE VERİLERİ ---
   useEffect(() => {
     if (showProjectDetails && currentProject?.id) {
         fetchMembers(currentProject.id);
@@ -22,6 +31,44 @@ function RightSidebar({ isOpen, toggleSidebar }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentProject?.id]);
 
+  // --- EFFECT: USERS İSTATİSTİKLERİ ---
+  useEffect(() => {
+    // Sadece Users sayfasındaysak ve Sidebar açıksa veri çek
+    if (isUsersPage && isOpen) {
+        const fetchStats = async () => {
+            setStats(prev => ({ ...prev, loading: true }));
+            try {
+                const res = await api.get('/users');
+                const usersList = res.data;
+                
+                const total = usersList.length;
+                const admins = usersList.filter(u => u.role === 'admin').length;
+                
+                // Bu ay kayıt olanları hesapla
+                const now = new Date();
+                const newUsers = usersList.filter(u => {
+                    const d = new Date(u.created_at);
+                    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                }).length;
+
+                setStats({
+                    total,
+                    admins,
+                    users: total - admins,
+                    newThisMonth: newUsers,
+                    loading: false
+                });
+            } catch (err) {
+                console.error("İstatistik hatası:", err);
+                setStats(prev => ({ ...prev, loading: false }));
+            }
+        };
+        fetchStats();
+    }
+  }, [isUsersPage, isOpen]);
+
+
+  // --- YARDIMCI FONKSİYONLAR ---
   const projectOwner = currentMembers ? currentMembers.find(m => m.role === 'owner') : null;
   const otherMembers = currentMembers ? currentMembers.filter(m => m.role !== 'owner') : [];
 
@@ -32,6 +79,169 @@ function RightSidebar({ isOpen, toggleSidebar }) {
     });
   };
 
+  // --- RENDER: PROJE DETAYLARI (Eski Kod) ---
+  const renderProjectContent = () => (
+    <div className="animate-fade-in flex flex-col h-full">
+        {/* 1. Başlık */}
+        <div className="mt-1 mb-8">
+            <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 leading-tight">
+                {currentProject.name}
+            </h2>
+        </div>
+
+        {/* 2. Açıklama */}
+        <div className="mb-8">
+            {currentProject.description ? (
+                <p className="text-sm text-gray-300 leading-relaxed font-light">
+                {currentProject.description}
+                </p>
+            ) : (
+                <p className="text-sm text-gray-500 italic">No description added.</p>
+            )}
+        </div>
+
+        {/* 3. Proje Sahibi */}
+        <div className="mb-8">
+            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center">
+                Led By
+            </h4>
+            <div className="flex items-center p-3 bg-gray-800/50 border border-gray-700 rounded-xl hover:border-blue-500/30 transition-colors group">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-md mr-3 group-hover:scale-105 transition-transform">
+                    {projectOwner?.username?.charAt(0).toUpperCase() || <FiUser />}
+                </div>
+                <div>
+                    <p className="text-white font-semibold text-sm">
+                        {projectOwner?.username || 'Loading...'}
+                    </p>
+                    <p className="text-xs text-blue-400 font-medium">Project Owner</p>
+                </div>
+            </div>
+        </div>
+
+        {/* 4. Takım Üyeleri */}
+        <div className="mb-8 flex-1">
+            <div className="flex justify-between items-end mb-3">
+                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Team</h4>
+                <span className="text-xs text-gray-600 bg-gray-800 px-2 py-0.5 rounded-full">
+                    {otherMembers.length} members
+                </span>
+            </div>
+            {otherMembers.length > 0 ? (
+                <div className="space-y-2">
+                    {otherMembers.map(member => (
+                        <div key={member.id} className="flex items-center justify-between p-2 hover:bg-gray-800 rounded-lg transition-colors cursor-default">
+                            <div className="flex items-center">
+                                <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-gray-300 text-xs font-bold mr-3 border border-gray-600">
+                                    {member.username.charAt(0).toUpperCase()}
+                                </div>
+                                <span className="text-gray-300 text-sm">{member.username}</span>
+                            </div>
+                            <span className="text-[10px] text-gray-500 uppercase font-semibold border border-gray-700 px-1.5 py-0.5 rounded">
+                                {member.role}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <div className="p-4 border border-dashed border-gray-700 rounded-xl text-center">
+                    <FiUsers className="mx-auto text-gray-600 mb-2" />
+                    <p className="text-xs text-gray-500">Solo project for now.</p>
+                </div>
+            )}
+        </div>
+
+        {/* 5. Footer Meta */}
+        <div className="mt-auto pt-6 border-t border-gray-800 grid grid-cols-2 gap-4">
+            <div>
+                <div className="flex items-center text-gray-500 mb-1">
+                    <FiCalendar className="mr-1.5 text-xs"/> <span className="text-[10px] uppercase font-bold tracking-wide">Created</span>
+                </div>
+                <span className="text-gray-300 text-xs font-mono">
+                {formatDate(currentProject.created_at)}
+                </span>
+            </div>
+            <div>
+                <div className="flex items-center text-gray-500 mb-1">
+                    <FiClock className="mr-1.5 text-xs"/> <span className="text-[10px] uppercase font-bold tracking-wide">Updated</span>
+                </div>
+                <span className="text-gray-300 text-xs font-mono">
+                {formatDate(currentProject.last_updated_at || currentProject.created_at)}
+                </span>
+            </div>
+        </div>
+    </div>
+  );
+
+  // --- RENDER: USERS İSTATİSTİKLERİ (YENİ - Seçenek 1) ---
+  const renderUsersContent = () => (
+    <div className="animate-fade-in flex flex-col h-full">
+        
+        {/* Başlık */}
+        <div className="mt-2 mb-8">
+            <h2 className="text-2xl font-bold text-white flex items-center">
+                <FiActivity className="mr-3 text-blue-500" />
+                System Overview
+            </h2>
+          
+        </div>
+
+        {stats.loading ? (
+            <div className="flex justify-center py-10"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div></div>
+        ) : (
+            <>
+                {/* Kart: Toplam Kullanıcı */}
+                <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-5 rounded-2xl border border-gray-700 mb-8 relative overflow-hidden group shadow-lg">
+                    <div className="absolute -right-4 -top-4 text-gray-700 opacity-20 group-hover:opacity-30 transition-opacity transform group-hover:scale-110 duration-500">
+                        <FiUsers size={100} />
+                    </div>
+                    <h3 className="text-gray-400 text-xs uppercase font-bold tracking-wider mb-1">Total Users</h3>
+                    <p className="text-5xl font-extrabold text-white tracking-tight">{stats.total}</p>
+                    
+                </div>
+
+                {/* Rol Dağılımı */}
+                <div className="mb-10 space-y-5">
+                    <h4 className="text-sm font-semibold text-gray-300 flex items-center uppercase tracking-wide">
+                        <FiShield className="mr-2 text-blue-500" /> Role Distribution
+                    </h4>
+                    
+                    {/* Admin Bar */}
+                    <div className="group">
+                        <div className="flex justify-between text-xs text-gray-400 mb-1.5">
+                            <span className="group-hover:text-red-400 transition-colors">Admins</span>
+                            <span className="font-mono">{stats.admins}</span>
+                        </div>
+                        <div className="w-full bg-gray-800 rounded-full h-2.5 overflow-hidden">
+                            <div 
+                                className="bg-gradient-to-r from-red-600 to-red-400 h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(239,68,68,0.5)]" 
+                                style={{ width: stats.total > 0 ? `${(stats.admins / stats.total) * 100}%` : '0%' }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* User Bar */}
+                    <div className="group">
+                        <div className="flex justify-between text-xs text-gray-400 mb-1.5">
+                            <span className="group-hover:text-blue-400 transition-colors">Students</span>
+                            <span className="font-mono">{stats.users}</span>
+                        </div>
+                        <div className="w-full bg-gray-800 rounded-full h-2.5 overflow-hidden">
+                            <div 
+                                className="bg-gradient-to-r from-blue-600 to-blue-400 h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(59,130,246,0.5)]" 
+                                style={{ width: stats.total > 0 ? `${(stats.users / stats.total) * 100}%` : '0%' }}
+                            />
+                        </div>
+                    </div>
+                </div>
+
+               
+                
+            </>
+        )}
+    </div>
+  );
+
+  // --- ANA RENDER ---
   return (
     <div 
       className={`${
@@ -39,7 +249,7 @@ function RightSidebar({ isOpen, toggleSidebar }) {
       } bg-gray-900 border-l border-gray-800 flex flex-col transition-all duration-300 ease-in-out absolute right-0 top-0 h-full z-30 shadow-2xl`}
     >
       
-      {/* Arka plan için hafif gradient efekti */}
+      {/* Arka plan gradient */}
       <div className="absolute inset-0 bg-gradient-to-b from-gray-800/50 to-gray-900 pointer-events-none" />
 
       {/* --- HEADER (Kapatma Butonu) --- */}
@@ -55,103 +265,13 @@ function RightSidebar({ isOpen, toggleSidebar }) {
       {/* --- İÇERİK ALANI --- */}
       <div className="relative z-10 flex-1 overflow-y-auto px-6 pb-20 custom-scrollbar">
         
-        {showProjectDetails ? (
-          <div className="animate-fade-in flex flex-col h-full">
-            
-            {/* 1. HERO BÖLÜMÜ (Başlık & İkon) */}
-            <div className="mt-1 mb-8">
-              
-              
-              <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 leading-tight">
-                {currentProject.name}
-              </h2>
-            </div>
-
-            {/* 2. AÇIKLAMA */}
-            <div className="mb-8">
-              {currentProject.description ? (
-                 <p className="text-sm text-gray-300 leading-relaxed font-light">
-                   {currentProject.description}
-                 </p>
-              ) : (
-                <p className="text-sm text-gray-500 italic">No description added.</p>
-              )}
-            </div>
-
-            {/* 3. PROJE SAHİBİ (Owner Card) */}
-            <div className="mb-8">
-              <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center">
-                 Led By
-              </h4>
-              <div className="flex items-center p-3 bg-gray-800/50 border border-gray-700 rounded-xl hover:border-blue-500/30 transition-colors group">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-md mr-3 group-hover:scale-105 transition-transform">
-                      {projectOwner?.username?.charAt(0).toUpperCase() || <FiUser />}
-                  </div>
-                  <div>
-                      <p className="text-white font-semibold text-sm">
-                        {projectOwner?.username || 'Loading...'}
-                      </p>
-                      <p className="text-xs text-blue-400 font-medium">Project Owner</p>
-                  </div>
-              </div>
-            </div>
-
-            {/* 4. TAKIM ÜYELERİ */}
-            <div className="mb-8 flex-1">
-                <div className="flex justify-between items-end mb-3">
-                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Team</h4>
-                    <span className="text-xs text-gray-600 bg-gray-800 px-2 py-0.5 rounded-full">
-                        {otherMembers.length} members
-                    </span>
-                </div>
-                
-                {otherMembers.length > 0 ? (
-                    <div className="space-y-2">
-                        {otherMembers.map(member => (
-                            <div key={member.id} className="flex items-center justify-between p-2 hover:bg-gray-800 rounded-lg transition-colors cursor-default">
-                                <div className="flex items-center">
-                                    <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-gray-300 text-xs font-bold mr-3 border border-gray-600">
-                                        {member.username.charAt(0).toUpperCase()}
-                                    </div>
-                                    <span className="text-gray-300 text-sm">{member.username}</span>
-                                </div>
-                                <span className="text-[10px] text-gray-500 uppercase font-semibold border border-gray-700 px-1.5 py-0.5 rounded">
-                                    {member.role}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="p-4 border border-dashed border-gray-700 rounded-xl text-center">
-                        <FiUsers className="mx-auto text-gray-600 mb-2" />
-                        <p className="text-xs text-gray-500">Solo project for now.</p>
-                    </div>
-                )}
-            </div>
-
-            {/* 5. TARİH BİLGİLERİ (Footer Meta) */}
-            <div className="mt-auto pt-6 border-t border-gray-800 grid grid-cols-2 gap-4">
-               <div>
-                  <div className="flex items-center text-gray-500 mb-1">
-                      <FiCalendar className="mr-1.5 text-xs"/> <span className="text-[10px] uppercase font-bold tracking-wide">Created</span>
-                  </div>
-                  <span className="text-gray-300 text-xs font-mono">
-                    {formatDate(currentProject.created_at)}
-                  </span>
-               </div>
-               <div>
-                  <div className="flex items-center text-gray-500 mb-1">
-                      <FiClock className="mr-1.5 text-xs"/> <span className="text-[10px] uppercase font-bold tracking-wide">Updated</span>
-                  </div>
-                  <span className="text-gray-300 text-xs font-mono">
-                    {formatDate(currentProject.last_updated_at || currentProject.created_at)}
-                  </span>
-               </div>
-            </div>
-
-          </div>
+        {/* Duruma göre içerik göster */}
+        {isUsersPage ? (
+            renderUsersContent()
+        ) : showProjectDetails ? (
+            renderProjectContent()
         ) : (
-          // --- BOŞ DURUM (Empty State) ---
+          // BOŞ DURUM
           <div className="flex flex-col items-center justify-center h-full text-center pb-20">
             <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mb-6 animate-pulse-slow">
                <FiTarget size={32} className="text-gray-600" />
@@ -162,14 +282,14 @@ function RightSidebar({ isOpen, toggleSidebar }) {
             </p>
           </div>
         )}
+
       </div>
 
-      {/* --- ALT KAPATMA BAR (Sadece İkon) --- */}
+      {/* --- ALT KAPATMA BAR --- */}
       <div className="absolute bottom-0 left-0 w-full h-12 border-t border-gray-800 bg-gray-900/90 backdrop-blur-sm z-20 flex items-center justify-center">
         <button
           onClick={toggleSidebar}
           className="text-gray-500 hover:text-white transition-colors p-2 rounded-full hover:bg-gray-800 group"
-          title="Close Sidebar"
         >
           <FiChevronsRight size={20} className="group-hover:translate-x-1 transition-transform" />
         </button>
