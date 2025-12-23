@@ -1,86 +1,59 @@
-// Accept all usernames and passwords, return a dummy token
-export const loginUser = (req, res) => {
-  const { username, password } = req.body;
+// backend/controllers/authController.js
+const db = require('../db'); 
+const crypto = require('crypto');
+const bcrypt = require('bcryptjs'); 
 
-  if (!username || !password) {
-    return res.status(400).json({ message: "Username and password required" });
-  }
+// FORGOT PASSWORD
+exports.forgotPassword = async (req, res) => {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: 'Please provide email.' });
 
-  const fakeToken = "token-" + Date.now();
-  res.status(200).json({ token: fakeToken });
+    try {
+        const userResult = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+        if (userResult.rowCount === 0) return res.status(404).json({ message: 'User not found.' });
+
+        const resetToken = crypto.randomBytes(20).toString('hex');
+
+        // SAVE THE TOKEN TO THE USER RECORD
+        await db.query('UPDATE users SET reset_token = $1 WHERE email = $2', [resetToken, email]);
+
+        const resetUrl = `http://localhost:3000/reset-password/${resetToken}`;
+        console.log(`🔑 LINK: ${resetUrl}`);
+
+        return res.status(200).json({ message: 'Link generated. Check terminal.' });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error.' });
+    }
 };
 
+// RESET PASSWORD
+exports.resetPassword = async (req, res) => {
+    const { token, newPassword } = req.body;
 
-
-// Minimal auth to obtain a JWT for protected project routes
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-import { createUser, findUserByEmail } from "../models/User.js";
-
-export async function register(req,res){
-  try{
-    const {name,email,password}=req.body;
-    if(!name||!email||!password) return res.status(400).json({message:"Missing fields"});
-    const exists = await findUserByEmail(email);
-    if(exists) return res.status(400).json({message:"User already exists"});
-    const hash = await bcrypt.hash(password, 10);
-    const user = await createUser(name,email,hash);
-    res.status(201).json({message:"Registered", user});
-  }catch(e){
-    res.status(500).json({message:e.message});
-  }
-}
-
-export async function login(req,res){
-  try{
-    const {email,password}=req.body;
-    const user = await findUserByEmail(email);
-    if(!user) return res.status(400).json({message:"User not found"});
-    const ok = await bcrypt.compare(password, user.password);
-    if(!ok) return res.status(400).json({message:"Invalid credentials"});
-    const token = jwt.sign({id:user.id}, process.env.JWT_SECRET || "dev_secret", {expiresIn:"2h"});
-    res.json({message:"Login successful", token});
-  }catch(e){
-    res.status(500).json({message:e.message});
-  }
-
-
-}
-
-exports.forgotPassword = async (req, res) => {
-  console.log("--> Forgot Password İsteği Alındı. Body:", req.body);
-
-  const { email } = req.body;
-
-  // 1. E-posta boş mu geldi? (400 Hatası Sebebi Olabilir)
-  if (!email) {
-    console.log("HATA: Email alanı boş gönderildi.");
-    return res.status(400).json({ message: 'Please provide an email address' });
-  }
-
-  try {
-    // 2. Kullanıcıyı bul
-    const user = await User.findOne({ email });
-
-    if (!user) {
-      console.log("HATA: Bu e-posta ile kullanıcı bulunamadı:", email);
-      // Güvenlik gereği 404 yerine 200 dönülebilir ama test için 404 dönelim
-      return res.status(404).json({ message: 'User not found' });
+    if (!token || !newPassword) {
+        return res.status(400).json({ message: 'Token and new password are required.' });
     }
 
-    // 3. Token oluştur (Simülasyon)
-    const resetToken = crypto.randomBytes(20).toString('hex');
-    const resetUrl = `http://localhost:3000/reset-password/${resetToken}`;
+    try {
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(newPassword, salt);
 
-    console.log("---------------------------------------------------");
-    console.log(`✅ RESET LINK (${email}):`);
-    console.log(resetUrl);
-    console.log("---------------------------------------------------");
+        // FIND USER BY TOKEN AND UPDATE PASSWORD
+        const updateQuery = `
+            UPDATE users 
+            SET password_hash = $1, reset_token = NULL 
+            WHERE reset_token = $2 
+            RETURNING id
+        `;
+        const result = await db.query(updateQuery, [passwordHash, token]); 
 
-    return res.status(200).json({ message: 'Reset link generated' });
+        if (result.rowCount === 0) {
+            return res.status(404).json({ message: 'Invalid or expired token.' });
+        }
 
-  } catch (error) {
-    console.error("SERVER ERROR:", error);
-    return res.status(500).json({ message: 'Server error processing request' });
-  }
+        return res.status(200).json({ message: 'Your password has been successfully updated.' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Error resetting password.' });
+    }
 };

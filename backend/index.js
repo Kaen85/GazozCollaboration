@@ -3,6 +3,7 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 const usersRouter = require("./routes/users");
+const authRoutes = require('./routes/authRoutes');
 
 const app = express();
 
@@ -12,7 +13,7 @@ app.use(express.json());
 
 // === ROUTES ===
 // Make sure this line exists and points to the file we edited:
-app.use('/api/auth', require('./routes/authRoutes')); 
+app.use('/api/auth',authRoutes); 
 app.use('/api/projects', require('./routes/projectRoutes'));
 app.use("/users", usersRouter);
 

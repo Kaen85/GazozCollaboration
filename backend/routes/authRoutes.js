@@ -7,6 +7,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const auth = require('../middleware/auth');
 require('dotenv').config();
+const authController = require('../controllers/authController');
 
 // =========================================================
 // 1. KULLANICI LİSTELEME
@@ -141,7 +142,7 @@ router.get('/user', auth, async (req, res) => {
     } catch (err) { res.status(500).send('Server Error'); }
 });
 
-router.post('/forgot-password', async (req, res) => { /* ... Mevcut kodunuz ... */ res.json({msg: 'Link sent'}); });
-router.post('/reset-password', async (req, res) => { /* ... Mevcut kodunuz ... */ res.json({msg: 'Password updated'}); });
+router.post('/forgot-password', authController.forgotPassword);
+router.post('/reset-password', authController.resetPassword);
 
 module.exports = router;
