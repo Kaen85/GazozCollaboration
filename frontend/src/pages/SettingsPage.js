@@ -113,19 +113,10 @@ export default function SettingsPage() {
                 : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-600'
             }`}
         >
-            <FiUser className="mr-2" /> Profile
+            <FiUser className="mr-2" /> Account
         </button>
         
-        <button 
-            onClick={() => setActiveTab('security')} 
-            className={`flex items-center px-6 py-3 text-sm font-medium transition-colors border-b-2 ${
-                activeTab === 'security' 
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400' 
-                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-600'
-            }`}
-        >
-            <FiLock className="mr-2" /> Security
-        </button>
+        
 
         <button 
             onClick={() => setActiveTab('appearance')} 
@@ -139,7 +130,7 @@ export default function SettingsPage() {
         </button>
       </div>
 
-      {/* --- İÇERİK ALANI --- */}
+      
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8 shadow-sm dark:shadow-xl min-h-[400px] transition-colors duration-300">
           {renderContent()}
           

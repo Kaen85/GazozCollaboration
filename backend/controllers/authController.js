@@ -43,4 +43,44 @@ export async function login(req,res){
   }catch(e){
     res.status(500).json({message:e.message});
   }
+
+
 }
+
+exports.forgotPassword = async (req, res) => {
+  console.log("--> Forgot Password İsteği Alındı. Body:", req.body);
+
+  const { email } = req.body;
+
+  // 1. E-posta boş mu geldi? (400 Hatası Sebebi Olabilir)
+  if (!email) {
+    console.log("HATA: Email alanı boş gönderildi.");
+    return res.status(400).json({ message: 'Please provide an email address' });
+  }
+
+  try {
+    // 2. Kullanıcıyı bul
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      console.log("HATA: Bu e-posta ile kullanıcı bulunamadı:", email);
+      // Güvenlik gereği 404 yerine 200 dönülebilir ama test için 404 dönelim
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // 3. Token oluştur (Simülasyon)
+    const resetToken = crypto.randomBytes(20).toString('hex');
+    const resetUrl = `http://localhost:3000/reset-password/${resetToken}`;
+
+    console.log("---------------------------------------------------");
+    console.log(`✅ RESET LINK (${email}):`);
+    console.log(resetUrl);
+    console.log("---------------------------------------------------");
+
+    return res.status(200).json({ message: 'Reset link generated' });
+
+  } catch (error) {
+    console.error("SERVER ERROR:", error);
+    return res.status(500).json({ message: 'Server error processing request' });
+  }
+};
