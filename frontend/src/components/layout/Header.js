@@ -50,21 +50,7 @@ function Header({ onToggleRightSidebar }) {
         {/* SAĞ: BUTONLAR VE PROFİL */}
         <div className="flex items-center space-x-2 md:space-x-4">
           
-          {/* Info Butonu (Right Sidebar Toggle) */}
-          <button 
-            onClick={onToggleRightSidebar}
-            className="p-2 rounded-full text-text-secondary hover:text-text-main hover:bg-surface-hover transition-all"
-            title="Toggle Info Panel"
-          >
-            <FiInfo size={22} />
-          </button>
-  
-          {/* Bildirim Butonu */}
-          <button className="p-2 rounded-full text-text-secondary hover:text-text-main hover:bg-surface-hover transition-all relative">
-            <FiBell size={20} />
-            {/* Bildirim noktası örneği (İsteğe bağlı) */}
-            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-surface"></span>
-          </button>
+         
           
           {/* Profil Dropdown */}
           <div className="relative" ref={dropdownRef}>
