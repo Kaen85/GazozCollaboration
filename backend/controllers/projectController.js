@@ -26,7 +26,8 @@ export async function mine(req,res){
 // GET /api/projects/shared  (public)
 export async function shared(req, res) {
   try {
-    const projects = await listSharedProjects(req.user.id); // Use req.user.id from auth middleware
+    // ÖNEMLİ: listSharedProjects fonksiyonuna giriş yapan kullanıcının ID'sini gönderiyoruz
+    const projects = await listSharedProjects(req.user.id); 
     res.json({ projects });
   } catch (e) {
     res.status(500).json({ message: e.message });

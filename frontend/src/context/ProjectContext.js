@@ -61,13 +61,18 @@ export const ProjectProvider = ({ children }) => {
   };
 
   const fetchSharedProjects = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.get(`${API_URL}/shared-projects`, getAuthHeaders());
-      setSharedProjects(response.data);
-    } catch (err) { handleError(err); } 
-    finally { setLoading(false); }
-  };
+  setLoading(true);
+  try {
+    // Bu istek backend'de güncellediğimiz /shared-projects rotasına gitmeli
+    const response = await axios.get(`${API_URL}/shared-projects`, getAuthHeaders()); 
+    // Gelen veri sadece üye olduğunuz projeleri içerecektir
+    setSharedProjects(response.data.projects || response.data); 
+  } catch (err) { 
+    handleError(err);
+  } finally { 
+    setLoading(false);
+  }
+};
 
   const createProject = async (name, description) => {
     setLoading(true);
@@ -97,7 +102,7 @@ export const ProjectProvider = ({ children }) => {
     } catch (err) { handleError(err); throw err; }
   };
 
-  // --- TASK FONKSİYONLARI ---
+
 
   const fetchDashboardTasks = async () => {
     setLoading(true);
@@ -143,7 +148,6 @@ export const ProjectProvider = ({ children }) => {
     } catch (err) { handleError(err); throw err; }
   };
 
-  // --- DİĞER (Members, Files, Issues vs.) ---
 
   const fetchMembers = async (projectId) => {
     try {

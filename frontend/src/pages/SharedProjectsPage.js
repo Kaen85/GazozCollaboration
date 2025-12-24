@@ -1,184 +1,138 @@
 // src/pages/SharedProjectsPage.js
-
 import React, { useState, useEffect, useMemo } from 'react';
-import { useProjectContext } from '../context/ProjectContext';
-import { FiLoader, FiGrid, FiList, FiChevronLeft, FiChevronRight } from 'react-icons/fi'; 
+import { FiLoader, FiSearch, FiChevronLeft, FiChevronRight, FiGlobe } from 'react-icons/fi'; 
 import SharedProjectCard from '../components/projects/SharedProjectCard';
+import api from '../services/api'; 
 
 function SharedProjectsPage() {
-  const { sharedProjects, loading, fetchSharedProjects } = useProjectContext();
-
-  const [viewMode, setViewMode] = useState(() => {
-    return localStorage.getItem('sharedProjectsViewMode') || 'grid';
-  });
-
+  const [publicProjects, setPublicProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const projectsPerPage = viewMode === 'grid' ? 6 : 4;
-
-  const changeViewMode = (mode) => {
-    setViewMode(mode);
-    localStorage.setItem('sharedProjectsViewMode', mode);
-  };
+  const projectsPerPage = 6;
 
   useEffect(() => {
-    fetchSharedProjects();
+    const fetchPublic = async () => {
+      setLoading(true);
+      try {
+        const response = await api.get('/api/projects/public-explorer');
+        setPublicProjects(response.data);
+      } catch (err) {
+        console.error("Public projects load error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPublic();
   }, []);
 
-  const uniqueProjects = useMemo(() => {
-    const projectMap = new Map();
-    sharedProjects.forEach(project => {
-      const existing = projectMap.get(project.id);
-      if (!existing) {
-        projectMap.set(project.id, project);
-      } else {
-        if (project.joined_at && !existing.joined_at) {
-          projectMap.set(project.id, project);
-        }
-      }
-    });
-    return Array.from(projectMap.values());
-  }, [sharedProjects]);
+  const filteredProjects = useMemo(() => {
+    return (Array.isArray(publicProjects) ? publicProjects : []).filter(project => 
+      project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (project.description && project.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  }, [publicProjects, searchTerm]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [uniqueProjects, viewMode]);
-
-  const indexOfLastProject = currentPage * projectsPerPage;
-  const indexOfFirstProject = indexOfLastProject - projectsPerPage;
-  const currentProjects = uniqueProjects.slice(indexOfFirstProject, indexOfLastProject);
-  const totalPages = Math.ceil(uniqueProjects.length / projectsPerPage);
+  const totalPages = Math.max(Math.ceil(filteredProjects.length / projectsPerPage), 1);
+  const currentProjects = filteredProjects.slice((currentPage - 1) * projectsPerPage, currentPage * projectsPerPage);
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
-  const nextPage = () => {
-    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
-  };
-  const prevPage = () => {
-    if (currentPage > 1) setCurrentPage(currentPage - 1);
-  };
 
-  return (
-    <div>
-      {/* --- HEADER --- */}
-      <div className="flex justify-between items-end mb-8">
-        <div>
-          {/* text-white -> text-text-main */}
-          <h1 className="text-3xl font-bold text-text-main">Shared by Others</h1>
-          {/* text-gray-400 -> text-text-secondary */}
-          <p className="text-text-secondary mt-2 text-sm">
-            Projects shared with you or available publicly.
-          </p>
-        </div>
+  useEffect(() => { setCurrentPage(1); }, [searchTerm]);
 
-        {/* bg-gray-800 -> bg-surface, border-gray-700 -> border-border */}
-        <div className="bg-surface p-1 rounded-lg border border-border flex">
-          <button
-            onClick={() => changeViewMode('grid')}
-            className={`p-2 rounded-md transition-all ${
-              viewMode === 'grid' ? 'bg-primary text-white shadow' : 'text-text-secondary hover:text-text-main hover:bg-surface-hover'
-            }`}
-            title="Grid View"
-          >
-            <FiGrid size={18} />
-          </button>
-          <button
-            onClick={() => changeViewMode('list')}
-            className={`p-2 rounded-md transition-all ${
-              viewMode === 'list' ? 'bg-primary text-white shadow' : 'text-text-secondary hover:text-text-main hover:bg-surface-hover'
-            }`}
-            title="List View"
-          >
-            <FiList size={18} />
-          </button>
+  // src/pages/SharedProjectsPage.js
+
+return (
+  <div className="flex flex-col h-[calc(100vh-140px)] p-4 pb-0 bg-app transition-colors duration-300 overflow-hidden">
+    <div className="max-w-7xl mx-auto w-full h-full flex flex-col">
+      
+      {/* HEADER SECTION */}
+      <div className="flex-none flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-black text-text-main tracking-tight dark:text-white flex items-center">
+          <FiGlobe className="mr-3 text-primary" /> Shared Projects
+        </h1>
+      </div>
+
+      {/* SEARCH BAR - My Projects ile aynı kutu stili */}
+      <div className="flex-none bg-surface p-2 rounded-2xl border border-border shadow-sm mb-4 dark:bg-surface-dark/40">
+        <div className="relative group">
+          <FiSearch className="absolute left-3 top-3 text-text-secondary transition-colors" />
+          <input
+            type="text"
+            placeholder="Search shared projects..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-app border border-border text-text-main text-base rounded-xl pl-10 py-2 outline-none focus:border-primary transition-all dark:bg-black/20"
+          />
         </div>
       </div>
 
-      {/* --- CONTENT --- */}
-      {loading ? (
-        <div className="flex justify-center items-center p-20">
-          <FiLoader className="animate-spin text-primary" size={40} />
-          <span className="ml-4 text-xl text-text-secondary">Loading Shared Projects...</span>
-        </div>
-      ) : uniqueProjects.length === 0 ? (
-        <p className="text-text-secondary">No projects have been shared with you yet.</p>
-      ) : (
-        <div className="flex flex-col min-h-[500px]">
-          
-          <div className="flex-grow">
-            {/* GRID MODU */}
-            {viewMode === 'grid' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {currentProjects.map(project => (
-                  <SharedProjectCard 
-                    key={project.id} 
-                    project={project} 
-                    viewMode="grid" 
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* LIST MODU */}
-            {viewMode === 'list' && (
-              <div className="flex flex-col space-y-3">
-                {currentProjects.map(project => (
-                  <SharedProjectCard 
-                    key={project.id} 
-                    project={project} 
-                    viewMode="list" 
-                  />
-                ))}
-              </div>
-            )}
+      {/* PROJECT LIST */}
+      <div className="flex-grow overflow-y-auto pr-1 custom-scrollbar">
+        {loading ? (
+          <div className="flex justify-center p-10"><FiLoader className="animate-spin text-primary" size={40} /></div>
+        ) : filteredProjects.length === 0 ? (
+          <div className="p-10 text-center bg-surface/20 rounded-2xl border border-dashed border-border/40">
+            <p className="text-text-secondary text-base font-medium">No shared projects found.</p>
           </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-2">
+            {currentProjects.map(project => (
+              <SharedProjectCard key={project.id} project={project} />
+            ))}
+          </div>
+        )}
+      </div>
 
-          {/* === PAGINATION BAR === */}
-          {uniqueProjects.length > projectsPerPage && (
-            <div className="flex justify-center items-center mt-2 pt-4 border-t border-border">
-              <button
-                onClick={prevPage}
-                disabled={currentPage === 1}
-                className={`p-2 rounded-md border border-border ${
-                  currentPage === 1 
-                    ? 'text-text-secondary cursor-not-allowed bg-surface/50' 
-                    : 'text-text-main bg-surface hover:bg-surface-hover hover:border-primary'
-                }`}
-              >
-                <FiChevronLeft size={20} />
-              </button>
-
-              <div className="flex space-x-1 mx-2">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
-                  <button
-                    key={number}
-                    onClick={() => paginate(number)}
-                    className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                      currentPage === number
-                        ? 'bg-primary text-white shadow-lg'
-                        : 'bg-surface text-text-secondary border border-border hover:bg-surface-hover hover:text-text-main'
-                    }`}
-                  >
-                    {number}
-                  </button>
-                ))}
-              </div>
-
-              <button
-                onClick={nextPage}
-                disabled={currentPage === totalPages}
-                className={`p-2 rounded-md border border-border ${
-                  currentPage === totalPages 
-                    ? 'text-text-secondary cursor-not-allowed bg-surface/50' 
-                    : 'text-text-main bg-surface hover:bg-surface-hover hover:border-primary'
-                }`}
-              >
-                <FiChevronRight size={20} />
-              </button>
-            </div>
-          )}
-        </div>
+      {/* FIXED PAGINATION BAR - "Showing" kısmı büyütüldü ve kurumsallaştırıldı */}
+      {/* FIXED PAGINATION BAR */}
+<div className="flex-none pt-2 pb-4">
+  <div className="flex justify-between items-center bg-surface p-3 border border-border rounded-xl shadow-sm dark:bg-surface-dark/60 backdrop-blur-md">
+    <span className="text-xs text-text-secondary font-bold uppercase tracking-widest opacity-60">
+      {filteredProjects.length > 0 ? (
+        <>
+          Showing {((currentPage - 1) * projectsPerPage) + 1} - {Math.min(currentPage * projectsPerPage, filteredProjects.length)} / {filteredProjects.length}
+        </>
+      ) : (
+        "Showing 0 / 0"
       )}
+    </span>
+    <div className="flex items-center gap-3">
+      <button 
+        onClick={() => paginate(currentPage - 1)} 
+        disabled={currentPage === 1} 
+        className="p-2 rounded-lg hover:bg-app disabled:opacity-10 transition-all border border-border text-text-main"
+      >
+        <FiChevronLeft size={20} />
+      </button>
+      <div className="flex gap-2">
+        {[...Array(totalPages)].map((_, i) => (
+          <button 
+            key={i + 1} 
+            onClick={() => paginate(i + 1)} 
+            className={`w-10 h-10 rounded-lg text-sm font-black transition-all ${
+              currentPage === i + 1 
+                ? 'bg-primary text-white shadow-md' 
+                : 'hover:bg-app text-text-secondary border border-border'
+            }`}
+          >
+            {i + 1}
+          </button>
+        ))}
+      </div>
+      <button 
+        onClick={() => paginate(currentPage + 1)} 
+        disabled={currentPage === totalPages} 
+        className="p-2 rounded-lg hover:bg-app disabled:opacity-10 transition-all text-text-main border border-border"
+      >
+        <FiChevronRight size={20} />
+      </button>
     </div>
-  );
+  </div>
+</div>
+    </div>
+  </div>
+);
 }
 
 export default SharedProjectsPage;
