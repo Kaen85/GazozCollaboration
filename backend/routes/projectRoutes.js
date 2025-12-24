@@ -366,4 +366,24 @@ router.delete('/:id/files/:fileId', auth, checkProjectMember, async (req, res) =
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
+// backend/routes/projectRoutes.js
+// Tüm projeleri getiren admin listesi
+router.get('/admin/all-projects', auth, async (req, res) => {
+  try {
+    const [projects] = await db.execute(`
+      SELECT 
+        p.id, 
+        p.name, 
+        u.username as owner_name 
+      FROM projects p 
+      LEFT JOIN users u ON p.owner_id = u.id 
+      ORDER BY p.updated_at DESC
+    `);
+    res.json(projects);
+  } catch (err) {
+    console.error("Database Error:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 module.exports = router;
