@@ -5,7 +5,7 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
 import Header from '../components/layout/Header';
 import RightSidebar from '../components/layout/RightSidebar';
-import { FiChevronsLeft } from 'react-icons/fi';
+import { FiInfo} from 'react-icons/fi';
 
 function DashboardLayout() {
   // Sol Sidebar: Varsayılan açık
@@ -40,10 +40,10 @@ function DashboardLayout() {
           {!isRightOpen && (
             <button
               onClick={() => setIsRightOpen(true)}
-              className="fixed bottom-6 right-6 z-40 p-3 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-500 transition-all animate-bounce-slow"
+              className="fixed bottom-5 right-5 z-40 p-2 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-500 transition-all animate-bounce-slow"
               title="Open Right Panel"
             >
-              <FiChevronsLeft size={24} />
+              <FiInfo size={20} />
             </button>
           )}
         </main>

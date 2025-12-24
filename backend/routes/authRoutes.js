@@ -142,6 +142,33 @@ router.get('/user', auth, async (req, res) => {
     } catch (err) { res.status(500).send('Server Error'); }
 });
 
+router.delete('/users/:id', auth, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // 1. Kullanıcı var mı kontrol et
+    const userCheck = await db.query('SELECT * FROM users WHERE id = $1', [id]);
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // 2. Kendi hesabını silmesini engellemek isteyebilirsiniz (Opsiyonel)
+    if (req.user.id === parseInt(id)) {
+      return res.status(400).json({ message: 'You cannot delete your own admin account.' });
+    }
+
+    // 3. Kullanıcıyı sil
+    await db.query('DELETE FROM users WHERE id = $1', [id]);
+    
+    console.log(`User with ID ${id} has been deleted.`);
+    res.json({ message: 'User deleted successfully' });
+
+  } catch (err) {
+    console.error("Delete Error:", err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
 router.post('/forgot-password', authController.forgotPassword);
 router.post('/reset-password', authController.resetPassword);
 

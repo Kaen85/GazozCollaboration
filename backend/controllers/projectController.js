@@ -24,12 +24,12 @@ export async function mine(req,res){
 }
 
 // GET /api/projects/shared  (public)
-export async function shared(_,res){
-  try{
-    const projects = await listSharedProjects();
+export async function shared(req, res) {
+  try {
+    const projects = await listSharedProjects(req.user.id); // Use req.user.id from auth middleware
     res.json({ projects });
-  }catch(e){
-    res.status(500).json({message:e.message});
+  } catch (e) {
+    res.status(500).json({ message: e.message });
   }
 }
 
@@ -46,3 +46,4 @@ export async function details(req,res){
     res.status(500).json({message:e.message});
   }
 }
+

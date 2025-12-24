@@ -2,12 +2,17 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { FiArrowRight, FiCheckCircle, FiUsers, FiLayout, FiLayers, FiShield } from 'react-icons/fi';
+import { useTheme } from '../context/ThemeContext'; // Import the theme hook
+import { 
+  FiArrowRight, FiCheckCircle, FiUsers, FiLayout, 
+  FiLayers, FiShield, FiSun, FiMoon 
+} from 'react-icons/fi';
 import BackgroundImage from '../assets/background.jpg';
 import LogoImage from '../assets/logo.png';
 
 const LandingPage = () => {
   const { user } = useAuth();
+  const { theme, toggleTheme } = useTheme(); // Access theme state
 
   return (
     <div className="min-h-screen font-sans text-text-main relative transition-colors duration-300">
@@ -17,7 +22,7 @@ const LandingPage = () => {
         className="absolute inset-0 bg-cover bg-center z-0 fixed"
         style={{ backgroundImage: `url(${BackgroundImage})` }}
       >
-        <div className="absolute inset-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-[2px] transition-colors duration-500"></div>
+        <div className="absolute inset-0 bg-white/70 dark:bg-gray-900/70 backdrop-blur-[2px] transition-colors duration-500"></div>
       </div>
 
       {/* Content Wrapper */}
@@ -25,37 +30,59 @@ const LandingPage = () => {
         
         {/* --- HEADER --- */}
         <header className="container mx-auto px-6 py-6 flex justify-between items-center fixed top-0 left-0 right-0 z-50 bg-transparent">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
              <img src={LogoImage} alt="GazozHub Logo" className="h-20 w-20 object-contain drop-shadow-lg brightness-0 dark:brightness-100 transition-all duration-300" />
              <span className="text-3xl font-extrabold tracking-tight text-text-main">GazozHub</span>
           </div>
           
-          <div className="hidden md:flex items-center gap-4">
-            {user ? (
-              <Link 
-                to="/dashboard" 
-                className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white font-semibold rounded-full transition-all shadow-lg hover:shadow-primary/30 flex items-center"
+          <div className="flex items-center gap-3">
+            {/* --- THEME TOGGLE BUTTON --- */}
+            <button
+              onClick={() => toggleTheme(theme === 'dark' ? 'light' : 'dark')}
+              className="relative flex items-center justify-between w-16 h-8 p-1 rounded-full bg-gray-200 dark:bg-gray-700 transition-colors duration-300 focus:outline-none shadow-inner"
+              aria-label="Toggle Theme"
+            >
+              <div
+                className={`absolute w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 flex items-center justify-center ${
+                  theme === 'dark' ? 'translate-x-8 bg-indigo-500' : 'translate-x-0 bg-amber-400'
+                }`}
               >
-                Go to Dashboard <FiArrowRight className="ml-2" />
-              </Link>
-            ) : (
-              <>
-                <Link to="/login" className="px-4 py-2 text-text-secondary hover:text-text-main font-medium transition-colors">
-                  Sign In
+                {theme === 'dark' ? (
+                  <FiMoon className="text-white w-4 h-4" />
+                ) : (
+                  <FiSun className="text-white w-4 h-4" />
+                )}
+              </div>
+              <FiSun className={`ml-1 w-4 h-4 ${theme === 'dark' ? 'text-gray-500' : 'opacity-0'}`} />
+              <FiMoon className={`mr-1 w-4 h-4 ${theme === 'light' ? 'text-gray-400' : 'opacity-0'}`} />
+            </button>
+
+            {/* Existing Desktop Nav */}
+            <div className="hidden md:flex items-center gap-4">
+              {user ? (
+                <Link 
+                  to="/dashboard" 
+                  className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white font-semibold rounded-full transition-all shadow-lg hover:shadow-primary/30 flex items-center"
+                >
+                  Go to Dashboard <FiArrowRight className="ml-2" />
                 </Link>
-                <Link to="/register" className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-full transition-all shadow-lg transform hover:-translate-y-0.5">
-                  Get Started
-                </Link>
-              </>
-            )}
+              ) : (
+                <>
+                  <Link to="/login" className="px-4 py-2 text-text-secondary hover:text-text-main font-medium transition-colors">
+                    Sign In
+                  </Link>
+                  <Link to="/register" className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-full transition-all shadow-lg transform hover:-translate-y-0.5">
+                    Get Started
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
         </header>
 
         {/* --- HERO SECTION --- */}
-        {/* min-h-screen ekleyerek bu alanın sayfayı kaplamasını sağladık */}
         <main className="flex-grow flex flex-col items-center">
           
-          {/* Giriş Alanı */}
           <section className="min-h-screen flex flex-col justify-center items-center text-center px-4">
             <div className="max-w-5xl mx-auto space-y-8">
               <h1 className="text-6xl md:text-8xl font-black tracking-tight leading-none mb-6 drop-shadow-2xl text-text-main">
@@ -88,7 +115,6 @@ const LandingPage = () => {
               </div>
             </div>
 
-            {/* Aşağı kaydır ikonu (İsteğe bağlı) */}
             <div className="absolute bottom-10 animate-bounce text-text-secondary">
               <p className="text-sm font-medium mb-2">Scroll to explore</p>
               <div className="flex justify-center">↓</div>
@@ -96,7 +122,6 @@ const LandingPage = () => {
           </section>
 
           {/* --- FEATURES GRID --- */}
-          {/* mt-[20vh] değerini mt-[10vh] veya ihtiyaca göre artırarak boşluğu ayarlayabiliriz */}
           <div className="pb-20 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl w-full px-4 mt-20">
             <FeatureCard 
               icon={<FiLayout className="w-8 h-8" />} 
@@ -136,7 +161,6 @@ const LandingPage = () => {
           </div>
         </main>
 
-        {/* --- FOOTER --- */}
         <footer className="py-8 text-center border-t border-border bg-surface/50 backdrop-blur-sm mt-auto">
            <div className="flex items-center justify-center gap-2 mb-2">
              <img src={LogoImage} alt="Logo" className="h-6 w-6 opacity-80" />
@@ -151,7 +175,7 @@ const LandingPage = () => {
   );
 };
 
-// Alt Bileşen: Özellik Kartı
+// Sub-component: Feature Card
 const FeatureCard = ({ icon, title, desc, color }) => (
   <div className="group p-8 rounded-3xl border border-border bg-surface/80 backdrop-blur-md hover:bg-surface hover:border-primary/50 transition-all duration-300 shadow-sm hover:shadow-lg">
     <div className={`w-14 h-14 rounded-2xl ${color} bg-opacity-10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>

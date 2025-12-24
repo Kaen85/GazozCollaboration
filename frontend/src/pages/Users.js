@@ -77,6 +77,27 @@ function Users() {
       setOpenMenuUserId(null);
       setShowModal(true);
   };
+const handleDelete = async (user) => {
+  // Kullanıcıya onay soralım
+  const confirmDelete = window.confirm(`Are you sure you want to delete ${user.username}? This action cannot be undone.`);
+  
+  if (!confirmDelete) return;
+
+  try {
+    setIsSubmitting(true); // Yükleniyor durumunu kullanabiliriz
+    await api.delete(`/api/auth/users/${user.id}`);
+    
+    alert("User deleted successfully.");
+    setOpenMenuUserId(null); // Menüyü kapat
+    fetchUsers(); // Listeyi yenile
+  } catch (err) {
+    console.error("Delete Error:", err);
+    const errorMsg = err.response?.data?.message || "Failed to delete user.";
+    alert(errorMsg);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   // --- FORM SUBMIT (MEVCUT MANTIK KORUNDU) ---
   const handleSubmit = async (e) => {
@@ -229,9 +250,12 @@ function Users() {
                                 <button onClick={() => openEditModal(user)} className="w-full text-left px-4 py-2 text-xs text-text-main hover:bg-surface-hover flex items-center transition-colors">
                                   <FiEdit2 className="mr-2"/> Edit
                                 </button>
-                                <button className="w-full text-left px-4 py-2 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center transition-colors">
-                                  <FiTrash2 className="mr-2"/> Delete
-                                </button>
+                                <button 
+                                  onClick={() => handleDelete(user)} 
+                                      className="w-full text-left px-4 py-2 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center transition-colors"
+                                    >
+                                <FiTrash2 className="mr-2"/> Delete
+                              </button>
                             </div>
                         )}
                       </td>

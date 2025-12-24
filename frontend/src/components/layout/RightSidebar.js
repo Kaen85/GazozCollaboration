@@ -7,7 +7,7 @@ import api from '../../services/api';
 import { 
   FiX, FiCalendar, FiClock, FiUser, FiUsers, 
   FiChevronsRight, FiTarget, FiActivity, FiTrendingUp, 
-  FiShield, FiUserPlus, FiDownload
+  FiShield, FiUserPlus, FiDownload, FiInfo
 } from 'react-icons/fi';
 
 function RightSidebar({ isOpen, toggleSidebar }) {
@@ -264,7 +264,7 @@ function RightSidebar({ isOpen, toggleSidebar }) {
 
       </div>
 
-      {/* --- ALT KAPATMA BAR --- */}
+      
       <div className="absolute bottom-0 left-0 w-full h-12 border-t border-border bg-surface/90 backdrop-blur-sm z-20 flex items-center justify-center">
         <button
           onClick={toggleSidebar}

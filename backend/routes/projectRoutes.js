@@ -519,6 +519,17 @@ router.delete('/:id/members/:userId', auth, checkProjectMember, async (req, res)
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
+router.get('/shared', auth, async (req, res) => {
+  try {
+    // Sadece giriş yapan kullanıcının üye olduğu projeleri çekiyoruz
+    const projects = await listSharedProjects(req.user.id);
+    res.json(projects);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
+  }
+});
+
 // =================================
 // 6. FILES
 // =================================
