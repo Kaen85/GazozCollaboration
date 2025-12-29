@@ -2,7 +2,6 @@ import React, { createContext, useState, useContext } from 'react';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
 
-// Backend adresi
 const API_URL = 'http://localhost:5000/api/projects';
 
 export const ProjectContext = createContext();
@@ -18,16 +17,14 @@ export const ProjectProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [dashboardTasks, setDashboardTasks] = useState([]);
   
-  // Token'ı AuthContext'ten alıyoruz
-  const { token, logout } = useAuth();
+  const { logout } = useAuth();
 
-  // --- ESKİ USUL: HEADER'I ELLE EKLEME ---
   const getAuthHeaders = () => {
-    const storedToken = localStorage.getItem('token'); // Token'ı direkt depodan alalım, daha garanti.
+    const storedToken = localStorage.getItem('token');
     if (!storedToken) return {}; 
     return { 
         headers: { 
-            'x-auth-token': storedToken // Backend x-auth-token bekliyor
+            'x-auth-token': storedToken 
         } 
     };
   };
@@ -40,8 +37,6 @@ export const ProjectProvider = ({ children }) => {
     }
   };
   
-  // --- PROJE FONKSİYONLARI ---
-
   const fetchProjects = async () => {
     setLoading(true);
     try {
@@ -61,18 +56,16 @@ export const ProjectProvider = ({ children }) => {
   };
 
   const fetchSharedProjects = async () => {
-  setLoading(true);
-  try {
-    // Bu istek backend'de güncellediğimiz /shared-projects rotasına gitmeli
-    const response = await axios.get(`${API_URL}/shared-projects`, getAuthHeaders()); 
-    // Gelen veri sadece üye olduğunuz projeleri içerecektir
-    setSharedProjects(response.data.projects || response.data); 
-  } catch (err) { 
-    handleError(err);
-  } finally { 
-    setLoading(false);
-  }
-};
+    setLoading(true);
+    try {
+      const response = await axios.get(`${API_URL}/shared-projects`, getAuthHeaders()); 
+      setSharedProjects(response.data.projects || response.data); 
+    } catch (err) { 
+      handleError(err);
+    } finally { 
+      setLoading(false);
+    }
+  };
 
   const createProject = async (name, description) => {
     setLoading(true);
@@ -101,8 +94,6 @@ export const ProjectProvider = ({ children }) => {
       return response.data; 
     } catch (err) { handleError(err); throw err; }
   };
-
-
 
   const fetchDashboardTasks = async () => {
     setLoading(true);
@@ -148,7 +139,6 @@ export const ProjectProvider = ({ children }) => {
     } catch (err) { handleError(err); throw err; }
   };
 
-
   const fetchMembers = async (projectId) => {
     try {
         const response = await axios.get(`${API_URL}/${projectId}/members`, getAuthHeaders());
@@ -173,6 +163,23 @@ export const ProjectProvider = ({ children }) => {
     } catch (err) { handleError(err); throw err; }
   };
 
+ const updateMemberRole = async (projectId, userId, newRole) => {
+  try {
+    const response = await axios.put(`${API_URL}/${projectId}/members/${userId}`, {
+      role: newRole
+    }, getAuthHeaders());
+
+    setCurrentMembers(prev => 
+      prev.map(m => m.id === userId ? { ...m, role: newRole } : m)
+    );
+
+    return response.data;
+  } catch (err) {
+    handleError(err);
+    throw err;
+  }
+};
+
   const updateProjectDetails = async (projectId, name, description, longDescription) => {
     try {
         const response = await axios.put(`${API_URL}/${projectId}`, { name, description, long_description: longDescription }, getAuthHeaders());
@@ -186,6 +193,15 @@ export const ProjectProvider = ({ children }) => {
         const response = await axios.put(`${API_URL}/${projectId}/settings/tasks-visibility`, { is_tasks_public: isPublic }, getAuthHeaders());
         setCurrentProject(prev => ({...prev, is_tasks_public: response.data.is_tasks_public}));
     } catch (err) { handleError(err); }
+  };
+
+  const deleteProject = async (projectId) => {
+    try {
+      await axios.delete(`${API_URL}/${projectId}`, getAuthHeaders());
+      setMyProjects(prev => prev.filter(p => p.id !== projectId));
+      setProjects(prev => prev.filter(p => p.id !== projectId));
+      return true;
+    } catch (err) { handleError(err); throw err; }
   };
 
   const fetchIssues = async (projectId) => {
@@ -221,12 +237,18 @@ export const ProjectProvider = ({ children }) => {
   const fetchFiles = async (projectId) => {
     try { return (await axios.get(`${API_URL}/${projectId}/files`, getAuthHeaders())).data; } catch (e) { handleError(e); }
   };
+  
+  // GÜNCELLENEN KISIM:
   const uploadFile = async (projectId, file) => {
     try { 
         const fd = new FormData(); fd.append('file', file);
         return (await axios.post(`${API_URL}/${projectId}/files`, fd, { headers: { ...getAuthHeaders().headers, 'Content-Type': 'multipart/form-data'} })).data; 
-    } catch (e) { handleError(e); }
+    } catch (e) { 
+        handleError(e); 
+        throw e; // HATAYI FIRLAT (Böylece bileşen haberdar olur)
+    }
   };
+  
   const deleteFile = async (projectId, fileId) => {
     try { await axios.delete(`${API_URL}/${projectId}/files/${fileId}`, getAuthHeaders()); return true; } catch (e) { handleError(e); }
   };
@@ -235,7 +257,7 @@ export const ProjectProvider = ({ children }) => {
     projects, currentProject, myProjects, sharedProjects, loading, error, dashboardTasks, currentMembers,
     fetchProjects, fetchMyProjects, fetchSharedProjects, createProject, fetchProjectById, updateProjectVisibility,
     fetchDashboardTasks, fetchTasks, createTask, updateTaskStatus, updateTask, deleteTask,
-    fetchMembers, addMember, removeMember, updateProjectDetails, updateTasksVisibility,
+    fetchMembers, addMember, removeMember, updateProjectDetails, updateTasksVisibility, updateMemberRole, deleteProject,
     fetchIssues, createIssue, updateIssue, fetchComments, addComment, likeComment, deleteComment, editComment,
     fetchIssueComments, addIssueComment, fetchFiles, uploadFile, deleteFile
   };

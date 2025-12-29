@@ -1,0 +1,1637 @@
+Directory structure:
+└── kaen85-gazozcollaboration/
+    ├── backend/
+    │   ├── controllers/
+    │   │   └── projectController.js
+    │   ├── middleware/
+    │   │   └── auth.js
+    │   ├── models/
+    │   │   ├── Project.js
+    │   │   └── User.js
+    │   └── routes/
+    │       ├── authRoutes.js
+    │       └── projectRoutes.js
+    └── frontend/
+        ├── package.json
+        ├── tailwind.config.js
+        └── src/
+            ├── context/
+            │   └── ProjectContext.js
+            ├── pages/
+            │   ├── MyProjectsPage.js
+            │   └── SharedProjectsPage.js
+            └── services/
+                └── api.js
+
+================================================
+FILE: backend/controllers/projectController.js
+================================================
+// Projects: create, list, details
+import { createProject, listMyProjects, listSharedProjects, getProjectById } from "../models/Project.js";
+
+// POST /api/projects  (auth required)
+export async function create(req,res){
+  try{
+    const { title, description, visibility } = req.body;
+    if(!title) return res.status(400).json({message:"Title is required"});
+    const project = await createProject(req.user.id, { title, description, visibility });
+    res.status(201).json({message:"Created", project});
+  }catch(e){
+    res.status(500).json({message:e.message});
+  }
+}
+
+// GET /api/projects/mine  (auth required)
+export async function mine(req,res){
+  try{
+    const projects = await listMyProjects(req.user.id);
+    res.json({ projects });
+  }catch(e){
+    res.status(500).json({message:e.message});
+  }
+}
+
+// GET /api/projects/shared  (public)
+export async function shared(req, res) {
+  try {
+    const projects = await listSharedProjects(req.user.id); // Use req.user.id from auth middleware
+    res.json({ projects });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+}
+
+// GET /api/projects/:id  (auth required; owner or shared)
+export async function details(req,res){
+  try{
+    const project = await getProjectById(req.params.id);
+    if(!project) return res.status(404).json({message:"Not found"});
+    if(project.visibility !== "shared" && project.owner_id !== req.user.id){
+      return res.status(403).json({message:"Forbidden"});
+    }
+    res.json({ project });
+  }catch(e){
+    res.status(500).json({message:e.message});
+  }
+}
+
+
+
+
+================================================
+FILE: backend/middleware/auth.js
+================================================
+const jwt = require('jsonwebtoken');
+require('dotenv').config();
+
+module.exports = function(req, res, next) {
+  // 1. Header'dan token'ı al (Frontend x-auth-token gönderiyor)
+  const token = req.header('x-auth-token');
+
+  // 2. Token yoksa durdur
+  if (!token) {
+    return res.status(401).json({ message: 'No token, authorization denied' });
+  }
+
+  // 3. Token'ı çöz ve kullanıcıyı tanı
+  try {
+    const secret = process.env.JWT_SECRET || 'mysecrettoken';
+    const decoded = jwt.verify(token, secret);
+    
+    req.user = decoded.user; // İşte req.user burada oluşuyor!
+    next();
+  } catch (err) {
+    res.status(401).json({ message: 'Token is not valid' });
+  }
+};
+
+
+================================================
+FILE: backend/models/Project.js
+================================================
+
+// backend/models/Project.js
+
+// Üyesi olduğunuz (sahibi olmadığınız) projeler
+export async function listSharedProjects(userId) {
+  const { rows } = await pool.query(
+    `SELECT p.*, pm.role as user_role 
+     FROM projects p 
+     INNER JOIN project_members pm ON p.id = pm.project_id 
+     WHERE pm.user_id = $1 AND p.owner_id != $1 
+     ORDER BY p.created_at DESC`,
+    [userId]
+  );
+  return rows;
+}
+export async function createProject(ownerId, { title, description, visibility }){
+  const { rows } = await pool.query(
+    "INSERT INTO projects(owner_id,title,description,visibility) VALUES($1,$2,$3,$4) RETURNING *",
+    [ownerId, title, description || null, visibility || "private"]
+  );
+  return rows[0];
+}
+// SADECE Public olan projeler (SharedProjectsPage için)
+export async function listPublicProjects() {
+  const { rows } = await pool.query(
+    "SELECT * FROM projects WHERE is_public = true ORDER BY created_at DESC"
+  );
+  return rows;
+}
+
+
+================================================
+FILE: backend/models/User.js
+================================================
+import { pool } from "../config/db.js";
+export async function findUserByEmail(email){
+  const { rows } = await pool.query("SELECT * FROM users WHERE email=$1", [email]);
+  return rows[0];
+}
+export async function createUser(name,email,hash){
+  const { rows } = await pool.query(
+    "INSERT INTO users(name,email,password) VALUES($1,$2,$3) RETURNING id,name,email,created_at",
+    [name,email,hash]
+  );
+  return rows[0];
+}
+
+
+
+================================================
+FILE: backend/routes/authRoutes.js
+================================================
+// backend/routes/authRoutes.js
+
+const express = require('express');
+const router = express.Router();
+const db = require('../db'); 
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const auth = require('../middleware/auth');
+require('dotenv').config();
+const authController = require('../controllers/authController');
+
+// =========================================================
+// 1. KULLANICI LİSTELEME
+// URL: /api/auth/users
+// =========================================================
+router.get('/users', auth, async (req, res) => {
+  try {
+    const result = await db.query(
+      'SELECT id, username, email, role, created_at FROM users ORDER BY created_at DESC'
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Listeleme Hatası:", err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// =========================================================
+// 2. KULLANICI KAYIT (REGISTER)
+// URL: /api/auth/register
+// =========================================================
+router.post('/register', async (req, res) => {
+  const { username, email, password, role } = req.body;
+
+  if (!username || !email || !password) {
+    return res.status(400).json({ message: 'Please enter all fields' });
+  }
+
+  try {
+    const userCheck = await db.query('SELECT * FROM users WHERE username = $1 OR email = $2', [username, email]);
+    if (userCheck.rows.length > 0) {
+       return res.status(400).json({ message: 'Username or Email already exists' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+    const userRole = role || 'student';
+
+    const newUser = await db.query(
+      'INSERT INTO users (username, email, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, username, email, role',
+      [username, email, passwordHash, userRole]
+    );
+
+    const payload = { user: { id: newUser.rows[0].id, role: newUser.rows[0].role } };
+
+    jwt.sign(payload, process.env.JWT_SECRET || 'mysecrettoken', { expiresIn: '30d' }, (err, token) => {
+        if (err) throw err;
+        res.status(201).json({ message: 'User registered successfully', token, user: newUser.rows[0] });
+    });
+  } catch (err) {
+    console.error("Register Hatası:", err.message);
+    res.status(500).send('Server error');
+  }
+});
+
+// =========================================================
+// 3. KULLANICI GÜNCELLEME (UPDATE) - YENİ EKLENDİ
+// URL: /api/auth/users/:id
+// =========================================================
+router.put('/users/:id', auth, async (req, res) => {
+  const { id } = req.params;
+  const { username, email, role, password } = req.body;
+
+  console.log(`Update isteği geldi: ID=${id}, User=${username}, Role=${role}`);
+
+  try {
+    // 1. Kullanıcı var mı?
+    const userCheck = await db.query('SELECT * FROM users WHERE id = $1', [id]);
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // 2. Sorguyu Hazırla
+    let query = 'UPDATE users SET username = $1, email = $2, role = $3';
+    let values = [username, email, role];
+    let counter = 4;
+
+    // Şifre varsa güncelle, yoksa dokunma
+    if (password && password.trim() !== '') {
+      const salt = await bcrypt.genSalt(10);
+      const passwordHash = await bcrypt.hash(password, salt);
+      query += `, password_hash = $${counter}`;
+      values.push(passwordHash);
+      counter++;
+    }
+
+    query += ` WHERE id = $${counter} RETURNING id, username, email, role`;
+    values.push(id);
+
+    // 3. Veritabanını Güncelle
+    const updatedUser = await db.query(query, values);
+    
+    console.log("Kullanıcı güncellendi:", updatedUser.rows[0]);
+    res.json(updatedUser.rows[0]);
+
+  } catch (err) {
+    console.error("Update Error:", err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// =========================================================
+// 4. GİRİŞ (LOGIN)
+// =========================================================
+router.post('/login', async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) return res.status(400).json({ message: 'Please enter all fields' });
+
+  try {
+    const userResult = await db.query('SELECT * FROM users WHERE username = $1', [username]);
+    if (userResult.rows.length === 0) return res.status(400).json({ message: 'Invalid credentials' });
+
+    const user = userResult.rows[0];
+    const isMatch = await bcrypt.compare(password, user.password_hash);
+    if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
+
+    const payload = { user: { id: user.id, role: user.role } };
+    jwt.sign(payload, process.env.JWT_SECRET || 'mysecrettoken', { expiresIn: '30d' }, (err, token) => {
+      if (err) throw err;
+      res.json({ token, user: { id: user.id, username: user.username, email: user.email, role: user.role } });
+    });
+  } catch (err) { res.status(500).send('Server error'); }
+});
+
+// =========================================================
+// 5. USER INFO, FORGOT & RESET PASSWORD
+// =========================================================
+router.get('/user', auth, async (req, res) => {
+    try {
+      const user = await db.query('SELECT id, username, email, role FROM users WHERE id = $1', [req.user.id]);
+      res.json(user.rows[0]);
+    } catch (err) { res.status(500).send('Server Error'); }
+});
+
+router.delete('/users/:id', auth, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // 1. Kullanıcı var mı kontrol et
+    const userCheck = await db.query('SELECT * FROM users WHERE id = $1', [id]);
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // 2. Kendi hesabını silmesini engellemek isteyebilirsiniz (Opsiyonel)
+    if (req.user.id === parseInt(id)) {
+      return res.status(400).json({ message: 'You cannot delete your own admin account.' });
+    }
+
+    // 3. Kullanıcıyı sil
+    await db.query('DELETE FROM users WHERE id = $1', [id]);
+    
+    console.log(`User with ID ${id} has been deleted.`);
+    res.json({ message: 'User deleted successfully' });
+
+  } catch (err) {
+    console.error("Delete Error:", err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+router.post('/forgot-password', authController.forgotPassword);
+router.post('/reset-password', authController.resetPassword);
+
+module.exports = router;
+
+
+================================================
+FILE: backend/routes/projectRoutes.js
+================================================
+const express = require('express');
+const router = express.Router();
+const db = require('../db'); 
+const multer = require('multer');
+const path = require('path');
+// ÖNEMLİ: Auth middleware buraya eklendi
+const auth = require('../middleware/auth'); 
+
+// === MULTER AYARLARI ===
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, 'uploads/'),
+  filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
+});
+const upload = multer({ storage: storage });
+
+// =================================
+// YETKİ KONTROLÜ (MIDDLEWARE)
+// =================================
+const checkProjectMember = async (req, res, next) => {
+  try {
+    const projectId = req.params.id; 
+    const userId = req.user.id; 
+    // Auth middleware'den gelen rolü alıyoruz
+    const userRole = req.user.role; 
+
+    // 1. Proje var mı diye bak
+    const projectCheck = await db.query(
+      'SELECT is_public, owner_id, is_tasks_public FROM projects WHERE id = $1',
+      [projectId]
+    );
+
+    if (projectCheck.rows.length === 0) {
+      return res.status(404).json({ message: 'Project not found.' });
+    }
+
+    const project = projectCheck.rows[0];
+
+    // === ADMIN KONTROLÜ (YENİ) ===
+    // Eğer kullanıcı Admin ise, veritabanı üyeliğine bakmaksızın 'owner' yetkisi ver.
+    if (userRole === 'admin') {
+        req.projectId = projectId;
+        req.memberRole = 'owner'; // Admin her zaman 'owner' yetkisine sahiptir
+        req.projectSettings = project; 
+        return next(); // Direkt geçiş izni
+    }
+
+    // 2. Admin değilse normal üyelik kontrolü yap
+    const memberCheck = await db.query(
+      'SELECT role FROM project_members WHERE project_id = $1 AND user_id = $2',
+      [projectId, userId]
+    );
+
+    const memberRole = memberCheck.rows[0]?.role; 
+
+    if (memberRole) {
+      req.projectId = projectId;
+      req.memberRole = memberRole;
+      req.projectSettings = project; 
+      next();
+    } else if (project.is_public) {
+      req.projectId = projectId;
+      req.memberRole = 'public_viewer';
+      req.projectSettings = project;
+      next();
+    } else {
+      return res.status(403).json({ message: 'Access Denied.' });
+    }
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+};
+
+// =================================
+// 1. PROJE YÖNETİMİ
+// =================================
+
+// ÖNEMLİ: Çakışmayı önlemek için özel rotaları en üste koyduk.
+
+// @route   GET /api/projects/user/all-tasks
+router.get('/user/all-tasks', auth, async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const query = `
+      SELECT 
+        t.id, t.title, t.status, t.due_date, t.created_at,
+        p.id as project_id, p.name as project_name
+      FROM project_tasks t
+      JOIN projects p ON t.project_id = p.id
+      JOIN project_members pm ON p.id = pm.project_id
+      WHERE pm.user_id = $1
+      ORDER BY t.created_at DESC
+      LIMIT 10
+    `;
+    const result = await db.query(query, [userId]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   GET /api/projects/my-projects
+router.get('/my-projects', auth, async (req, res) => {
+  try {
+    const projects = await db.query(`
+      SELECT * FROM projects
+      WHERE owner_id = $1
+      ORDER BY last_updated_at DESC
+    `, [req.user.id]);
+    res.json(projects.rows);
+  } catch (err) {
+    res.status(500).send('Server error');
+  }
+});
+
+// @route   GET /api/projects/shared-projects
+router.get('/shared-projects', auth, async (req, res) => {
+  try {
+    // EĞER ADMIN İSE: Kendi oluşturmadığı TÜM projeleri "Shared" gibi görsün
+    if (req.user.role === 'admin') {
+      const projects = await db.query(`
+        SELECT p.id, p.name, p.description, p.owner_id, p.created_at, p.last_updated_at, p.is_public,
+          p.created_at as joined_at,
+          u.username as owner_name
+        FROM projects p
+        JOIN users u ON p.owner_id = u.id
+        WHERE p.owner_id != $1 -- Kendisinin olmayanlar
+        ORDER BY p.last_updated_at DESC
+      `, [req.user.id]);
+      return res.json(projects.rows);
+    }
+
+    // NORMAL KULLANICI İÇİN (Eski kodun aynısı)
+    const projects = await db.query(`
+      (
+        SELECT p.id, p.name, p.description, p.owner_id, p.created_at, p.last_updated_at, p.is_public,
+          pm.joined_at,
+          u.username as owner_name
+        FROM projects p
+        JOIN project_members pm ON p.id = pm.project_id
+        JOIN users u ON p.owner_id = u.id
+        WHERE pm.user_id = $1 AND p.owner_id != $1
+      )
+      UNION
+      (
+        SELECT p.id, p.name, p.description, p.owner_id, p.created_at, p.last_updated_at, p.is_public,
+          p.created_at as joined_at,
+          u.username as owner_name
+        FROM projects p
+        JOIN users u ON p.owner_id = u.id
+        WHERE p.is_public = true AND p.owner_id != $1
+      )
+      ORDER BY last_updated_at DESC
+    `, [req.user.id]);
+    res.json(projects.rows);
+  } catch (err) {
+    res.status(500).send('Server error');
+  }
+});
+
+// @route   POST /api/projects (Yeni Proje)
+router.post('/', auth, async (req, res) => {
+  const { name, description } = req.body;
+  const ownerId = req.user.id; 
+
+  try {
+    const existingProject = await db.query('SELECT id FROM projects WHERE name = $1', [name]);
+    if (existingProject.rows.length > 0) {
+      return res.status(400).json({ message: 'A project with this name already exists.' });
+    }
+
+    await db.query('BEGIN'); 
+    
+    const newProject = await db.query(`
+      INSERT INTO projects (name, description, owner_id)
+      VALUES ($1, $2, $3)
+      RETURNING * `, [name, description, ownerId]);
+      
+    const projectId = newProject.rows[0].id;
+    
+    await db.query(
+      'INSERT INTO project_members (project_id, user_id, role) VALUES ($1, $2, $3)',
+      [projectId, ownerId, 'owner']
+    );
+    
+    await db.query('COMMIT'); 
+    res.status(201).json(newProject.rows[0]);
+  } catch (err) {
+    await db.query('ROLLBACK'); 
+    res.status(500).send('Server error');
+  }
+});
+
+// @route   GET /api/projects (Tüm projeler)
+router.get('/', auth, async (req, res) => {
+  try {
+    let query;
+    let params;
+
+    // EĞER ADMIN İSE: Veritabanındaki BÜTÜN projeleri getir
+    if (req.user.role === 'admin') {
+      query = `
+        SELECT p.*, 'owner' as user_role 
+        FROM projects p 
+        ORDER BY p.last_updated_at DESC
+      `;
+      params = [];
+    } 
+    // EĞER NORMAL KULLANICI İSE: Sadece üye olduklarını getir
+    else {
+      query = `
+        SELECT p.*, pm.role as user_role 
+        FROM projects p 
+        JOIN project_members pm ON p.id = pm.project_id 
+        WHERE pm.user_id = $1 
+        ORDER BY p.last_updated_at DESC
+      `;
+      params = [req.user.id];
+    }
+
+    const projects = await db.query(query, params);
+    res.json(projects.rows);
+  } catch (err) { 
+    console.error(err);
+    res.status(500).send('Server error');
+  }
+});
+
+// @route   GET /api/projects/:id (Detay)
+router.get('/:id', auth, checkProjectMember, async (req, res) => {
+  try {
+    const project = await db.query('SELECT * FROM projects WHERE id = $1', [req.projectId]);
+    const data = project.rows[0];
+    data.currentUserRole = req.memberRole; 
+    res.json(data);
+  } catch (err) {
+    res.status(500).send('Server error');
+  }
+});
+
+// @route   PUT /api/projects/:id (Güncelle)
+router.put('/:id', auth, checkProjectMember, async (req, res) => {
+  if (req.memberRole !== 'owner') {
+    return res.status(403).json({ message: 'Only the project owner can update details.' });
+  }
+  const { name, description, long_description } = req.body;
+  try {
+    const updatedProject = await db.query(
+      'UPDATE projects SET name = $1, description = $2, long_description = $3, last_updated_at = NOW() WHERE id = $4 RETURNING *',
+      [name, description, long_description, req.projectId]
+    );
+    const projectData = updatedProject.rows[0];
+    projectData.currentUserRole = req.memberRole;
+    res.json(projectData);
+  } catch (err) {
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   DELETE /api/projects/:id
+router.delete('/:id', auth, checkProjectMember, async (req, res) => {
+  if (req.memberRole !== 'owner') {
+    return res.status(403).json({ message: 'Only owner can delete.' });
+  }
+  try {
+    await db.query('DELETE FROM projects WHERE id = $1', [req.projectId]);
+    res.json({ message: 'Project deleted successfully' });
+  } catch (err) {
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   PUT /visibility
+router.put('/:id/visibility', auth, checkProjectMember, async (req, res) => {
+  if (req.memberRole !== 'owner') return res.status(403).json({ message: 'Only owner.' });
+  try {
+    const upd = await db.query(
+      'UPDATE projects SET is_public = $1 WHERE id = $2 RETURNING *',
+      [req.body.is_public, req.projectId]
+    );
+    const data = upd.rows[0];
+    data.currentUserRole = req.memberRole;
+    res.json(data);
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
+// =================================
+// 2. TASKS (KANBAN)
+// =================================
+
+router.put('/:id/settings/tasks-visibility', auth, checkProjectMember, async (req, res) => {
+  if (req.memberRole !== 'owner') return res.status(403).json({ message: 'Only owner.' });
+  try {
+    const upd = await db.query('UPDATE projects SET is_tasks_public = $1 WHERE id = $2 RETURNING is_tasks_public', [req.body.is_tasks_public, req.projectId]);
+    res.json(upd.rows[0]);
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
+router.get('/:id/tasks', auth, checkProjectMember, async (req, res) => {
+  if (req.memberRole === 'public_viewer' && !req.projectSettings.is_tasks_public) {
+    return res.status(403).json({ message: 'Tasks are private.' });
+  }
+  try {
+    const tasks = await db.query(
+      'SELECT t.*, u.username as created_by_name FROM project_tasks t LEFT JOIN users u ON t.assignee_id = u.id WHERE t.project_id = $1 ORDER BY t.created_at ASC',
+      [req.projectId]
+    );
+    res.json(tasks.rows);
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
+router.post('/:id/tasks', auth, checkProjectMember, async (req, res) => {
+  if (req.memberRole === 'public_viewer') return res.status(403).json({ message: 'Read-only.' });
+  const { title, description, status, due_date } = req.body;
+  try {
+    const newTask = await db.query(
+      'INSERT INTO project_tasks (project_id, title, description, status, due_date, assignee_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [req.projectId, title, description, status || 'todo', due_date, req.user.id]
+    );
+    const user = await db.query('SELECT username FROM users WHERE id = $1', [req.user.id]);
+    const taskObj = newTask.rows[0];
+    taskObj.created_by_name = user.rows[0].username;
+    res.status(201).json(taskObj);
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
+router.put('/:id/tasks/:taskId', auth, checkProjectMember, async (req, res) => {
+  if (req.memberRole === 'public_viewer') return res.status(403).json({ message: 'Read-only.' });
+  const { title, status } = req.body;
+  const { taskId } = req.params;
+  try {
+    let q, p;
+    if (status) { q = 'UPDATE project_tasks SET status = $1 WHERE id = $2 RETURNING *'; p = [status, taskId]; }
+    else { q = 'UPDATE project_tasks SET title = $1 WHERE id = $2 RETURNING *'; p = [title, taskId]; }
+    
+    const upd = await db.query(q, p);
+    const taskObj = upd.rows[0];
+    const user = await db.query('SELECT username FROM users WHERE id = $1', [taskObj.assignee_id]);
+    taskObj.created_by_name = user.rows.length > 0 ? user.rows[0].username : 'Unknown';
+    res.json(taskObj);
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
+router.delete('/:id/tasks/:taskId', auth, checkProjectMember, async (req, res) => {
+  if (req.memberRole === 'public_viewer') return res.status(403).json({ message: 'Read-only.' });
+  try {
+    await db.query('DELETE FROM project_tasks WHERE id = $1', [req.params.taskId]);
+    res.json({ message: 'Deleted' });
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
+// =================================
+// 3. ISSUES
+// =================================
+
+router.get('/:id/issues', auth, checkProjectMember, async (req, res) => {
+  try {
+    const issues = await db.query(
+      'SELECT pi.*, u.username as created_by_name FROM project_issues pi JOIN users u ON pi.created_by_id = u.id WHERE pi.project_id = $1 ORDER BY pi.created_at DESC',
+      [req.projectId]
+    );
+    res.json(issues.rows);
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
+router.post('/:id/issues', auth, checkProjectMember, async (req, res) => {
+  if (req.memberRole === 'viewer' || req.memberRole === 'public_viewer') return res.status(403).json({ message: 'No permission.' });
+  try {
+    const newIssue = await db.query(
+      'INSERT INTO project_issues (project_id, created_by_id, text) VALUES ($1, $2, $3) RETURNING *',
+      [req.projectId, req.user.id, req.body.text]
+    );
+    const user = await db.query('SELECT username FROM users WHERE id = $1', [req.user.id]);
+    const result = newIssue.rows[0];
+    result.created_by_name = user.rows[0].username;
+    res.status(201).json(result);
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
+router.put('/:id/issues/:issueId', auth, checkProjectMember, async (req, res) => {
+  if (req.memberRole !== 'owner' && req.memberRole !== 'editor') return res.status(403).json({ message: 'No permission.' });
+  const { text, status } = req.body;
+  try {
+    let q, p;
+    if (text !== undefined) { q = 'UPDATE project_issues SET text = $1 WHERE id = $2 RETURNING *'; p = [text, req.params.issueId]; }
+    else { q = 'UPDATE project_issues SET status = $1 WHERE id = $2 RETURNING *'; p = [status, req.params.issueId]; }
+    const upd = await db.query(q, p);
+    const result = upd.rows[0];
+    const userResult = await db.query('SELECT username FROM users WHERE id = $1', [result.created_by_id]);
+    result.created_by_name = userResult.rows[0].username;
+    res.json(result);
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
+// =================================
+// 4. COMMENTS
+// =================================
+
+router.get('/:id/comments', auth, checkProjectMember, async (req, res) => {
+  try {
+    const comments = await db.query(
+      'SELECT c.*, u.username as author_name, c.likes_user_ids FROM comments c JOIN users u ON c.author_id = u.id WHERE c.project_id = $1 AND c.issue_id IS NULL ORDER BY c.created_at ASC',
+      [req.projectId]
+    );
+    res.json(comments.rows);
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
+router.post('/:id/comments', auth, checkProjectMember, async (req, res) => {
+  try {
+    const newComment = await db.query(
+      'INSERT INTO comments (project_id, author_id, text) VALUES ($1, $2, $3) RETURNING *',
+      [req.projectId, req.user.id, req.body.text]
+    );
+    const user = await db.query('SELECT username FROM users WHERE id = $1', [req.user.id]);
+    const result = newComment.rows[0];
+    result.author_name = user.rows[0].username;
+    result.likes_user_ids = [];
+    res.status(201).json(result);
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
+router.get('/:id/issues/:issueId/comments', auth, checkProjectMember, async (req, res) => {
+  try {
+    const comments = await db.query(
+      'SELECT c.*, u.username as author_name, c.likes_user_ids FROM comments c JOIN users u ON c.author_id = u.id WHERE c.issue_id = $1 ORDER BY c.created_at ASC',
+      [req.params.issueId]
+    );
+    res.json(comments.rows);
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
+router.post('/:id/issues/:issueId/comments', auth, checkProjectMember, async (req, res) => {
+  try {
+    const issueCheck = await db.query('SELECT status FROM project_issues WHERE id = $1', [req.params.issueId]);
+    if (issueCheck.rows[0].status === 'Closed') return res.status(403).json({ message: 'Issue is closed.' });
+    
+    const newComment = await db.query(
+      'INSERT INTO comments (project_id, issue_id, author_id, text) VALUES ($1, $2, $3, $4) RETURNING *',
+      [req.projectId, req.params.issueId, req.user.id, req.body.text]
+    );
+    const userResult = await db.query('SELECT username FROM users WHERE id = $1', [req.user.id]);
+    const result = newComment.rows[0];
+    result.author_name = userResult.rows[0].username;
+    res.status(201).json(result);
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
+router.put('/:id/comments/:commentId', auth, checkProjectMember, async (req, res) => {
+  try {
+    let q = 'UPDATE comments SET text = $1 WHERE id = $2 AND author_id = $3 RETURNING *';
+    let p = [req.body.text, req.params.commentId, req.user.id];
+    if (req.memberRole === 'owner') { q = 'UPDATE comments SET text = $1 WHERE id = $2 RETURNING *'; p = [req.body.text, req.params.commentId]; }
+    const upd = await db.query(q, p);
+    if(upd.rows.length===0) return res.status(403).json({message:'Denied'});
+    const result = upd.rows[0];
+    const userResult = await db.query('SELECT username FROM users WHERE id = $1', [result.author_id]);
+    result.author_name = userResult.rows[0].username;
+    res.json(result);
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
+router.delete('/:id/comments/:commentId', auth, checkProjectMember, async (req, res) => {
+  try {
+    let q = 'DELETE FROM comments WHERE id = $1 AND author_id = $2 RETURNING *';
+    let p = [req.params.commentId, req.user.id];
+    if (req.memberRole === 'owner') { q = 'DELETE FROM comments WHERE id = $1 RETURNING *'; p = [req.params.commentId]; }
+    const del = await db.query(q, p);
+    if(del.rows.length===0) return res.status(403).json({message:'Denied'});
+    res.json({message:'Deleted'});
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
+router.post('/:id/comments/:commentId/like', auth, checkProjectMember, async (req, res) => {
+   try {
+     const c = await db.query('SELECT likes_user_ids FROM comments WHERE id = $1', [req.params.commentId]);
+     if(c.rows.length===0) return res.status(404).json({message:'Not found'});
+     const likes = c.rows[0].likes_user_ids || [];
+     let q;
+     if(likes.includes(req.user.id)) q = 'UPDATE comments SET likes_user_ids = array_remove(likes_user_ids, $1) WHERE id = $2 RETURNING likes_user_ids';
+     else q = 'UPDATE comments SET likes_user_ids = array_append(likes_user_ids, $1) WHERE id = $2 RETURNING likes_user_ids';
+     const upd = await db.query(q, [req.user.id, req.params.commentId]);
+     res.json(upd.rows[0]);
+   } catch (err) { res.status(500).send('Server Error'); }
+});
+
+// =================================
+// 5. MEMBERS
+// =================================
+router.get('/:id/members', auth, checkProjectMember, async (req, res) => {
+  try {
+    const m = await db.query('SELECT u.id, u.username, pm.role FROM project_members pm LEFT JOIN users u ON pm.user_id = u.id WHERE pm.project_id = $1', [req.projectId]);
+    res.json(m.rows);
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
+router.post('/:id/members', auth, checkProjectMember, async (req, res) => {
+  if (req.memberRole !== 'owner' && req.memberRole !== 'editor') return res.status(403).json({message:'Denied'});
+  const { username, role } = req.body;
+  try {
+    const u = await db.query('SELECT id FROM users WHERE username = $1', [username]);
+    if(u.rows.length===0) return res.status(404).json({message:'User not found'});
+    const uid = u.rows[0].id;
+    const check = await db.query('SELECT * FROM project_members WHERE project_id=$1 AND user_id=$2', [req.projectId, uid]);
+    if(check.rows.length>0) return res.status(400).json({message:'Already member'});
+    const nm = await db.query('INSERT INTO project_members (project_id, user_id, role) VALUES ($1, $2, $3) RETURNING role', [req.projectId, uid, role]);
+    res.status(201).json({id: uid, username, role: nm.rows[0].role});
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
+router.delete('/:id/members/:userId', auth, checkProjectMember, async (req, res) => {
+  if (req.memberRole !== 'owner') return res.status(403).json({message:'Denied'});
+  if (req.params.userId === req.user.id) return res.status(400).json({message:'Cannot remove owner'});
+  try {
+    const del = await db.query('DELETE FROM project_members WHERE project_id=$1 AND user_id=$2 RETURNING *', [req.projectId, req.params.userId]);
+    if(del.rows.length===0) return res.status(404).json({message:'Not found'});
+    res.json({message:'Removed'});
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
+router.get('/shared', auth, async (req, res) => {
+  try {
+    // Sadece giriş yapan kullanıcının üye olduğu projeleri çekiyoruz
+    const projects = await listSharedProjects(req.user.id);
+    res.json(projects);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
+  }
+});
+
+// =================================
+// 6. FILES
+// =================================
+router.get('/:id/files', auth, checkProjectMember, async (req, res) => {
+  try {
+    const f = await db.query('SELECT pf.*, u.username as uploader_name FROM project_files pf JOIN users u ON pf.uploader_id = u.id WHERE pf.project_id = $1 ORDER BY pf.created_at DESC', [req.projectId]);
+    res.json(f.rows);
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
+router.post('/:id/files', auth, checkProjectMember, upload.single('file'), async (req, res) => {
+  if(req.memberRole!=='owner' && req.memberRole!=='editor') return res.status(403).json({message:'Denied'});
+  if(!req.file) return res.status(400).json({message:'No file'});
+  try {
+    const nf = await db.query('INSERT INTO project_files (project_id, uploader_id, filename, file_path, file_type) VALUES ($1, $2, $3, $4, $5) RETURNING *', [req.projectId, req.user.id, req.file.originalname, req.file.path, req.file.mimetype]);
+    const u = await db.query('SELECT username FROM users WHERE id=$1', [req.user.id]);
+    const r = nf.rows[0];
+    r.uploader_name = u.rows[0].username;
+    res.status(201).json(r);
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
+router.delete('/:id/files/:fileId', auth, checkProjectMember, async (req, res) => {
+  if(req.memberRole!=='owner' && req.memberRole!=='editor') return res.status(403).json({message:'Denied'});
+  try {
+    await db.query('DELETE FROM project_files WHERE id=$1', [req.params.fileId]);
+    res.json({message:'Deleted'});
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
+module.exports = router;
+
+
+================================================
+FILE: frontend/package.json
+================================================
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^13.5.0",
+    "axios": "^1.12.2",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-icons": "^5.5.0",
+    "react-router-dom": "^7.11.0",
+    "react-scripts": "5.0.1",
+    "web-vitals": "^2.1.4"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.3.3"
+  }
+}
+
+
+
+================================================
+FILE: frontend/tailwind.config.js
+================================================
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  // Dark mode'u 'class' stratejisine çekiyoruz (ThemeContext ile uyumlu olması için)
+  darkMode: 'class', 
+  content: [
+    "./src/**/*.{js,jsx,ts,tsx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        // Kendi semantik renklerimizi ekliyoruz
+        // Artık bg-gray-900 yerine bg-app kullanacağız
+        app: 'var(--bg-app)',
+        surface: 'var(--bg-surface)',
+        'surface-hover': 'var(--bg-surface-hover)',
+        
+        // Metinler
+        'text-main': 'var(--text-main)',
+        'text-secondary': 'var(--text-secondary)',
+        'text-inverted': 'var(--text-inverted)',
+
+        // Çizgiler
+        border: 'var(--border-color)',
+
+        // Ana Renk (Primary) - Mevcut blue/indigo yerine bunu kullan
+        primary: {
+          DEFAULT: 'var(--primary)',
+          hover: 'var(--primary-hover)',
+        }
+      },
+    },
+  },
+  plugins: [],
+}
+
+
+================================================
+FILE: frontend/src/context/ProjectContext.js
+================================================
+import React, { createContext, useState, useContext } from 'react';
+import axios from 'axios';
+import { useAuth } from './AuthContext';
+
+// Backend adresi
+const API_URL = 'http://localhost:5000/api/projects';
+
+export const ProjectContext = createContext();
+export const useProjectContext = () => useContext(ProjectContext);
+
+export const ProjectProvider = ({ children }) => {
+  const [projects, setProjects] = useState([]);
+  const [currentProject, setCurrentProject] = useState(null);
+  const [myProjects, setMyProjects] = useState([]);
+  const [sharedProjects, setSharedProjects] = useState([]);
+  const [currentMembers, setCurrentMembers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [dashboardTasks, setDashboardTasks] = useState([]);
+  
+  // Token'ı AuthContext'ten alıyoruz
+  const { token, logout } = useAuth();
+
+  // --- ESKİ USUL: HEADER'I ELLE EKLEME ---
+  const getAuthHeaders = () => {
+    const storedToken = localStorage.getItem('token'); // Token'ı direkt depodan alalım, daha garanti.
+    if (!storedToken) return {}; 
+    return { 
+        headers: { 
+            'x-auth-token': storedToken // Backend x-auth-token bekliyor
+        } 
+    };
+  };
+
+  const handleError = (err) => {
+    const message = err.response?.data?.message || 'Bir hata oluştu.';
+    setError(message);
+    if (err.response?.status === 401) {
+        logout();
+    }
+  };
+  
+  // --- PROJE FONKSİYONLARI ---
+
+  const fetchProjects = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get(API_URL, getAuthHeaders());
+      setProjects(response.data);
+    } catch (err) { handleError(err); } 
+    finally { setLoading(false); }
+  };
+
+  const fetchMyProjects = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`${API_URL}/my-projects`, getAuthHeaders());
+      setMyProjects(response.data); 
+    } catch (err) { handleError(err); } 
+    finally { setLoading(false); }
+  };
+
+  const fetchSharedProjects = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`${API_URL}/shared-projects`, getAuthHeaders());
+      setSharedProjects(response.data);
+    } catch (err) { handleError(err); } 
+    finally { setLoading(false); }
+  };
+
+  const createProject = async (name, description) => {
+    setLoading(true);
+    try {
+      const response = await axios.post(API_URL, { name, description }, getAuthHeaders());
+      setProjects(prev => [response.data, ...prev]);
+      setMyProjects(prev => [response.data, ...prev]);
+      return response.data;
+    } catch (err) { handleError(err); throw err; } 
+    finally { setLoading(false); }
+  };
+
+  const fetchProjectById = async (projectId) => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`${API_URL}/${projectId}`, getAuthHeaders());
+      setCurrentProject(response.data);
+    } catch (err) { handleError(err); } 
+    finally { setLoading(false); }
+  };
+
+  const updateProjectVisibility = async (projectId, isPublic) => {
+    try {
+      const response = await axios.put(`${API_URL}/${projectId}/visibility`, { is_public: isPublic }, getAuthHeaders());
+      setCurrentProject(response.data);
+      return response.data; 
+    } catch (err) { handleError(err); throw err; }
+  };
+
+  // --- TASK FONKSİYONLARI ---
+
+  const fetchDashboardTasks = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`${API_URL}/user/all-tasks`, getAuthHeaders());
+      setDashboardTasks(response.data);
+    } catch (err) { handleError(err); } 
+    finally { setLoading(false); }
+  };
+
+  const fetchTasks = async (projectId) => {
+    try {
+      const response = await axios.get(`${API_URL}/${projectId}/tasks`, getAuthHeaders());
+      return response.data;
+    } catch (err) { if(err.response?.status !== 403) handleError(err); }
+  };
+
+  const createTask = async (projectId, taskData) => {
+    try {
+      const response = await axios.post(`${API_URL}/${projectId}/tasks`, taskData, getAuthHeaders());
+      return response.data;
+    } catch (err) { handleError(err); }
+  };
+
+  const updateTaskStatus = async (projectId, taskId, newStatus) => {
+    try {
+      const response = await axios.put(`${API_URL}/${projectId}/tasks/${taskId}`, { status: newStatus }, getAuthHeaders());
+      return response.data;
+    } catch (err) { handleError(err); }
+  };
+
+  const updateTask = async (projectId, taskId, data) => {
+    try {
+      const response = await axios.put(`${API_URL}/${projectId}/tasks/${taskId}`, data, getAuthHeaders());
+      return response.data;
+    } catch (err) { handleError(err); throw err; }
+  };
+
+  const deleteTask = async (projectId, taskId) => {
+    try {
+      await axios.delete(`${API_URL}/${projectId}/tasks/${taskId}`, getAuthHeaders());
+      return true;
+    } catch (err) { handleError(err); throw err; }
+  };
+
+  // --- DİĞER (Members, Files, Issues vs.) ---
+
+  const fetchMembers = async (projectId) => {
+    try {
+        const response = await axios.get(`${API_URL}/${projectId}/members`, getAuthHeaders());
+        setCurrentMembers(response.data);
+        return response.data;
+    } catch (err) { handleError(err); }
+  };
+
+  const addMember = async (projectId, username, role) => {
+    try {
+        const response = await axios.post(`${API_URL}/${projectId}/members`, { username, role }, getAuthHeaders());
+        setCurrentMembers(prev => [...prev, response.data]);
+        return response.data;
+    } catch (err) { handleError(err); throw err; }
+  };
+
+  const removeMember = async (projectId, userId) => {
+    try {
+        await axios.delete(`${API_URL}/${projectId}/members/${userId}`, getAuthHeaders());
+        setCurrentMembers(prev => prev.filter(m => m.id !== userId));
+        return true;
+    } catch (err) { handleError(err); throw err; }
+  };
+
+  const updateProjectDetails = async (projectId, name, description, longDescription) => {
+    try {
+        const response = await axios.put(`${API_URL}/${projectId}`, { name, description, long_description: longDescription }, getAuthHeaders());
+        setCurrentProject(response.data);
+        return response.data;
+    } catch (err) { handleError(err); throw err; }
+  };
+
+  const updateTasksVisibility = async (projectId, isPublic) => {
+    try {
+        const response = await axios.put(`${API_URL}/${projectId}/settings/tasks-visibility`, { is_tasks_public: isPublic }, getAuthHeaders());
+        setCurrentProject(prev => ({...prev, is_tasks_public: response.data.is_tasks_public}));
+    } catch (err) { handleError(err); }
+  };
+
+  const fetchIssues = async (projectId) => {
+    try { return (await axios.get(`${API_URL}/${projectId}/issues`, getAuthHeaders())).data; } catch (e) { handleError(e); }
+  };
+  const createIssue = async (projectId, text) => {
+    try { return (await axios.post(`${API_URL}/${projectId}/issues`, {text}, getAuthHeaders())).data; } catch (e) { handleError(e); }
+  };
+  const updateIssue = async (projectId, issueId, data) => {
+    try { return (await axios.put(`${API_URL}/${projectId}/issues/${issueId}`, data, getAuthHeaders())).data; } catch (e) { handleError(e); }
+  };
+  const fetchComments = async (projectId) => {
+    try { return (await axios.get(`${API_URL}/${projectId}/comments`, getAuthHeaders())).data; } catch (e) { handleError(e); }
+  };
+  const addComment = async (projectId, text) => {
+    try { return (await axios.post(`${API_URL}/${projectId}/comments`, {text}, getAuthHeaders())).data; } catch (e) { handleError(e); }
+  };
+  const likeComment = async (projectId, commentId) => {
+    try { return (await axios.post(`${API_URL}/${projectId}/comments/${commentId}/like`, {}, getAuthHeaders())).data; } catch (e) { handleError(e); }
+  };
+  const deleteComment = async (projectId, commentId) => {
+    try { await axios.delete(`${API_URL}/${projectId}/comments/${commentId}`, getAuthHeaders()); return true; } catch (e) { handleError(e); }
+  };
+  const editComment = async (projectId, commentId, text) => {
+    try { return (await axios.put(`${API_URL}/${projectId}/comments/${commentId}`, {text}, getAuthHeaders())).data; } catch (e) { handleError(e); }
+  };
+  const fetchIssueComments = async (projectId, issueId) => {
+    try { return (await axios.get(`${API_URL}/${projectId}/issues/${issueId}/comments`, getAuthHeaders())).data; } catch (e) { handleError(e); }
+  };
+  const addIssueComment = async (projectId, issueId, text) => {
+    try { return (await axios.post(`${API_URL}/${projectId}/issues/${issueId}/comments`, {text}, getAuthHeaders())).data; } catch (e) { handleError(e); }
+  };
+  const fetchFiles = async (projectId) => {
+    try { return (await axios.get(`${API_URL}/${projectId}/files`, getAuthHeaders())).data; } catch (e) { handleError(e); }
+  };
+  const uploadFile = async (projectId, file) => {
+    try { 
+        const fd = new FormData(); fd.append('file', file);
+        return (await axios.post(`${API_URL}/${projectId}/files`, fd, { headers: { ...getAuthHeaders().headers, 'Content-Type': 'multipart/form-data'} })).data; 
+    } catch (e) { handleError(e); }
+  };
+  const deleteFile = async (projectId, fileId) => {
+    try { await axios.delete(`${API_URL}/${projectId}/files/${fileId}`, getAuthHeaders()); return true; } catch (e) { handleError(e); }
+  };
+
+  const value = {
+    projects, currentProject, myProjects, sharedProjects, loading, error, dashboardTasks, currentMembers,
+    fetchProjects, fetchMyProjects, fetchSharedProjects, createProject, fetchProjectById, updateProjectVisibility,
+    fetchDashboardTasks, fetchTasks, createTask, updateTaskStatus, updateTask, deleteTask,
+    fetchMembers, addMember, removeMember, updateProjectDetails, updateTasksVisibility,
+    fetchIssues, createIssue, updateIssue, fetchComments, addComment, likeComment, deleteComment, editComment,
+    fetchIssueComments, addIssueComment, fetchFiles, uploadFile, deleteFile
+  };
+
+  return (
+    <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>
+  );
+};
+
+
+================================================
+FILE: frontend/src/pages/MyProjectsPage.js
+================================================
+// src/pages/MyProjectsPage.js
+import React, { useState, useEffect, useMemo } from 'react';
+import CreateProjectModal from '../components/projects/CreateProjectModal';
+import { Link } from 'react-router-dom';
+import { useProjectContext } from '../context/ProjectContext';
+import { useAuth } from '../context/AuthContext';
+import { 
+  FiLoader, FiPlus, FiGrid, FiList, FiClock, FiGlobe, 
+  FiChevronLeft, FiChevronRight, FiSearch, FiX, FiUser, FiLock 
+} from 'react-icons/fi';
+
+function MyProjectsPage() {
+  const { user } = useAuth();
+  const { myProjects, sharedProjects, loading, fetchMyProjects, fetchSharedProjects } = useProjectContext();
+  
+  const [isModalOpen, setIsModalOpen] = useState(false); 
+  const [viewMode, setViewMode] = useState('grid'); 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [ownershipFilter, setOwnershipFilter] = useState('all'); 
+  const [visibilityFilter, setVisibilityFilter] = useState('all');
+
+  const projectsPerPage = viewMode === 'grid' ? 6 : 5;
+
+  useEffect(() => {
+    fetchMyProjects();
+    fetchSharedProjects();
+  }, []);
+
+  // --- STRICT MEMBERSHIP FILTERING ---
+  const joinedProjects = useMemo(() => {
+    if (!user) return [];
+
+    // 1. Projects I own
+    const owned = myProjects
+      .filter(p => Number(p.owner_id) === Number(user.id))
+      .map(p => ({ ...p, _role: 'owner' }));
+
+    // 2. Projects where I am explicitly a member (sharedProjects)
+    // We assume sharedProjects now only returns joined projects due to backend fix
+    const shared = sharedProjects
+      .filter(p => Number(p.owner_id) !== Number(user.id))
+      .map(p => ({ ...p, _role: 'member' }));
+
+    return [...owned, ...shared];
+  }, [myProjects, sharedProjects, user]);
+
+  // --- FILTER LOGIC ---
+  const filteredProjects = useMemo(() => {
+    return joinedProjects.filter(project => {
+      const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (project.description && project.description.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      const matchesOwnership = ownershipFilter === 'all' ? true : project._role === ownershipFilter;
+      const matchesVisibility = visibilityFilter === 'all' ? true : 
+                               visibilityFilter === 'public' ? project.is_public === true : 
+                               project.is_public === false;
+
+      return matchesSearch && matchesOwnership && matchesVisibility;
+    });
+  }, [joinedProjects, searchTerm, ownershipFilter, visibilityFilter]);
+
+  const indexOfLastProject = currentPage * projectsPerPage;
+  const indexOfFirstProject = indexOfLastProject - projectsPerPage;
+  const currentProjects = filteredProjects.slice(indexOfFirstProject, indexOfLastProject);
+  const totalPages = Math.max(Math.ceil(filteredProjects.length / projectsPerPage), 1);
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  useEffect(() => { setCurrentPage(1); }, [searchTerm, ownershipFilter, visibilityFilter]);
+
+  return (
+    <div className="flex flex-col min-h-[calc(100vh-140px)] p-6 bg-app transition-colors duration-300">
+      <div className="max-w-7xl mx-auto w-full flex-grow flex flex-col">
+        
+        {/* HEADER & FILTERS */}
+        <div className="flex-none space-y-6 mb-8">
+          <div className="flex justify-between items-center">
+            <h1 className="text-3xl font-black text-text-main tracking-tight">My Workspace</h1>
+            <button onClick={() => setIsModalOpen(true)} className="flex items-center bg-primary hover:bg-primary-hover text-white font-bold py-2.5 px-6 rounded-xl shadow-lg transition-all transform hover:scale-105">
+              <FiPlus className="mr-2" /> New Project
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-surface p-4 rounded-2xl border border-border shadow-sm">
+            <div className="relative col-span-1 md:col-span-2">
+              <FiSearch className="absolute left-3 top-3.5 text-text-secondary" />
+              <input
+                type="text"
+                placeholder="Search my projects..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-app border border-border text-text-main text-sm rounded-xl pl-10 pr-4 py-3 outline-none focus:border-primary transition-all"
+              />
+            </div>
+            <div>
+              <select value={ownershipFilter} onChange={(e) => setOwnershipFilter(e.target.value)} className="w-full bg-app border border-border text-text-main text-sm rounded-xl px-4 py-3 outline-none focus:border-primary cursor-pointer appearance-none">
+                <option value="all">👥 All My Projects</option>
+                <option value="owner">👑 Owner</option>
+                <option value="member">🛠️ Member</option>
+              </select>
+            </div>
+            <div>
+              <select value={visibilityFilter} onChange={(e) => setVisibilityFilter(e.target.value)} className="w-full bg-app border border-border text-text-main text-sm rounded-xl px-4 py-3 outline-none focus:border-primary cursor-pointer appearance-none">
+                <option value="all">🌐 All Visibility</option>
+                <option value="public">🌍 Public</option>
+                <option value="private">🔒 Private</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* PROJECTS AREA */}
+        <div className="flex-grow">
+          {loading ? (
+            <div className="flex justify-center p-20"><FiLoader className="animate-spin text-primary" size={50} /></div>
+          ) : filteredProjects.length === 0 ? (
+            <div className="bg-surface/50 p-20 rounded-2xl border border-dashed border-border text-center shadow-inner">
+              <p className="text-text-secondary font-medium italic">No projects found in your workspace.</p>
+            </div>
+          ) : (
+            <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "flex flex-col space-y-3"}>
+              {currentProjects.map(project => (
+                <Link to={`/project/${project.id}`} key={project.id}>
+                  <div className="bg-surface p-6 rounded-2xl border border-border hover:border-primary/50 shadow-sm hover:shadow-lg transition-all h-full flex flex-col justify-between group">
+                    <div>
+                      <div className="flex justify-between items-start mb-3">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest ${project._role === 'owner' ? 'bg-blue-500/10 text-blue-500' : 'bg-purple-500/10 text-purple-500'}`}>
+                          {project._role}
+                        </span>
+                        {project.is_public ? <FiGlobe className="text-green-500" /> : <FiLock className="text-amber-500" />}
+                      </div>
+                      <h3 className="text-lg font-bold text-text-main group-hover:text-primary transition-colors truncate mb-2">{project.name}</h3>
+                      <p className="text-text-secondary text-xs line-clamp-2 leading-relaxed">{project.description || "No description."}</p>
+                    </div>
+                    <div className="mt-6 pt-4 border-t border-border flex justify-between items-center text-[10px] text-text-secondary font-bold uppercase">
+                      <span className="flex items-center"><FiClock className="mr-1.5 text-primary" /> {new Date(project.created_at).toLocaleDateString()}</span>
+                      <span className="flex items-center text-primary group-hover:translate-x-1 transition-transform">Details <FiChevronRight className="ml-1" /></span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* STICKY FOOTER PAGINATION */}
+        <div className="flex-none mt-10 pb-4">
+          <div className="flex justify-between items-center bg-surface border border-border p-4 rounded-2xl shadow-md">
+            <span className="text-xs text-text-secondary">Page {currentPage} of {totalPages}</span>
+            <div className="flex items-center gap-2">
+              <button onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1} className="p-2 rounded-xl border border-border hover:bg-app disabled:opacity-20 transition-all"><FiChevronLeft size={20} /></button>
+              <div className="flex gap-1">
+                {[...Array(totalPages)].map((_, i) => (
+                  <button key={i + 1} onClick={() => paginate(i + 1)} className={`w-10 h-10 rounded-xl text-sm font-bold transition-all ${currentPage === i + 1 ? 'bg-primary text-white shadow-lg' : 'hover:bg-app text-text-secondary'}`}>{i + 1}</button>
+                ))}
+              </div>
+              <button onClick={() => paginate(currentPage + 1)} disabled={currentPage === totalPages} className="p-2 rounded-xl border border-border hover:bg-app disabled:opacity-20 transition-all"><FiChevronRight size={20} /></button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <CreateProjectModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+    </div>
+  );
+}
+
+export default MyProjectsPage;
+
+
+================================================
+FILE: frontend/src/pages/SharedProjectsPage.js
+================================================
+// src/pages/SharedProjectsPage.js
+
+import React, { useState, useEffect, useMemo } from 'react';
+import { useProjectContext } from '../context/ProjectContext';
+import { FiLoader, FiGrid, FiList, FiChevronLeft, FiChevronRight } from 'react-icons/fi'; 
+import SharedProjectCard from '../components/projects/SharedProjectCard';
+
+function SharedProjectsPage() {
+  const { sharedProjects, loading, fetchSharedProjects } = useProjectContext();
+
+  const [viewMode, setViewMode] = useState(() => {
+    return localStorage.getItem('sharedProjectsViewMode') || 'grid';
+  });
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const projectsPerPage = viewMode === 'grid' ? 6 : 4;
+
+  const changeViewMode = (mode) => {
+    setViewMode(mode);
+    localStorage.setItem('sharedProjectsViewMode', mode);
+  };
+
+  useEffect(() => {
+    fetchSharedProjects();
+  }, []);
+
+  const uniqueProjects = useMemo(() => {
+    const projectMap = new Map();
+    sharedProjects.forEach(project => {
+      const existing = projectMap.get(project.id);
+      if (!existing) {
+        projectMap.set(project.id, project);
+      } else {
+        if (project.joined_at && !existing.joined_at) {
+          projectMap.set(project.id, project);
+        }
+      }
+    });
+    return Array.from(projectMap.values());
+  }, [sharedProjects]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [uniqueProjects, viewMode]);
+
+  const indexOfLastProject = currentPage * projectsPerPage;
+  const indexOfFirstProject = indexOfLastProject - projectsPerPage;
+  const currentProjects = uniqueProjects.slice(indexOfFirstProject, indexOfLastProject);
+  const totalPages = Math.ceil(uniqueProjects.length / projectsPerPage);
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  const nextPage = () => {
+    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+  };
+  const prevPage = () => {
+    if (currentPage > 1) setCurrentPage(currentPage - 1);
+  };
+
+  return (
+    <div>
+      {/* --- HEADER --- */}
+      <div className="flex justify-between items-end mb-8">
+        <div>
+          {/* text-white -> text-text-main */}
+          <h1 className="text-3xl font-bold text-text-main">Shared by Others</h1>
+          {/* text-gray-400 -> text-text-secondary */}
+          <p className="text-text-secondary mt-2 text-sm">
+            Projects shared with you or available publicly.
+          </p>
+        </div>
+
+        {/* bg-gray-800 -> bg-surface, border-gray-700 -> border-border */}
+        <div className="bg-surface p-1 rounded-lg border border-border flex">
+          <button
+            onClick={() => changeViewMode('grid')}
+            className={`p-2 rounded-md transition-all ${
+              viewMode === 'grid' ? 'bg-primary text-white shadow' : 'text-text-secondary hover:text-text-main hover:bg-surface-hover'
+            }`}
+            title="Grid View"
+          >
+            <FiGrid size={18} />
+          </button>
+          <button
+            onClick={() => changeViewMode('list')}
+            className={`p-2 rounded-md transition-all ${
+              viewMode === 'list' ? 'bg-primary text-white shadow' : 'text-text-secondary hover:text-text-main hover:bg-surface-hover'
+            }`}
+            title="List View"
+          >
+            <FiList size={18} />
+          </button>
+        </div>
+      </div>
+
+      {/* --- CONTENT --- */}
+      {loading ? (
+        <div className="flex justify-center items-center p-20">
+          <FiLoader className="animate-spin text-primary" size={40} />
+          <span className="ml-4 text-xl text-text-secondary">Loading Shared Projects...</span>
+        </div>
+      ) : uniqueProjects.length === 0 ? (
+        <p className="text-text-secondary">No projects have been shared with you yet.</p>
+      ) : (
+        <div className="flex flex-col min-h-[500px]">
+          
+          <div className="flex-grow">
+            {/* GRID MODU */}
+            {viewMode === 'grid' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {currentProjects.map(project => (
+                  <SharedProjectCard 
+                    key={project.id} 
+                    project={project} 
+                    viewMode="grid" 
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* LIST MODU */}
+            {viewMode === 'list' && (
+              <div className="flex flex-col space-y-3">
+                {currentProjects.map(project => (
+                  <SharedProjectCard 
+                    key={project.id} 
+                    project={project} 
+                    viewMode="list" 
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* === PAGINATION BAR === */}
+          {uniqueProjects.length > projectsPerPage && (
+            <div className="flex justify-center items-center mt-2 pt-4 border-t border-border">
+              <button
+                onClick={prevPage}
+                disabled={currentPage === 1}
+                className={`p-2 rounded-md border border-border ${
+                  currentPage === 1 
+                    ? 'text-text-secondary cursor-not-allowed bg-surface/50' 
+                    : 'text-text-main bg-surface hover:bg-surface-hover hover:border-primary'
+                }`}
+              >
+                <FiChevronLeft size={20} />
+              </button>
+
+              <div className="flex space-x-1 mx-2">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
+                  <button
+                    key={number}
+                    onClick={() => paginate(number)}
+                    className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                      currentPage === number
+                        ? 'bg-primary text-white shadow-lg'
+                        : 'bg-surface text-text-secondary border border-border hover:bg-surface-hover hover:text-text-main'
+                    }`}
+                  >
+                    {number}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={nextPage}
+                disabled={currentPage === totalPages}
+                className={`p-2 rounded-md border border-border ${
+                  currentPage === totalPages 
+                    ? 'text-text-secondary cursor-not-allowed bg-surface/50' 
+                    : 'text-text-main bg-surface hover:bg-surface-hover hover:border-primary'
+                }`}
+              >
+                <FiChevronRight size={20} />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default SharedProjectsPage;
+
+
+================================================
+FILE: frontend/src/services/api.js
+================================================
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: 'http://localhost:5000',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+// TOKEN EKLEME INTERCEPTOR'I
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      // Backend'in beklediği header anahtarı: 'x-auth-token'
+      // Eğer backend middleware'inde 'Authorization' bekliyorsan burayı değiştirmen gerekir.
+      // Senin backend/middleware/auth.js dosyan 'x-auth-token' bekliyor.
+      config.headers['x-auth-token'] = token;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+export default api;
+

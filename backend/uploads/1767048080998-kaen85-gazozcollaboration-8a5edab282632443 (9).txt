@@ -1,0 +1,3846 @@
+Directory structure:
+└── kaen85-gazozcollaboration/
+    └── frontend/
+        ├── package.json
+        ├── tailwind.config.js
+        ├── public/
+        │   ├── index.html
+        │   ├── manifest.json
+        │   └── robots.txt
+        └── src/
+            ├── App.css
+            ├── App.js
+            ├── App.test.js
+            ├── index.css
+            ├── index.js
+            ├── reportWebVitals.js
+            ├── setupTests.js
+            ├── components/
+            │   └── projects/
+            │       ├── Comment.js
+            │       ├── CommentForm.js
+            │       ├── CommentList.js
+            │       ├── CreateProjectModal.js
+            │       ├── FileList.js
+            │       ├── IssueItem.js
+            │       ├── ProjectDiscussion.js
+            │       ├── ProjectEditPage.js
+            │       ├── ProjectFiles.js
+            │       ├── ProjectIssues.js
+            │       ├── ProjectList.js
+            │       └── ProjectTasks.js
+            ├── pages/
+            │   ├── ForgotPasswordPage.js
+            │   ├── LandingPage.js
+            │   ├── LoginPage.js
+            │   ├── ProjectDetailPage.js
+            │   ├── RegisterPage.js
+            │   ├── ResetPasswordPage.js
+            │   └── Users.js
+            └── services/
+                └── api.js
+
+================================================
+FILE: frontend/package.json
+================================================
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^13.5.0",
+    "axios": "^1.12.2",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-icons": "^5.5.0",
+    "react-router-dom": "^7.11.0",
+    "react-scripts": "5.0.1",
+    "web-vitals": "^2.1.4"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.3.3"
+  }
+}
+
+
+
+================================================
+FILE: frontend/tailwind.config.js
+================================================
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  // Dark mode'u 'class' stratejisine çekiyoruz (ThemeContext ile uyumlu olması için)
+  darkMode: 'class', 
+  content: [
+    "./src/**/*.{js,jsx,ts,tsx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        // Kendi semantik renklerimizi ekliyoruz
+        // Artık bg-gray-900 yerine bg-app kullanacağız
+        app: 'var(--bg-app)',
+        surface: 'var(--bg-surface)',
+        'surface-hover': 'var(--bg-surface-hover)',
+        
+        // Metinler
+        'text-main': 'var(--text-main)',
+        'text-secondary': 'var(--text-secondary)',
+        'text-inverted': 'var(--text-inverted)',
+
+        // Çizgiler
+        border: 'var(--border-color)',
+
+        // Ana Renk (Primary) - Mevcut blue/indigo yerine bunu kullan
+        primary: {
+          DEFAULT: 'var(--primary)',
+          hover: 'var(--primary-hover)',
+        }
+      },
+    },
+  },
+  plugins: [],
+}
+
+
+================================================
+FILE: frontend/public/index.html
+================================================
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="Web site created using create-react-app"
+    />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <!--
+      manifest.json provides metadata used when your web app is installed on a
+      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
+    -->
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <!--
+      Notice the use of %PUBLIC_URL% in the tags above.
+      It will be replaced with the URL of the `public` folder during the build.
+      Only files inside the `public` folder can be referenced from the HTML.
+
+      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
+      work correctly both with client-side routing and a non-root public URL.
+      Learn how to configure a non-root public URL by running `npm run build`.
+    -->
+    <title>
+     
+      GazozHub</title>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+    <!--
+      This HTML file is a template.
+      If you open it directly in the browser, you will see an empty page.
+
+      You can add webfonts, meta tags, or analytics to this file.
+      The build step will place the bundled scripts into the <body> tag.
+
+      To begin the development, run `npm start` or `yarn start`.
+      To create a production bundle, use `npm run build` or `yarn build`.
+    -->
+  </body>
+</html>
+
+
+
+================================================
+FILE: frontend/public/manifest.json
+================================================
+{
+  "short_name": "React App",
+  "name": "Create React App Sample",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
+}
+
+
+
+================================================
+FILE: frontend/public/robots.txt
+================================================
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Disallow:
+
+
+
+================================================
+FILE: frontend/src/App.css
+================================================
+/* ☀️ Varsayılan (LIGHT MODE) */
+:root {
+  /* Arka Planlar */
+  --bg-app: #F8FAFC;        /* Soft Slate */
+  --bg-surface: #FFFFFF;    /* Beyaz */
+  
+  /* Metinler */
+  --text-main: #1E293B;     /* Koyu Gri/Mavi */
+  --text-secondary: #64748B; /* Orta Gri */
+  
+  /* Marka Rengi */
+  --primary: #4F46E5;       /* İndigo */
+  --primary-text: #FFFFFF;  /* Buton yazı rengi */
+  
+  /* Çizgiler */
+  --border-color: #E2E8F0;  /* Açık Gri */
+}
+
+/* 🌙 Karanlık Mod (DARK MODE) */
+body.dark-mode {
+  /* Arka Planlar - Light'ın tam tersi koyu tonlar */
+  --bg-app: #0F172A;        /* Çok koyu lacivert (Slate 900) */
+  --bg-surface: #1E293B;    /* Kartlar için biraz daha açık (Slate 800) */
+  
+  /* Metinler - Koyu zemin üzerinde açık renkler */
+  --text-main: #F1F5F9;     /* Kırık Beyaz */
+  --text-secondary: #94A3B8; /* Açık Gri (Slate 400) */
+  
+  /* Marka Rengi */
+  --primary: #6366F1;       /* İndigo'nun bir tık parlağı (Karanlıkta daha iyi okunur) */
+  --primary-text: #FFFFFF;
+  
+  /* Çizgiler */
+  --border-color: #334155;  /* Koyu Gri çizgi */
+}
+
+/* GENEL AYARLAR ve GEÇİŞ EFEKTİ */
+body {
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  
+  /* Renk değişiminde yumuşak geçiş (Animasyon) */
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Kartlar ve Kutular için genel sınıf */
+.card, .box, .navbar {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.App {
+  text-align: center;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+
+================================================
+FILE: frontend/src/App.js
+================================================
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+
+// Context Providers
+import { AuthProvider } from './context/AuthContext';
+import { ProjectProvider } from './context/ProjectContext';
+import { ThemeProvider } from './context/ThemeContext';
+
+// Auth Components
+import ProtectedRoute from './components/auth/ProtectedRoute';
+
+// Pages - Public
+import LandingPage from './pages/LandingPage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+
+// Pages - Dashboard & Layout
+import DashboardLayout from './pages/DashboardLayout';
+import DashboardOverviewPage from './pages/DashboardOverviewPage';
+import MyProjectsPage from './pages/MyProjectsPage';
+import SharedProjectsPage from './pages/SharedProjectsPage';
+import SettingsPage from './pages/SettingsPage';
+import Users from './pages/Users';
+
+// Pages - Project Details & Tabs
+import ProjectDetailPage from './pages/ProjectDetailPage';
+import ProjectFiles from './components/projects/ProjectFiles';
+import ProjectTasks from './components/projects/ProjectTasks';
+import ProjectIssues from './components/projects/ProjectIssues';
+import ProjectDiscussion from './components/projects/ProjectDiscussion';
+import ProjectEditPage from './components/projects/ProjectEditPage';
+
+function App() {
+  return (
+    <ThemeProvider>
+      <AuthProvider>
+        <ProjectProvider>
+          
+          <Routes>
+            {/* === DEĞİŞİKLİK BURADA BAŞLIYOR === */}
+            
+            {/* 1. Eğer kullanıcı kök dizine (localhost:3000/) gelirse, /home'a yönlendir */}
+            <Route path="/" element={<Navigate to="/home" replace />} />
+
+            {/* 2. LandingPage artık /home adresinde çalışıyor */}
+            <Route path="/home" element={<LandingPage />} />
+
+            {/* === DEĞİŞİKLİK BURADA BİTİYOR === */}
+
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+            {/* === PROTECTED ROUTES (Giriş yapılması zorunlu) === */}
+            <Route 
+              path="/*" 
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="dashboard" element={<DashboardOverviewPage />} />
+              <Route path="my-projects" element={<MyProjectsPage />} />
+              <Route path="shared-projects" element={<SharedProjectsPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+              
+
+              {/* Project Detail Routes */}
+              <Route path="project/:id" element={<ProjectDetailPage />}>
+                <Route index element={<ProjectFiles />} /> 
+                <Route path="tasks" element={<ProjectTasks />} />
+                <Route path="issues" element={<ProjectIssues />} />
+                <Route path="discussions" element={<ProjectDiscussion />} />
+                <Route path="edit" element={<ProjectEditPage />} />
+              </Route>
+              <Route path="users" element={<Users />} />
+              
+              {/* Tanımsız bir rota girilirse dashboard'a yönlendir */}
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Route>
+
+          </Routes>
+
+        </ProjectProvider>
+      </AuthProvider>
+    </ThemeProvider>
+  );
+}
+
+export default App;
+
+
+================================================
+FILE: frontend/src/App.test.js
+================================================
+import { render, screen } from '@testing-library/react';
+import App from './App';
+
+test('renders learn react link', () => {
+  render(<App />);
+  const linkElement = screen.getByText(/learn react/i);
+  expect(linkElement).toBeInTheDocument();
+});
+
+
+
+================================================
+FILE: frontend/src/index.css
+================================================
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 🎨 TEMA SİSTEMİ 
+  Light Mode (Varsayılan): Modern Indigo
+  Dark Mode (.dark class'ı gelince): Senin Mevcut Teman
+*/
+
+@layer base {
+  :root {
+    /* --- LIGHT MODE (Modern Indigo) --- */
+    --bg-app: #F8FAFC;        /* Slate-50: Ferah arka plan */
+    --bg-surface: #FFFFFF;    /* Beyaz kartlar */
+    --bg-surface-hover: #F1F5F9; 
+    
+    --text-main: #1E293B;     /* Koyu Gri/Lacivert Metin */
+    --text-secondary: #64748B; /* Orta Gri Metin */
+    --text-inverted: #FFFFFF;  /* Buton içi yazı vb. */
+
+    --border-color: #E2E8F0;  /* İnce çizgiler */
+    
+    --primary: #4F46E5;       /* Indigo-600 */
+    --primary-hover: #4338CA; /* Indigo-700 */
+  }
+
+  /* --- DARK MODE (Mevcut Teman) --- */
+  /* ThemeContext 'dark' class'ını eklediğinde burası devreye girer */
+  .dark {
+    --bg-app: #111827;        /* Gray-900 (Mevcut body rengin) */
+    --bg-surface: #1F2937;    /* Gray-800 (Mevcut kart rengin) */
+    --bg-surface-hover: #374151; /* Gray-700 */
+
+    --text-main: #F9FAFB;     /* Gray-50 (Beyazımsı) */
+    --text-secondary: #9CA3AF; /* Gray-400 */
+    --text-inverted: #FFFFFF;
+
+    --border-color: #374151;  /* Gray-700 */
+
+    --primary: #6366F1;       /* Indigo-500 (Karanlıkta daha parlak durur) */
+    --primary-hover: #4F46E5;
+  }
+
+  body {
+    @apply bg-app text-text-main transition-colors duration-300;
+  }
+}
+
+
+================================================
+FILE: frontend/src/index.js
+================================================
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import './index.css';
+import App from './App';
+import reportWebVitals from './reportWebVitals';
+// Router'ı import ediyoruz
+import { BrowserRouter } from 'react-router-dom'; 
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    {/* Uygulamayı Router ile sarmalıyoruz */}
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </React.StrictMode>
+);
+
+reportWebVitals();
+
+
+================================================
+FILE: frontend/src/reportWebVitals.js
+================================================
+const reportWebVitals = onPerfEntry => {
+  if (onPerfEntry && onPerfEntry instanceof Function) {
+    import('web-vitals').then(({ getCLS, getFID, getFCP, getLCP, getTTFB }) => {
+      getCLS(onPerfEntry);
+      getFID(onPerfEntry);
+      getFCP(onPerfEntry);
+      getLCP(onPerfEntry);
+      getTTFB(onPerfEntry);
+    });
+  }
+};
+
+export default reportWebVitals;
+
+
+
+================================================
+FILE: frontend/src/setupTests.js
+================================================
+// jest-dom adds custom jest matchers for asserting on DOM nodes.
+// allows you to do things like:
+// expect(element).toHaveTextContent(/react/i)
+// learn more: https://github.com/testing-library/jest-dom
+import '@testing-library/jest-dom';
+
+
+
+================================================
+FILE: frontend/src/components/projects/Comment.js
+================================================
+// src/components/projects/Comment.js
+
+import React, { useState, useRef, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { useProjectContext } from '../../context/ProjectContext';
+import { 
+  FiUser, FiHeart, FiCopy, FiMoreVertical, FiEdit, FiTrash, 
+    FiLoader, FiCheck,
+} from 'react-icons/fi';
+
+// Yeni proplar alıyoruz: projectId, onCommentUpdated, onCommentDeleted
+function Comment({ comment, projectId, onCommentUpdated, onCommentDeleted }) {
+  
+  const { user } = useAuth(); // Mevcut giriş yapmış kullanıcı (artık {id, username} içeriyor)
+  const { 
+    likeComment, 
+    editComment, 
+    deleteComment, 
+    currentProject // Proje sahibini kontrol etmek için
+  } = useProjectContext();
+
+  // 'comment' prop'unu yerel state'e alıyoruz, böylece "Beğen" sayısı anında güncellenir
+  const [localComment, setLocalComment] = useState(comment);
+
+  // Yorumu düzenleme (edit) modu için state'ler
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState(comment.text);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // 3-nokta menü state'i
+  const [isMenuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  // Kopyalama state'i
+  const [copied, setCopied] = useState(false);
+  // Beğenme (like) state'i
+  const [isLiking, setIsLiking] = useState(false);
+
+  // === GÜVENLİK KONTROLLERİ ===
+  const authorId = localComment?.author_id;
+  const currentUserId = user?.id;
+  const projectOwnerId = currentProject?.owner_id;
+
+  // Kullanıcı bu yorumun sahibi mi?
+  const isOwner = currentUserId === authorId;
+  // Kullanıcı proje sahibi mi?
+  const isProjectOwner = currentUserId === projectOwnerId;
+  // Kullanıcı bu yorumu beğenmiş mi?
+  const hasLiked = localComment?.likes_user_ids?.includes(currentUserId);
+  // Beğeni sayısı
+  const likeCount = localComment?.likes_user_ids?.length || 0;
+
+  // Ebeveynden 'comment' prop'u değişirse, yerel state'i güncelle
+  useEffect(() => {
+    setLocalComment(comment);
+  }, [comment]);
+
+  // --- KOPYALA FONKSİYONU ---
+  const handleCopy = () => {
+    const el = document.createElement('textarea');
+    el.value = localComment.text;
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000); 
+  };
+
+  // --- BEĞEN (LIKE) FONKSİYONU ---
+  const handleLike = async () => {
+    if (isLiking) return; 
+    setIsLiking(true);
+    try {
+      const updatedLikes = await likeComment(projectId, localComment.id);
+      // === "BEĞEN" DÜZELTMESİ: Yerel state'i güncelle ===
+      setLocalComment(prev => ({ ...prev, likes_user_ids: updatedLikes.likes_user_ids }));
+    } catch (error) {
+      console.error("Failed to like comment:", error);
+    } finally {
+      setIsLiking(false);
+    }
+  };
+
+  // --- DÜZENLE (EDIT) FONKSİYONLARI ---
+  const handleEdit = () => {
+    setIsEditing(true);
+    setMenuOpen(false);
+  };
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditText(localComment.text); // Değişiklikleri iptal et
+  };
+  const handleSaveEdit = async () => {
+    if (editText.trim() === '' || editText === localComment.text) {
+      return handleCancelEdit();
+    }
+    setIsSaving(true);
+    try {
+      const updatedComment = await editComment(projectId, localComment.id, editText);
+      // === "EDIT" DÜZELTMESİ: Yerel state'i ve ebeveyni güncelle ===
+      setLocalComment(updatedComment); // Yerel state'i güncelle
+      setIsEditing(false);
+      if (onCommentUpdated) {
+        onCommentUpdated(updatedComment); // Ebeveyni (CommentList/IssueItem) uyar
+      }
+    } catch (error) {
+      console.error("Failed to save edit:", error);
+      alert("Hata: " + error.message); // Backend'den gelen hatayı göster
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // --- SİL (DELETE) FONKSİYONU ---
+  const handleDelete = async () => {
+    if (window.confirm('Are you sure you want to delete this comment?')) {
+      try {
+        await deleteComment(projectId, localComment.id);
+        // === "DELETE" DÜZELTMESİ: Ebeveyni uyar ===
+        if (onCommentDeleted) {
+          onCommentDeleted(localComment.id);
+        }
+      } catch (error) {
+        console.error("Failed to delete comment:", error);
+        alert("Hata: " + error.message); // Backend'den gelen hatayı göster
+      }
+    }
+    setMenuOpen(false);
+  };
+  
+  // 3-nokta menüsü dışına tıklamayı dinle
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [menuRef]);
+
+
+  return (
+    // Yorumları ayırmak için üst çizgi
+    <div className="flex space-x-3 pt-4 border-t border-gray-600">
+      {/* Avatar/İkon */}
+      <div className="flex-shrink-0">
+        <FiUser className="w-8 h-8 text-gray-400 bg-gray-700 rounded-full p-1" />
+      </div>
+      
+      {/* Yorum İçeriği */}
+      <div className="flex-1">
+        
+        {isEditing ? (
+          // --- DÜZENLEME MODU ---
+          <div className="space-y-2">
+            <textarea
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              className="w-full py-2 px-3 text-gray-200 bg-gray-600 border border-blue-500 rounded-lg focus:outline-none"
+              rows="3"
+            />
+            <div className="flex justify-end space-x-2">
+              <button onClick={handleCancelEdit} className="text-gray-400 hover:text-white text-sm">Cancel</button>
+              <button 
+                onClick={handleSaveEdit} 
+                disabled={isSaving}
+                className="flex items-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded-lg text-sm"
+              >
+                {isSaving ? <FiLoader className="animate-spin" /> : 'Save'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          // --- NORMAL GÖRÜNÜM MODU ---
+          <div className="bg-gray-700 rounded-lg p-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="font-semibold text-white text-sm">
+                {localComment.author_name || 'User'} 
+              </span>
+              <span className="text-xs text-gray-500">
+                {new Date(localComment.created_at).toLocaleString()}
+              </span>
+            </div>
+            <p className="text-gray-300 text-sm break-words">
+              {localComment.text}
+            </p>
+            
+            {/* YORUM ALTINDAKİ BUTONLAR (BEĞEN, KOPYALA, 3-NOKTA) */}
+            <div className="flex items-center space-x-3 mt-3">
+              
+              {/* BEĞEN BUTONU */}
+              <button 
+                onClick={handleLike} 
+                disabled={isLiking}
+                className={`flex items-center text-xs ${hasLiked ? 'text-red-500' : 'text-gray-400 hover:text-white'}`}
+              >
+                <FiHeart fill={hasLiked ? 'currentColor' : 'none'} size={14} className="mr-1" />
+                {likeCount}
+              </button>
+              
+              {/* KOPYALA BUTONU */}
+              <button onClick={handleCopy} className="text-xs text-gray-400 hover:text-white">
+                {copied ? <FiCheck size={14} className="text-green-500" /> : <FiCopy size={14} />}
+              </button>
+              
+              {/* 3-NOKTA MENÜ (SADECE YORUMUN SAHİBİ VEYA PROJE SAHİBİ GÖRÜR) */}
+              {(isOwner || isProjectOwner) && (
+                <div className="relative" ref={menuRef}>
+                  <button onClick={() => setMenuOpen(p => !p)} className="text-xs text-gray-400 hover:text-white">
+                    <FiMoreVertical size={14} />
+                  </button>
+                  
+                  {isMenuOpen && (
+                    <div className="absolute right-0 top-6 w-36 bg-gray-800 border border-gray-600 rounded-md shadow-lg z-10">
+                      <ul className="py-1">
+                        {/* Sadece YORUM SAHİBİ düzenleyebilir */}
+                        {isOwner && (
+                          <li>
+                            <button
+                              onClick={handleEdit}
+                              className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
+                            >
+                              <FiEdit size={14} className="mr-2" />
+                              Edit
+                            </button>
+                          </li>
+                        )}
+                        {/* Yorum sahibi VEYA Proje sahibi silebilir */}
+                        <li>
+                          <button
+                            onClick={handleDelete}
+                            className="w-full text-left flex items-center px-4 py-2 text-sm text-red-500 hover:bg-gray-700"
+                          >
+                            <FiTrash size={14} className="mr-2" />
+                            Delete
+                          </button>
+                        </li>
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default Comment;
+
+
+================================================
+FILE: frontend/src/components/projects/CommentForm.js
+================================================
+// src/components/projects/CommentForm.js
+
+import React, { useState } from 'react';
+// 1. Context import'ları kaldırıldı
+// import { useProjectContext } from '../../context/ProjectContext';
+import { FiSend, FiLoader } from 'react-icons/fi';
+
+// 2. Component artık 'projectId' veya 'onCommentAdded' yerine
+//    'onSubmit' (bir fonksiyon) ve 'loading' (bir durum) proplarını alıyor.
+function CommentForm({ onSubmit, loading }) {
+  const [text, setText] = useState('');
+  
+  // 3. 'addComment' ve 'loading' state'i context'ten kaldırıldı.
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!text.trim()) return;
+
+    try {
+      // 4. Artık 'addComment'i DEĞİL, dışarıdan gelen 'onSubmit' fonksiyonunu
+      //    mevcut 'text' (metin) ile çağırıyoruz.
+      await onSubmit(text);
+      
+      // 5. Başarılı olursa formu temizle
+      setText(''); 
+    } catch (error) {
+      // Hata yönetimi artık bu fonksiyonu çağıran
+      // parent component (IssueItem veya ProjectDiscussion) tarafından yapılacak.
+      console.error("CommentForm Error:", error);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="flex">
+      <input 
+        type="text"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        className="flex-grow py-2 px-3 text-gray-200 bg-gray-700 border border-gray-600 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        placeholder="Add a comment..."
+      />
+      <button 
+        type="submit" 
+        // 6. 'loading' durumunu dışarıdan (prop) al
+        disabled={loading}
+        className="flex items-center justify-center w-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-3 rounded-r-lg transition-colors disabled:opacity-50"
+      >
+        {loading ? <FiLoader className="animate-spin" /> : <FiSend size={18} />}
+      </button>
+    </form>
+  );
+}
+
+export default CommentForm;
+
+
+================================================
+FILE: frontend/src/components/projects/CommentList.js
+================================================
+// src/components/projects/CommentList.js
+
+import React, { useState, useEffect } from 'react';
+import { useProjectContext } from '../../context/ProjectContext';
+import { FiLoader } from 'react-icons/fi';
+import Comment from './Comment'; 
+
+// 'refreshKey', yeni yorum eklendiğinde (ProjectDiscussion'dan) tetiklenir
+function CommentList({ projectId, refreshKey }) {
+  const [comments, setComments] = useState([]);
+  const { fetchComments, loading } = useProjectContext();
+
+  // Yorumları çeken fonksiyon
+  const loadComments = async () => {
+    try {
+      const fetchedComments = await fetchComments(projectId);
+      setComments(fetchedComments || []);
+    } catch (error) {
+      console.error("Failed to fetch comments:", error);
+    }
+  };
+
+  // 1. Sayfa yüklendiğinde VEYA 'refreshKey' değiştiğinde yorumları çek
+  useEffect(() => {
+    if (projectId) {
+      loadComments();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, refreshKey]); // refreshKey'e bağımlı
+
+  // === YENİ: Yorum Düzenlendiğinde veya Silindiğinde Listeyi Güncelle ===
+  const handleCommentUpdated = (updatedComment) => {
+    setComments(prev => 
+      prev.map(c => c.id === updatedComment.id ? updatedComment : c)
+    );
+  };
+  const handleCommentDeleted = (deletedCommentId) => {
+    setComments(prev => 
+      prev.filter(c => c.id !== deletedCommentId)
+    );
+  };
+
+  return (
+    <div className="space-y-4 mt-4">
+      {loading && comments.length === 0 ? (
+        <FiLoader className="animate-spin text-blue-500 mx-auto" size={24} />
+      ) : comments.length === 0 ? (
+        <p className="text-gray-500 text-sm text-center">Be the first to comment.</p>
+      ) : (
+        comments.map(comment => (
+          <Comment 
+            key={comment.id} 
+            comment={comment}
+            projectId={projectId} // 'like/edit/delete' için gerekli
+            onCommentUpdated={handleCommentUpdated} // Yeni prop
+            onCommentDeleted={handleCommentDeleted} // Yeni prop
+          />
+        ))
+      )}
+    </div>
+  );
+}
+
+export default CommentList;
+
+
+================================================
+FILE: frontend/src/components/projects/CreateProjectModal.js
+================================================
+import React, { useState } from 'react';
+import { useProjectContext } from '../../context/ProjectContext'; // 1. Context'i import et
+import { FiX, FiLoader } from 'react-icons/fi';
+
+// Component, 'isOpen' (açık mı?) ve 'onClose' (kapatma fonksiyonu) proplarını alır
+function CreateProjectModal({ isOpen, onClose }) {
+  
+  // 2. Context'ten 'createProject' fonksiyonunu ve 'loading' durumunu al
+  const { createProject, loading } = useProjectContext();
+
+  // 3. Form alanları için state'ler
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [error, setError] = useState(null);
+
+  // Form gönderildiğinde çalışacak fonksiyon
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null); // Eski hatayı temizle
+
+    if (!name) {
+      setError('Project name is required.');
+      return;
+    }
+
+    try {
+      // 4. Context'teki 'createProject' fonksiyonunu çağır
+      // Bu fonksiyon backend'e API isteği atacak
+      await createProject(name, description);
+      
+      // Başarılı olursa, formu temizle ve modal'ı kapat
+      setName('');
+      setDescription('');
+      onClose(); 
+    } catch (err) {
+      // Başarısız olursa (örn: sunucu hatası), hatayı göster
+      setError(err.message);
+    }
+  };
+
+  // Eğer modal 'isOpen' false ise, hiçbir şey gösterme
+  if (!isOpen) {
+    return null;
+  }
+
+  // Modal açıksa, bu JSX'i göster
+  return (
+    // Arka planı karartan overlay
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50">
+      
+      {/* Asıl Modal Penceresi */}
+      <div className="bg-gray-800 rounded-lg shadow-2xl w-full max-w-lg p-6">
+        
+        {/* Başlık ve Kapatma Butonu */}
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold text-white">Create New Project</h2>
+          <button 
+            onClick={onClose} 
+            className="text-gray-400 hover:text-white"
+          >
+            <FiX size={24} />
+          </button>
+        </div>
+        
+        {/* Proje Oluşturma Formu */}
+        <form onSubmit={handleSubmit}>
+          <div className="space-y-4">
+            
+            {/* Proje Adı */}
+            <div>
+              <label htmlFor="projectName" className="block text-sm font-medium text-gray-300 mb-1">
+                Project Name
+              </label>
+              <input 
+                type="text"
+                id="projectName"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full py-2 px-3 text-gray-200 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="My New Awesome Project"
+              />
+            </div>
+            
+            {/* Proje Açıklaması */}
+            <div>
+              <label htmlFor="projectDescription" className="block text-sm font-medium text-gray-300 mb-1">
+                Description (Optional)
+              </label>
+              <textarea
+                id="projectDescription"
+                rows="3"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="w-full py-2 px-3 text-gray-200 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="What is this project about?"
+              />
+            </div>
+          </div>
+          
+          {/* Hata Mesajı Alanı */}
+          {error && (
+            <p className="text-sm text-red-400 text-center mt-4">
+              {error}
+            </p>
+          )}
+
+          {/* Butonlar */}
+          <div className="flex justify-end space-x-3 mt-6">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="py-2 px-4 bg-gray-600 hover:bg-gray-500 text-white rounded-lg transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex items-center justify-center py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50"
+            >
+              {loading ? (
+                <FiLoader className="animate-spin mr-2" />
+              ) : (
+                'Create Project'
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export default CreateProjectModal;
+
+
+================================================
+FILE: frontend/src/components/projects/FileList.js
+================================================
+// src/components/projects/FileList.js
+import React from 'react';
+import { FiFileText, FiFile, FiImage } from 'react-icons/fi'; // Icons for file types
+
+// A simple function to get an icon based on file type
+const getFileIcon = (fileName) => {
+  if (fileName.endsWith('.pdf')) return <FiFileText className="text-red-400" />;
+  if (fileName.endsWith('.docx') || fileName.endsWith('.doc')) return <FiFileText className="text-blue-40á00" />;
+  if (fileName.endsWith('.png') || fileName.endsWith('.jpg')) return <FiImage className="text-green-400" />;
+  return <FiFile className="text-gray-400" />;
+};
+
+function FileList({ files, loading }) {
+  return (
+    <div className="mt-12">
+      <h2 className="text-2xl font-bold text-white border-b border-gray-700 pb-2 mb-4">
+        Project Files
+      </h2>
+      {loading ? (
+        <p>Loading files...</p>
+      ) : (
+        <div className="space-y-2">
+          {files.map(file => (
+            <div key={file.id} className="flex items-center bg-gray-800 p-3 rounded-md">
+              <span className="mr-3">{getFileIcon(file.name)}</span>
+              <div className="flex-1">
+                <p className="text-white font-medium">{file.name}</p>
+                <p className="text-xs text-gray-500">Uploaded by {file.uploadedBy}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+export default FileList;
+
+
+================================================
+FILE: frontend/src/components/projects/IssueItem.js
+================================================
+// src/components/projects/IssueItem.js
+
+import React, { useState, useRef, useEffect } from 'react';
+import { 
+  FiMessageSquare, FiChevronDown, FiChevronRight, FiLoader, 
+  FiMoreVertical, FiEdit, FiCheckCircle, FiCircle, FiSave, FiX, FiAlertTriangle
+} from 'react-icons/fi';
+import { useProjectContext } from '../../context/ProjectContext';
+import { useAuth } from '../../context/AuthContext';
+import Comment from './Comment'; 
+import CommentForm from './CommentForm';
+
+function IssueItem({ issue, projectId, onIssueUpdated }) {
+  
+  // === 1. STATE (DURUM) TANIMLAMALARI ===
+  const [localIssue, setLocalIssue] = useState(issue);
+  const [isOpen, setIsOpen] = useState(false); 
+  const [comments, setComments] = useState([]); 
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [isMenuOpen, setMenuOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false); 
+  const [editText, setEditText] = useState(issue.text); 
+  const [isSaving, setIsSaving] = useState(false);
+  const [editError, setEditError] = useState(null);
+  const menuRef = useRef(null);
+  
+  // Context'ten gerekli fonksiyonları al
+  const { 
+    currentProject, 
+    fetchIssueComments, 
+    addIssueComment, 
+    updateIssue, 
+    loading: contextLoading 
+  } = useProjectContext();
+  
+  const { user } = useAuth(); 
+  const userRole = currentProject?.currentUserRole;
+
+  // === 2. EFFECT'LER ===
+  
+  // 'issue' prop'u değiştiğinde yerel state'i güncelle
+  useEffect(() => {
+    setLocalIssue(issue);
+  }, [issue]); 
+
+  // Menü dışına tıklamayı dinle
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [menuRef]);
+  
+  // === 3. FONKSİYONLAR ===
+
+  // Yorumları aç/kapat
+  const toggleComments = async () => {
+    if (isOpen) {
+      setIsOpen(false);
+      return;
+    }
+    setIsOpen(true);
+    setLoadingComments(true);
+    try {
+      const fetchedComments = await fetchIssueComments(projectId, localIssue.id);
+      setComments(fetchedComments || []);
+    } catch (error) {
+      console.error("Failed to fetch issue comments:", error);
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
+  // Yorum ekle
+  const handleCommentAdded = async (text) => {
+    try {
+      const newComment = await addIssueComment(projectId, localIssue.id, text);
+      setComments([...comments, newComment]); // Listeyi anında güncelle
+    } catch (error) {
+      console.error("Failed to add issue comment:", error);
+    }
+  };
+
+  // Issue durumunu Değiştir (Done/Open)
+  const handleToggleStatus = async () => {
+    const isDone = localIssue.status === 'Closed';
+    const newStatus = isDone ? 'Open' : 'Closed'; 
+    try {
+      const updatedIssue = await updateIssue(projectId, localIssue.id, { status: newStatus });
+      setLocalIssue(updatedIssue); 
+      onIssueUpdated(updatedIssue); 
+    } catch (error) {
+      console.error("Failed to update issue status:", error);
+    } finally {
+      setMenuOpen(false);
+    }
+  };
+  
+  // "Edit" (Düzenleme) Modu Fonksiyonları
+  const handleEditClick = () => {
+    setEditText(localIssue.text); 
+    setIsEditing(true); 
+    setMenuOpen(false); 
+    setEditError(null); 
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false); 
+    setEditError(null); 
+  };
+
+  const handleSaveEdit = async () => {
+    if (editText.trim() === '' || editText === localIssue.text) {
+      setIsEditing(false); 
+      return;
+    }
+    setIsSaving(true); 
+    setEditError(null);
+    try {
+      const updatedIssue = await updateIssue(projectId, localIssue.id, { text: editText });
+      setLocalIssue(updatedIssue); 
+      onIssueUpdated(updatedIssue); 
+      setIsEditing(false); 
+    } catch (error) {
+      console.error("Failed to save issue edit:", error);
+      setEditError("Failed to save. Please try again."); 
+    } finally {
+      setIsSaving(false); 
+    }
+  };
+  
+  // Yorum listesi için güncelleme fonksiyonları
+  const handleCommentUpdated = (updatedComment) => {
+    setComments(prev => 
+      prev.map(c => c.id === updatedComment.id ? updatedComment : c)
+    );
+  };
+  const handleCommentDeleted = (deletedCommentId) => {
+    setComments(prev => 
+      prev.filter(c => c.id !== deletedCommentId)
+    );
+  };
+
+  // === 4. RENDER (GÖRÜNÜM) ===
+  const isDone = localIssue.status === 'Closed';
+  const issueTextStyle = isDone ? "text-gray-500 line-through" : "text-white";
+  const issueAuthorStyle = isDone ? "text-gray-600" : "text-gray-400";
+
+  return (
+    <div className={`bg-gray-700 rounded-md ${isDone ? 'bg-opacity-70' : ''}`}>
+      <div className="flex justify-between items-center p-3">
+        
+        {isEditing ? (
+          // --- DÜZENLEME MODU ---
+          <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex items-center space-x-2">
+              <input
+                type="text"
+                value={editText}
+                autoFocus
+                onChange={(e) => setEditText(e.target.value)}
+                className="flex-grow py-1 px-2 text-white bg-gray-600 border border-blue-500 rounded-md focus:outline-none"
+              />
+              <button 
+                onClick={handleSaveEdit} 
+                disabled={isSaving} 
+                className="p-2 text-green-400 hover:text-green-300 disabled:opacity-50"
+              >
+                {isSaving ? <FiLoader className="animate-spin" /> : <FiSave size={18} />}
+              </button>
+              <button onClick={handleCancelEdit} className="p-2 text-red-400 hover:text-red-300">
+                <FiX size={18} />
+              </button>
+            </div>
+            {editError && (
+              <p className="text-xs text-red-400 mt-1 ml-1 flex items-center">
+                <FiAlertTriangle size={14} className="mr-1" />
+                {editError}
+              </p>
+            )}
+          </div>
+
+        ) : (
+          // --- NORMAL MOD ---
+          <>
+            <button 
+              onClick={toggleComments}
+              className="flex-1 flex items-center text-left"
+            >
+              {isOpen ? <FiChevronDown size={20} className="mr-2" /> : <FiChevronRight size={20} className="mr-2" />}
+              <div className="flex-1">
+                <p className={`font-medium ${issueTextStyle}`}>{localIssue.text}</p>
+                <span className={`text-xs ${issueAuthorStyle}`}>
+                  Opened by {localIssue.created_by_name || '...'}
+                  {isDone && (
+                    <span className="italic">
+                      : Closed by {user?.username || '...'}
+                    </span>
+                  )}
+                </span>
+              </div>
+            </button>
+            
+            <div className="flex items-center">
+              <FiMessageSquare size={16} className={`mr-3 ${issueAuthorStyle}`} />
+              
+              {/* 3-NOKTA MENÜ (SADECE 'viewer' veya 'public_viewer' DEĞİLSE GÖSTER) */}
+              {(userRole === 'owner' || userRole === 'editor') && (
+                <div className="relative" ref={menuRef}>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation(); // Düzeltme: Tıklamanın yayılmasını engelle
+                      setMenuOpen(prev => !prev);
+                    }}
+                    className="p-1 text-gray-400 hover:text-white rounded-full"
+                  >
+                    <FiMoreVertical size={18} />
+                  </button>
+                  
+                  {isMenuOpen && (
+                    // Düzeltme: z-index 50 yapıldı
+                    <div className="absolute right-0 top-8 w-48 bg-gray-800 border border-gray-600 rounded-md shadow-lg z-50">
+                      <ul className="py-1">
+                        <li>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditClick();
+                            }}
+                            className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
+                          >
+                            <FiEdit size={14} className="mr-2" />
+                            Edit Issue
+                          </button>
+                        </li>
+                        <li>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleStatus();
+                            }}
+                            className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
+                          >
+                            {isDone ? (
+                              <><FiCircle size={14} className="mr-2 text-yellow-500" />Mark as Open</>
+                            ) : (
+                              <><FiCheckCircle size={14} className="mr-2 text-green-500" />Mark as Done</>
+                            )}
+                          </button>
+                        </li>
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Yorum Bölümü */}
+      {isOpen && !isEditing && (
+        <div className="p-4 border-t border-gray-600">
+          
+          {/* Yorum Listesi */}
+          {loadingComments ? (
+            <div className="flex justify-center p-3">
+              <FiLoader className="animate-spin text-blue-400" />
+            </div>
+          ) : (
+            <div className="space-y-4 mb-4">
+              {comments.length === 0 ? (
+                <p className="text-gray-500 text-sm text-center">No comments yet.</p>
+              ) : (
+                comments.map(comment => (
+                  <Comment 
+                    key={comment.id} 
+                    comment={comment}
+                    projectId={projectId}
+                    onCommentUpdated={handleCommentUpdated} 
+                    onCommentDeleted={handleCommentDeleted} 
+                  />
+                ))
+              )}
+            </div>
+          )}
+          
+          {/* Yorum Formu veya Kapalı Mesajı */}
+          {isDone ? (
+            <div className="p-3 bg-gray-800 rounded-md text-center">
+              <p className="text-sm text-gray-400">
+                This issue is closed. No new comments can be added.
+              </p>
+            </div>
+          ) : (
+            // Herkes (public_viewer dahil) yorum yapabilir
+            <CommentForm 
+              onSubmit={handleCommentAdded}
+              loading={contextLoading} 
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default IssueItem;
+
+
+================================================
+FILE: frontend/src/components/projects/ProjectDiscussion.js
+================================================
+// src/components/projects/ProjectDiscussion.js
+
+import React, { useState, useEffect, useRef } from 'react';
+import { useProjectContext } from '../../context/ProjectContext';
+import { useAuth } from '../../context/AuthContext';
+import { FiSend, FiLoader, FiLock, FiUser } from 'react-icons/fi';
+
+export default function ProjectDiscussion() {
+  
+  const { currentProject, fetchComments, addComment, loading: contextLoading } = useProjectContext();
+  const { user } = useAuth();
+
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSending, setIsSending] = useState(false);
+  const chatEndRef = useRef(null);
+
+  const userRole = currentProject?.currentUserRole;
+
+  useEffect(() => {
+    if (userRole === 'public_viewer' || !currentProject?.id) {
+      setIsLoading(false);
+      return;
+    }
+    const loadMessages = async () => {
+      setIsLoading(true);
+      try {
+        const fetchedMessages = await fetchComments(currentProject.id);
+        setMessages(fetchedMessages || []);
+      } catch (error) {
+        console.error("Error loading messages:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadMessages();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentProject?.id, userRole]);
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!newMessage.trim() || isSending) return;
+    const text = newMessage;
+    setNewMessage('');
+    setIsSending(true);
+    try {
+      const newComment = await addComment(currentProject.id, text);
+      setMessages(prev => [...prev, newComment]);
+    } catch (error) {
+      console.error("Error sending:", error);
+      setNewMessage(text);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  if (userRole === 'public_viewer') {
+    return (
+      <div className="flex flex-col items-center justify-center p-10 bg-gray-800 rounded-lg h-64 border border-gray-700">
+        <FiLock size={40} className="text-yellow-500 mb-4" />
+        <h3 className="text-xl font-semibold text-white">Members Only Chat</h3>
+        <p className="text-gray-400 mt-2">This chat room is only visible to project members.</p>
+      </div>
+    );
+  }
+
+  return (
+    // === GÜNCELLEME: h-[65vh] ile yüksekliği ekranın %65'ine sabitledik ===
+    // Bu sayede kesinlikle daha kısa olacak ve taşma yapmayacak.
+    <div className="flex flex-col h-[55vh] bg-gray-800 rounded-lg shadow-lg border border-gray-700">
+      
+      {/* Mesaj Listesi */}
+      <div className="flex-1 p-3 space-y-3 overflow-y-auto custom-scrollbar">
+        {isLoading ? (
+          <div className="flex justify-center items-center h-full">
+            <FiLoader className="animate-spin text-blue-500" size={24} />
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="flex justify-center items-center h-full flex-col opacity-50">
+             <div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center mb-2">
+                <FiSend size={20} className="text-gray-400" />
+             </div>
+            <p className="text-gray-400 text-sm">No messages yet.</p>
+          </div>
+        ) : (
+          messages.map(msg => {
+            const isMine = msg.author_id === user.id;
+            return (
+              <div key={msg.id} className={`flex items-start ${isMine ? 'justify-end' : 'justify-start'} animate-fade-in`}>
+                {!isMine && (
+                  <div className="flex-shrink-0 mr-2 mt-1">
+                    <div className="w-6 h-6 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-[10px] font-bold shadow-sm">
+                        {msg.author_name?.charAt(0).toUpperCase() || <FiUser />}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Mesaj Balonu (Daha kompakt padding: p-2) */}
+                <div className={`max-w-[80%] lg:max-w-[70%] p-2 rounded-2xl shadow-sm ${
+                    isMine 
+                      ? 'bg-blue-600 text-white rounded-tr-none' 
+                      : 'bg-gray-700 text-gray-200 rounded-tl-none'
+                  }`}
+                >
+                  {!isMine && (
+                    <p className="text-[10px] font-bold text-blue-300 mb-0.5 opacity-90">
+                      {msg.author_name}
+                    </p>
+                  )}
+                  <p className="text-sm break-words leading-snug">{msg.text}</p>
+                  <p className={`text-[9px] mt-1 text-right ${isMine ? 'text-blue-200' : 'text-gray-400'}`}>
+                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+              </div>
+            );
+          })
+        )}
+        <div ref={chatEndRef} />
+      </div>
+
+      {/* Mesaj Yazma Kutusu */}
+      <div className="p-3 border-t border-gray-700 bg-gray-800/50 rounded-b-lg">
+        <form onSubmit={handleSendMessage} className="flex space-x-2">
+          <input
+            type="text"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            className="flex-grow py-2 px-3 text-sm text-gray-200 bg-gray-900 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder-gray-500"
+            placeholder="Type your message..."
+            disabled={isSending || contextLoading}
+          />
+          <button
+            type="submit"
+            disabled={isSending || contextLoading}
+            className="flex items-center justify-center w-10 h-auto bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all disabled:opacity-50"
+          >
+            {isSending ? <FiLoader className="animate-spin text-xs" /> : <FiSend size={16} />}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+
+================================================
+FILE: frontend/src/components/projects/ProjectEditPage.js
+================================================
+// src/components/projects/ProjectEditPage.js
+
+import React, { useState, useEffect } from 'react';
+import { useProjectContext } from '../../context/ProjectContext';
+import { useAuth } from '../../context/AuthContext'; 
+import { useNavigate } from 'react-router-dom';
+// === DÜZELTME BURADA: 'FiFileText' EKLENDİ ===
+import { 
+  FiUserPlus, FiLoader, FiCheck, FiAlertTriangle, FiSave,
+  FiUsers, FiTrash2, FiUser, FiGlobe, FiLock, FiSettings, FiShield, FiLayout, FiFileText
+} from 'react-icons/fi';
+
+export default function ProjectEditPage() {
+  const { user } = useAuth(); 
+  const navigate = useNavigate(); 
+  
+  const { 
+    currentProject, 
+    addMember, 
+    removeMember,       
+    currentMembers,   
+    fetchMembers,
+    updateProjectVisibility,
+    updateTasksVisibility,
+    updateProjectDetails, 
+    deleteProject         
+  } = useProjectContext();
+
+  // --- 1. STATE TANIMLAMALARI ---
+
+  // Genel Ayarlar Formu
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [longDescription, setLongDescription] = useState(''); // Uzun açıklama state'i
+  const [isSavingDetails, setIsSavingDetails] = useState(false);
+  const [saveMessage, setSaveMessage] = useState(null);
+
+  // Invite Form
+  const [usernameToAdd, setUsernameToAdd] = useState('');
+  const [roleToAdd, setRoleToAdd] = useState('viewer'); 
+  const [isAdding, setIsAdding] = useState(false);
+  const [addError, setAddError] = useState(null);
+  const [addSuccess, setAddSuccess] = useState(null);
+
+  // Visibility
+  const [isPublic, setIsPublic] = useState(false);
+  const [updatingVisibility, setUpdatingVisibility] = useState(false);
+  const [tasksPublic, setTasksPublic] = useState(false);
+  const [updatingTasks, setUpdatingTasks] = useState(false);
+
+  // Member Remove
+  const [removingId, setRemovingId] = useState(null); 
+  const [isDeletingProject, setIsDeletingProject] = useState(false);
+
+  // --- 2. VERİ YÜKLEME ---
+  useEffect(() => {
+    if (currentProject) {
+      setName(currentProject.name);
+      setDescription(currentProject.description || '');
+      setLongDescription(currentProject.long_description || ''); // Uzun açıklamayı yükle
+      setIsPublic(currentProject.is_public); 
+      setTasksPublic(currentProject.is_tasks_public);
+      fetchMembers(currentProject.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentProject]);
+
+  if (!currentProject) return <div className="p-10 text-center"><FiLoader className="animate-spin text-blue-500" /></div>;
+
+  // --- 3. FONKSİYONLAR ---
+
+  // Proje Adı/Açıklama Güncelleme
+  const handleDetailsSubmit = async (e) => {
+    e.preventDefault();
+    setIsSavingDetails(true);
+    setSaveMessage(null);
+    try {
+      // updateProjectDetails fonksiyonunun 'longDescription'ı aldığından emin olun
+      await updateProjectDetails(currentProject.id, name, description, longDescription);
+      setSaveMessage({ type: 'success', text: 'Project details updated successfully!' });
+    } catch (err) {
+      console.error(err);
+      // Backend'den gelen gerçek hata mesajını göster
+      const errorMsg = err.response?.data?.message || err.message || 'Failed to update.';
+      setSaveMessage({ type: 'error', text: errorMsg });
+    } finally {
+      setIsSavingDetails(false);
+    }
+  };
+
+  // Görünürlük Değiştirme
+  const handleVisibilityToggle = async () => {
+    setUpdatingVisibility(true);
+    try {
+      const newVisibility = !isPublic; 
+      await updateProjectVisibility(currentProject.id, newVisibility);
+      setIsPublic(newVisibility); 
+    } catch (error) {
+      alert("Error: " + error.message);
+    } finally {
+      setUpdatingVisibility(false);
+    }
+  };
+
+  const handleTasksVisibilityToggle = async () => {
+    setUpdatingTasks(true);
+    try {
+      const newVisibility = !tasksPublic;
+      await updateTasksVisibility(currentProject.id, newVisibility);
+      setTasksPublic(newVisibility);
+    } catch (error) {
+      alert("Error: " + error.message);
+    } finally {
+      setUpdatingTasks(false);
+    }
+  };
+
+  // Üye Ekleme
+  const handleMemberSubmit = async (e) => {
+    e.preventDefault();
+    if (!usernameToAdd) return;
+    setIsAdding(true);
+    setAddError(null);
+    setAddSuccess(null);
+    try {
+      const addedMember = await addMember(currentProject.id, usernameToAdd, roleToAdd);
+      setAddSuccess(`Added ${addedMember.username} as ${addedMember.role}.`);
+      setUsernameToAdd(''); 
+    } catch (err) {
+      setAddError(err.message);
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
+  // Üye Çıkarma
+  const handleRemoveMember = async (memberId, memberUsername) => {
+    if (window.confirm(`Remove ${memberUsername}?`)) {
+      setRemovingId(memberId); 
+      try {
+        await removeMember(currentProject.id, memberId);
+      } catch (err) {
+        alert("Error: " + err.message); 
+      } finally {
+        setRemovingId(null); 
+      }
+    }
+  };
+
+  // Proje Silme
+  const handleDeleteProject = async () => {
+    const confirmName = window.prompt(`To delete this project, type its name: "${currentProject.name}"`);
+    if (confirmName === currentProject.name) {
+      setIsDeletingProject(true);
+      try {
+        await deleteProject(currentProject.id);
+        navigate('/dashboard'); // Ana sayfaya yönlendir
+      } catch (err) {
+        alert("Failed to delete project: " + err.message);
+        setIsDeletingProject(false);
+      }
+    } else if (confirmName !== null) {
+      alert("Project name did not match.");
+    }
+  };
+
+  // --- 4. RENDER ---
+  return (
+    <div className="max-w-4xl mx-auto space-y-8 pb-20">
+      
+      {/* BAŞLIK */}
+      <div className="border-b border-gray-700 pb-4">
+        <h2 className="text-3xl font-bold text-white flex items-center">
+          <FiSettings className="mr-3 text-gray-400" />
+          Project Settings
+        </h2>
+      </div>
+      
+      {/* 1. GENEL AYARLAR (AD & AÇIKLAMA) */}
+      <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
+        <h3 className="text-xl font-semibold text-white mb-4">General Settings</h3>
+        <form onSubmit={handleDetailsSubmit} className="space-y-4">
+          
+          {/* İsim */}
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-1">Project Name</label>
+            <input 
+              type="text" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+          
+          {/* Kısa Açıklama */}
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-1">Short Description (Header)</label>
+            <textarea 
+              rows="2"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+
+          {/* Uzun Açıklama (Readme) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-1 flex items-center">
+              <FiFileText className="mr-1"/> Long Description (Readme / Files Tab)
+            </label>
+            <textarea 
+              rows="6"
+              value={longDescription}
+              onChange={(e) => setLongDescription(e.target.value)}
+              className="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm"
+              placeholder="Detailed project documentation, instructions, or readme content..."
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <button 
+              type="submit" 
+              disabled={isSavingDetails}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center disabled:opacity-50"
+            >
+              {isSavingDetails ? <FiLoader className="animate-spin mr-2"/> : <FiSave className="mr-2"/>}
+              Save Changes
+            </button>
+            {saveMessage && (
+              <span className={`text-sm ${saveMessage.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
+                {saveMessage.text}
+              </span>
+            )}
+          </div>
+        </form>
+      </div>
+
+      {/* 2. GÖRÜNÜRLÜK AYARLARI */}
+      <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+        {/* Proje Görünürlüğü */}
+        <div className="p-6 border-b border-gray-700 flex justify-between items-center">
+          <div>
+            <h3 className="text-xl font-semibold text-white flex items-center">
+              {isPublic ? <FiGlobe className="mr-2 text-green-400"/> : <FiLock className="mr-2 text-red-400"/>}
+              Project Visibility
+            </h3>
+            <p className="text-gray-400 text-sm mt-1">
+              {isPublic ? "Visible to everyone." : "Private. Only members can access."}
+            </p>
+          </div>
+          <button onClick={handleVisibilityToggle} disabled={updatingVisibility} className={`px-4 py-2 rounded-lg font-medium border transition-colors ${isPublic ? 'border-red-500 text-red-400 hover:bg-red-900/20' : 'border-green-500 text-green-400 hover:bg-green-900/20'}`}>
+            {updatingVisibility ? <FiLoader className="animate-spin"/> : (isPublic ? "Make Private" : "Make Public")}
+          </button>
+        </div>
+
+        {/* Görev Görünürlüğü */}
+        <div className="p-6 flex justify-between items-center">
+          <div>
+            <h3 className="text-xl font-semibold text-white flex items-center">
+              <FiLayout className="mr-2 text-blue-400"/>
+              Tasks Visibility
+            </h3>
+            <p className="text-gray-400 text-sm mt-1">
+              {tasksPublic ? "Tasks are visible to public visitors." : "Tasks are hidden from public visitors."}
+            </p>
+          </div>
+          <button onClick={handleTasksVisibilityToggle} disabled={updatingTasks} className={`px-4 py-2 rounded-lg font-medium border transition-colors ${tasksPublic ? 'border-red-500 text-red-400 hover:bg-red-900/20' : 'border-green-500 text-green-400 hover:bg-green-900/20'}`}>
+            {updatingTasks ? <FiLoader className="animate-spin"/> : (tasksPublic ? "Hide Tasks" : "Show Tasks")}
+          </button>
+        </div>
+      </div>
+
+      {/* 3. ÜYE YÖNETİMİ */}
+      <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
+        <h3 className="text-xl font-semibold text-white mb-4 flex items-center">
+          <FiUsers className="mr-2" /> Manage Team
+        </h3>
+        
+        {/* Üye Ekleme Formu */}
+        <form onSubmit={handleMemberSubmit} className="bg-gray-900 p-4 rounded-lg mb-6 flex flex-col md:flex-row gap-3 items-end">
+          <div className="flex-grow w-full">
+            <label className="text-xs text-gray-500 uppercase font-bold">Username</label>
+            <input 
+              type="text" 
+              value={usernameToAdd} 
+              onChange={(e) => setUsernameToAdd(e.target.value)}
+              className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white outline-none focus:border-blue-500"
+              placeholder="username"
+            />
+          </div>
+          <div className="w-full md:w-40">
+            <label className="text-xs text-gray-500 uppercase font-bold">Role</label>
+            <select 
+              value={roleToAdd} 
+              onChange={(e) => setRoleToAdd(e.target.value)}
+              className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white outline-none focus:border-blue-500"
+            >
+              <option value="viewer">Viewer</option>
+              <option value="editor">Editor</option>
+            </select>
+          </div>
+          <button disabled={isAdding} type="submit" className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-semibold flex items-center justify-center disabled:opacity-50">
+            {isAdding ? <FiLoader className="animate-spin"/> : <FiUserPlus />}
+          </button>
+        </form>
+        
+        {/* Hata/Başarı Mesajları */}
+        {(addSuccess || addError) && (
+          <div className={`mb-4 p-2 rounded text-sm flex items-center ${addSuccess ? 'text-green-400 bg-green-900/20' : 'text-red-400 bg-red-900/20'}`}>
+            {addSuccess ? <FiCheck className="mr-2"/> : <FiAlertTriangle className="mr-2"/>}
+            {addSuccess || addError}
+          </div>
+        )}
+
+        {/* Üye Listesi */}
+        <div className="space-y-2">
+          {currentMembers.length > 0 ? (
+            currentMembers.map(member => (
+              <div key={member.id} className="flex justify-between items-center p-3 bg-gray-750 border border-gray-600 rounded hover:bg-gray-700 transition">
+                <div className="flex items-center">
+                  <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-white font-bold mr-3">
+                    {member.username.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-white font-medium text-sm">{member.username}</p>
+                    <span className="text-xs text-gray-400 bg-gray-800 px-2 py-0.5 rounded border border-gray-600 capitalize">
+                      {member.role}
+                    </span>
+                  </div>
+                </div>
+                {member.role !== 'owner' && (
+                  <button 
+                    onClick={() => handleRemoveMember(member.id, member.username)}
+                    disabled={removingId === member.id}
+                    className="text-gray-500 hover:text-red-500 p-2"
+                  >
+                    {removingId === member.id ? <FiLoader className="animate-spin"/> : <FiTrash2 />}
+                  </button>
+                )}
+              </div>
+            ))
+          ) : (
+            <p className="text-gray-500 text-center py-4">No members yet.</p>
+          )}
+        </div>
+      </div>
+
+      {/* 4. TEHLİKE BÖLGESİ */}
+      <div className="bg-red-900/10 border border-red-900/50 rounded-xl p-6 mt-10">
+        <h3 className="text-xl font-bold text-red-500 flex items-center mb-2">
+          <FiShield className="mr-2" /> Danger Zone
+        </h3>
+        <p className="text-gray-400 text-sm mb-6">
+          Deleting this project will permanently remove all issues, comments, files, and member associations. This action cannot be undone.
+        </p>
+        <div className="flex justify-end">
+          <button
+            onClick={handleDeleteProject}
+            disabled={isDeletingProject}
+            className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 flex items-center"
+          >
+            {isDeletingProject ? <FiLoader className="animate-spin mr-2"/> : <FiTrash2 className="mr-2"/>}
+            Delete Project
+          </button>
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
+
+================================================
+FILE: frontend/src/components/projects/ProjectFiles.js
+================================================
+// src/components/projects/ProjectFiles.js
+
+import React, { useState, useEffect } from 'react';
+import { useProjectContext } from '../../context/ProjectContext';
+import { 
+  FiFile, FiDownload, FiTrash2, FiUpload, FiLoader, 
+  FiFileText, FiX, FiEye, FiCheckSquare, FiSquare, FiChevronLeft, FiChevronRight 
+} from 'react-icons/fi';
+
+export default function ProjectFiles() {
+  const { currentProject, fetchFiles, uploadFile, deleteFile } = useProjectContext();
+  
+  const [files, setFiles] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  
+  // ÇOKLU SEÇİM STATE'İ
+  const [selectedIds, setSelectedIds] = useState([]);
+
+  // ÖNİZLEME MODALI STATE'İ
+  const [previewFile, setPreviewFile] = useState(null);
+
+  const userRole = currentProject?.currentUserRole;
+  const canEdit = userRole === 'owner' || userRole === 'editor';
+
+  // --- VERİ ÇEKME ---
+  useEffect(() => {
+    if (currentProject) {
+      setLoading(true);
+      fetchFiles(currentProject.id)
+        .then(data => setFiles(data || []))
+        .finally(() => setLoading(false));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentProject]);
+
+  // --- KLAVYE İLE GEZİNME ---
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!previewFile) return;
+      if (e.key === 'ArrowRight') handleNextPrev('next');
+      if (e.key === 'ArrowLeft') handleNextPrev('prev');
+      if (e.key === 'Escape') setPreviewFile(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  });
+
+  // --- DOSYA YÜKLEME ---
+  const handleFileUpload = async (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    if (selectedFiles.length === 0) return;
+
+    setUploading(true);
+    try {
+      const uploadPromises = selectedFiles.map(file => uploadFile(currentProject.id, file));
+      const newFiles = await Promise.all(uploadPromises);
+      setFiles(prevFiles => [...newFiles, ...prevFiles]); 
+    } catch (error) {
+      console.error("Upload failed", error);
+      alert("Hata: Dosyalar yüklenemedi.");
+    } finally {
+      setUploading(false);
+      e.target.value = null; 
+    }
+  };
+
+  // --- TOPLU SİLME ---
+  const handleDeleteSelected = async () => {
+    if (window.confirm(`Seçili ${selectedIds.length} dosyayı silmek istediğine emin misin?`)) {
+      setLoading(true);
+      try {
+        await Promise.all(selectedIds.map(id => deleteFile(currentProject.id, id)));
+        setFiles(files.filter(f => !selectedIds.includes(f.id)));
+        setSelectedIds([]); 
+      } catch (err) {
+        alert("Bazı dosyalar silinemedi.");
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  // --- SEÇİM MANTIĞI ---
+  const toggleSelect = (id, e) => {
+    e.stopPropagation();
+    if (selectedIds.includes(id)) {
+      setSelectedIds(selectedIds.filter(itemId => itemId !== id));
+    } else {
+      setSelectedIds([...selectedIds, id]);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === files.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(files.map(f => f.id));
+    }
+  };
+
+  // --- NAVİGASYON MANTIĞI ---
+  const handleNextPrev = (direction) => {
+    if (!previewFile) return;
+    const currentIndex = files.findIndex(f => f.id === previewFile.id);
+    let newIndex;
+
+    if (direction === 'next') {
+      newIndex = currentIndex + 1 < files.length ? currentIndex + 1 : 0; 
+    } else {
+      newIndex = currentIndex - 1 >= 0 ? currentIndex - 1 : files.length - 1; 
+    }
+    setPreviewFile(files[newIndex]);
+  };
+
+  const getFileUrl = (filePath) => {
+    const cleanPath = filePath.replace(/\\/g, '/');
+    return `http://localhost:5000/${cleanPath}`;
+  };
+
+  // --- DOSYA TÜRÜ BELİRLEME ---
+  const getFileType = (filename) => {
+    const ext = filename.split('.').pop().toLowerCase();
+    
+    // Resimler
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) return 'image';
+    
+    // PDF
+    if (ext === 'pdf') return 'pdf';
+    
+    // Metin tabanlı dosyalar (TXT, Kod dosyaları vb.) - Tarayıcıda açılabilir
+    if (['txt', 'md', 'json', 'xml', 'js', 'css', 'html', 'csv', 'log'].includes(ext)) return 'text';
+    
+    return 'other';
+  };
+
+  return (
+    <div className="space-y-6 relative">
+      {/* --- HEADER --- */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <div className="flex items-center gap-4">
+          <h2 className="text-2xl font-semibold text-white">Project Files</h2>
+          {selectedIds.length > 0 && canEdit && (
+            <button 
+              onClick={handleDeleteSelected}
+              className="flex items-center px-3 py-1.5 bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white rounded-lg transition-colors text-sm border border-red-600/30"
+            >
+              <FiTrash2 className="mr-2" /> Delete Selected ({selectedIds.length})
+            </button>
+          )}
+        </div>
+        
+        {canEdit && (
+          <div className="relative">
+            <input 
+              type="file" multiple onChange={handleFileUpload}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+              disabled={uploading}
+            />
+            <button className={`relative z-0 flex items-center px-4 py-2 rounded-lg transition-colors ${uploading ? 'bg-gray-600 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white shadow-lg`}>
+              {uploading ? <FiLoader className="animate-spin mr-2" /> : <FiUpload className="mr-2" />}
+              {uploading ? 'Uploading...' : 'Upload Files'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* --- LİSTE --- */}
+      <div className="bg-gray-800 rounded-xl overflow-hidden shadow-sm border border-gray-700">
+        <div className="flex items-center bg-gray-900/50 p-3 border-b border-gray-700 text-xs font-bold text-gray-400 uppercase">
+          <div className="w-10 text-center">
+            {canEdit && (
+              <button onClick={toggleSelectAll} className="hover:text-white">
+                {files.length > 0 && selectedIds.length === files.length ? <FiCheckSquare size={16}/> : <FiSquare size={16}/>}
+              </button>
+            )}
+          </div>
+          <div className="flex-1 px-4">Filename</div>
+          <div className="w-32 hidden sm:block">Uploaded By</div>
+          <div className="w-32 text-right hidden sm:block">Date</div>
+          <div className="w-16 text-center">View</div>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center p-10"><FiLoader className="animate-spin text-blue-500" size={30} /></div>
+        ) : files.length === 0 ? (
+          <div className="p-10 text-center text-gray-500">No files uploaded yet.</div>
+        ) : (
+          <ul className="divide-y divide-gray-700">
+            {files.map(file => {
+              const isSelected = selectedIds.includes(file.id);
+              const type = getFileType(file.filename);
+
+              return (
+                <li 
+                  key={file.id} 
+                  onClick={() => setPreviewFile(file)}
+                  className={`flex items-center p-3 hover:bg-gray-700/50 transition-colors cursor-pointer group ${isSelected ? 'bg-blue-900/10' : ''}`}
+                >
+                  {/* CHECKBOX */}
+                  <div className="w-10 flex justify-center" onClick={(e) => e.stopPropagation()}>
+                    {canEdit && (
+                      <button onClick={(e) => toggleSelect(file.id, e)} className={`transition-colors ${isSelected ? 'text-blue-400' : 'text-gray-500 hover:text-white'}`}>
+                        {isSelected ? <FiCheckSquare size={18}/> : <FiSquare size={18}/>}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* İKON VE İSİM */}
+                  <div className="flex-1 px-4 flex items-center min-w-0">
+                    <div className={`p-2 rounded-lg mr-3 ${type === 'image' ? 'bg-purple-500/10 text-purple-400' : (type === 'pdf' || type === 'text') ? 'bg-blue-500/10 text-blue-400' : 'bg-gray-700 text-gray-400'}`}>
+                      {type === 'image' ? <FiFileText /> : <FiFile />}
+                    </div>
+                    <span className="text-gray-200 font-medium truncate">{file.filename}</span>
+                  </div>
+
+                  {/* META */}
+                  <div className="w-32 text-sm text-gray-500 hidden sm:block truncate">{file.uploader_name}</div>
+                  <div className="w-32 text-right text-sm text-gray-500 hidden sm:block font-mono">{new Date(file.created_at).toLocaleDateString()}</div>
+
+                  {/* GÖRÜNTÜLE / İNDİR (Sadece indirme butonu, silme kaldırıldı) */}
+                  <div className="w-16 flex justify-center" onClick={(e) => e.stopPropagation()}>
+                    <a 
+                      href={getFileUrl(file.file_path)} 
+                      download
+                      className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors"
+                      title="Download"
+                    >
+                      <FiDownload size={16} />
+                    </a>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
+      {/* --- PREVIEW MODAL --- */}
+      {previewFile && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md animate-fade-in select-none">
+          
+          {/* KAPAT */}
+          <button onClick={() => setPreviewFile(null)} className="absolute top-6 right-6 text-gray-400 hover:text-white bg-gray-800/80 p-2 rounded-full z-50 transition-colors">
+            <FiX size={28} />
+          </button>
+
+          {/* OKLAR */}
+          <button onClick={() => handleNextPrev('prev')} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white p-4 hover:bg-white/10 rounded-full transition-all z-50">
+            <FiChevronLeft size={40} />
+          </button>
+          <button onClick={() => handleNextPrev('next')} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white p-4 hover:bg-white/10 rounded-full transition-all z-50">
+            <FiChevronRight size={40} />
+          </button>
+
+          {/* İÇERİK */}
+          <div className="w-full h-full p-12 flex flex-col items-center justify-center">
+            
+            {getFileType(previewFile.filename) === 'image' ? (
+              <img 
+                src={getFileUrl(previewFile.file_path)} 
+                alt="Preview" 
+                className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+              />
+            ) : (getFileType(previewFile.filename) === 'pdf' || getFileType(previewFile.filename) === 'text') ? (
+              <iframe 
+                src={getFileUrl(previewFile.file_path)} 
+                title="File Preview"
+                className="w-full max-w-5xl h-[85vh] bg-white rounded-lg shadow-2xl border-none"
+              />
+            ) : (
+              <div className="text-center text-white bg-gray-800 p-16 rounded-2xl border border-gray-700 shadow-2xl">
+                <FiFileText size={80} className="mx-auto mb-6 text-blue-500 opacity-80"/>
+                <h3 className="text-2xl font-bold mb-3 text-white">{previewFile.filename}</h3>
+                <p className="text-gray-400 mb-8">This file type cannot be previewed directly.</p>
+                <a 
+                  href={getFileUrl(previewFile.file_path)} 
+                  download 
+                  className="px-8 py-3 bg-blue-600 hover:bg-blue-500 rounded-lg font-bold text-white transition-colors shadow-lg"
+                >
+                  Download File
+                </a>
+              </div>
+            )}
+
+            {/* ALT BİLGİ */}
+            <div className="absolute bottom-6 left-0 w-full text-center pointer-events-none">
+                <span className="bg-black/50 text-white px-4 py-2 rounded-full text-sm backdrop-blur-sm">
+                    {files.findIndex(f => f.id === previewFile.id) + 1} / {files.length} — {previewFile.filename}
+                </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
+
+
+================================================
+FILE: frontend/src/components/projects/ProjectIssues.js
+================================================
+// src/components/projects/ProjectIssues.js
+
+import React, { useState, useEffect } from 'react';
+import { useProjectContext } from '../../context/ProjectContext';
+import { useAuth } from '../../context/AuthContext';
+import { FiLoader, FiPlus, FiSearch } from 'react-icons/fi'; // Search ikonu eklendi
+import IssueItem from './IssueItem'; 
+
+function ProjectIssues() {
+  const [issues, setIssues] = useState([]);
+  const [newIssueText, setNewIssueText] = useState('');
+  
+  // === YENİ STATE: Arama Kelimesi ===
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  const { currentProject, fetchIssues, createIssue, loading } = useProjectContext();
+  const { user } = useAuth(); 
+
+  const projectId = currentProject?.id; 
+  const userRole = currentProject?.currentUserRole;
+
+  // Issue'ları çek
+  useEffect(() => {
+    const loadIssues = async () => {
+      try {
+        const fetchedIssues = await fetchIssues(projectId);
+        setIssues(fetchedIssues || []);
+      } catch (error) {
+        console.error("Failed to fetch issues:", error);
+      }
+    };
+    if (projectId) loadIssues();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]); 
+
+  // Issue Ekle
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!newIssueText.trim()) return; 
+    try {
+      const newIssue = await createIssue(projectId, newIssueText);
+      // Yeni ekleneni listeye (başa) ekle
+      setIssues([newIssue, ...issues]); 
+      setNewIssueText(''); 
+    } catch (error) {
+      console.error("Failed to create issue:", error);
+    }
+  };
+
+  const handleIssueUpdate = (updatedIssue) => {
+    setIssues(prevIssues => 
+      prevIssues.map(issue => 
+        issue.id === updatedIssue.id ? updatedIssue : issue
+      )
+    );
+  };
+
+  // === FİLTRELEME MANTIĞI ===
+  // Arama kutusuna yazılan kelimeye göre issue'ları filtrele
+  const filteredIssues = issues.filter(issue => 
+    issue.text.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div className="bg-gray-800 p-4 rounded-lg shadow-lg">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-xl font-semibold text-white">Project Issues</h3>
+        <span className="text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded-full">
+          {issues.length} Total
+        </span>
+      </div>
+      
+      {/* === YENİ: ARAMA KUTUSU === */}
+      <div className="relative mb-6">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <FiSearch className="text-gray-500" />
+        </div>
+        <input 
+          type="text"
+          placeholder="Search issues..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full bg-gray-900 text-gray-200 border border-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block pl-10 p-2.5 placeholder-gray-500 transition-colors"
+        />
+      </div>
+
+      {/* Issue Ekleme Formu */}
+      {(userRole === 'owner' || userRole === 'editor') && (
+        <form onSubmit={handleSubmit} className="flex mb-4">
+          <input 
+            type="text"
+            value={newIssueText}
+            onChange={(e) => setNewIssueText(e.target.value)}
+            className="flex-grow py-2 px-3 text-gray-200 bg-gray-700 border border-gray-600 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="New issue title..."
+          />
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="flex items-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-3 rounded-r-lg transition-colors disabled:opacity-50"
+          >
+            {loading ? <FiLoader className="animate-spin" /> : <FiPlus />}
+          </button>
+        </form>
+      )}
+
+      {/* Issue Listesi (Filtrelenmiş listeyi kullanıyoruz) */}
+      <div className="space-y-3">
+        {loading && issues.length === 0 ? (
+          <p className="text-gray-400 text-center py-4">Loading issues...</p>
+        ) : issues.length === 0 ? (
+          <p className="text-gray-400 text-center py-4">No issues found for this project.</p>
+        ) : filteredIssues.length === 0 ? (
+          // Arama sonucu boşsa
+          <p className="text-gray-400 text-center py-4">No issues match your search.</p>
+        ) : (
+          filteredIssues.map(issue => (
+            <IssueItem 
+              key={issue.id} 
+              issue={issue} 
+              projectId={projectId} 
+              onIssueUpdated={handleIssueUpdate} 
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default ProjectIssues;
+
+
+================================================
+FILE: frontend/src/components/projects/ProjectList.js
+================================================
+// src/components/projects/ProjectList.js
+
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { FiLoader, FiArrowRight } from 'react-icons/fi'; // İkonlar
+
+// 1. Component artık 'projects', 'loading', 'title' gibi verileri
+//    prop (parametre) olarak dışarıdan alır.
+function ProjectList({ title, projects, loading, viewAllLink }) {
+
+  // 2. Yükleniyorsa (Loading)
+  if (loading) {
+    return (
+      <div className="bg-gray-800 p-6 rounded-lg flex justify-center items-center">
+        <FiLoader className="animate-spin text-blue-500" size={30} />
+      </div>
+    );
+  }
+
+  // 3. Yükleme bitti ve proje yoksa (Empty State)
+  if (projects.length === 0) {
+    return (
+      <div className="bg-gray-800 p-6 rounded-lg">
+        <h2 className="text-xl font-semibold text-white mb-2">{title}</h2>
+        <p className="text-gray-400">Henüz bu kategoriye ait bir projeniz yok.</p>
+        <p className="text-gray-500 text-sm mt-4">
+          Başlamak için "Create New Project" butonunu kullanın.
+        </p>
+      </div>
+    );
+  }
+
+  // 4. Yükleme bitti ve projeler varsa (Project List)
+  return (
+    <div className="bg-gray-800 p-6 rounded-lg">
+      {/* Başlık ve 'View All' Linki */}
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold text-white">{title}</h2>
+        {viewAllLink && (
+          <Link to={viewAllLink} className="text-sm text-blue-400 hover:text-blue-300 flex items-center">
+            View All
+            <FiArrowRight className="ml-1" size={14} />
+          </Link>
+        )}
+      </div>
+
+      {/* Proje Kartları */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {projects.map(project => (
+          <Link 
+            to={`/project/${project.id}`} // Proje detay sayfasına yönlendir
+            key={project.id} 
+            className="block bg-gray-700 p-4 rounded-lg shadow hover:bg-gray-600 transition-colors"
+          >
+            <h3 className="font-bold text-lg text-white mb-1">{project.name}</h3>
+            <p className="text-gray-400 text-sm truncate">{project.description}</p>
+            <span className="text-xs text-gray-500 mt-2 block">
+              Last updated: {new Date(project.last_updated_at).toLocaleDateString()}
+            </span>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default ProjectList;
+
+
+================================================
+FILE: frontend/src/components/projects/ProjectTasks.js
+================================================
+// src/components/projects/ProjectTasks.js
+
+import React, { useState, useEffect, useRef } from 'react';
+import { useProjectContext } from '../../context/ProjectContext';
+import api from '../../services/api'; // <--- BU SATIR EKLENDİ (ÖNEMLİ)
+import { 
+  FiPlus, FiCheckCircle, FiLoader, FiClock, FiLock, 
+  FiMoreVertical, FiEdit, FiTrash2, FiSave, FiX, FiUser 
+} from 'react-icons/fi';
+
+export default function ProjectTasks() {
+  // Context'ten sadece create ve delete fonksiyonlarını alıyoruz
+  const { currentProject, fetchTasks, createTask, deleteTask, updateTask } = useProjectContext();
+  
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [accessDenied, setAccessDenied] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  
+  const projectId = currentProject?.id;
+  const userRole = currentProject?.currentUserRole;
+  const canEdit = userRole !== 'public_viewer'; 
+
+  // Görevleri Yükle
+  useEffect(() => {
+    if (projectId) {
+      setLoading(true);
+      fetchTasks(projectId).then(data => {
+        if (data === null) {
+          setAccessDenied(true); 
+        } else {
+          setTasks(data);
+          setAccessDenied(false);
+        }
+        setLoading(false);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
+
+  // Yeni Görev Ekle
+  const handleAddTask = async (e) => {
+    e.preventDefault();
+    if (!newTaskTitle.trim()) return;
+    
+    try {
+      const newTask = await createTask(projectId, { 
+        title: newTaskTitle, 
+        status: 'todo',
+        due_date: new Date().toISOString() 
+      });
+      
+      if (newTask) {
+        setTasks([...tasks, newTask]);
+        setNewTaskTitle('');
+      }
+    } catch (error) {
+      console.error("Failed to create task:", error);
+    }
+  };
+
+  // === DÜZELTME BURADA: Görev Taşıma ve API İsteği ===
+ const moveTask = async (task, newStatus) => {
+    // 1. DIAGNOSTIC: Check if Token exists in Browser Storage
+    const savedToken = localStorage.getItem('token');
+    
+    if (!savedToken) {
+      alert("CRITICAL ERROR: You are NOT logged in!\n\nReason: 'token' is missing from localStorage.\n\nSolution: Please Log Out and Log In again.");
+      console.error("Local Storage is empty!", localStorage);
+      return; 
+    }
+
+    // 2. Optimistic Update
+    const previousTasks = [...tasks];
+    const updatedList = tasks.map(t => t.id === task.id ? { ...t, status: newStatus } : t);
+    setTasks(updatedList);
+
+    // 3. Send Request
+    try {
+        console.log(`📡 Sending Request with Token: ${savedToken.substring(0, 10)}...`);
+        
+        await api.put(`/api/projects/${projectId}/tasks/${task.id}`, {
+            status: newStatus
+        });
+
+        console.log("✅ Success!");
+
+    } catch (error) {
+      console.error("❌ Error:", error);
+      setTasks(previousTasks); // Rollback
+
+      if (error.response && error.response.status === 401) {
+         alert("ERROR 401: The token exists but is invalid or expired.\n\nPlease Log Out and Log In again.");
+      } else if (error.response) {
+         alert(`SERVER ERROR (${error.response.status}): ${JSON.stringify(error.response.data)}`);
+      } else {
+         alert(`ERROR: ${error.message}`);
+      }
+    }
+  };
+
+  // Görev Silme
+  const handleDeleteTask = async (taskId) => {
+    if (window.confirm("Are you sure you want to delete this task?")) {
+      try {
+        await deleteTask(projectId, taskId); 
+        setTasks(tasks.filter(t => t.id !== taskId));
+      } catch (error) {
+        console.error("Failed to delete task:", error);
+      }
+    }
+  };
+
+  // Görev Başlığı Güncelleme
+  const handleUpdateTaskTitle = async (taskId, newTitle) => {
+    try {
+      const updatedTask = await updateTask(projectId, taskId, { title: newTitle });
+      setTasks(tasks.map(t => t.id === taskId ? updatedTask : t));
+    } catch (error) {
+      console.error("Failed to update task:", error);
+    }
+  };
+
+  // === DRAG AND DROP HANDLERS ===
+  const handleDragStart = (e, taskId) => {
+    e.dataTransfer.setData("taskId", taskId);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault(); // Allow drop
+  };
+
+  const handleDrop = (e, newStatus) => {
+    e.preventDefault();
+    const taskId = e.dataTransfer.getData("taskId");
+    const task = tasks.find(t => t.id === Number(taskId) || t.id === taskId); // ID tip dönüşümü kontrolü
+    
+    if (task && task.status !== newStatus) {
+      moveTask(task, newStatus);
+    }
+  };
+
+  // === İLERLEME DURUMU HESAPLA ===
+  const totalTasks = tasks.length;
+  const doneCount = tasks.filter(t => t.status === 'done').length;
+  const inProgressCount = tasks.filter(t => t.status === 'in_progress').length;
+  const weightedScore = doneCount + (inProgressCount * 0.5);
+  const progressPercentage = totalTasks === 0 ? 0 : Math.round((weightedScore / totalTasks) * 100);
+
+  if (loading) return <div className="p-10 flex justify-center"><FiLoader className="animate-spin text-blue-500" size={30}/></div>;
+
+  if (accessDenied) {
+    return (
+      <div className="flex flex-col items-center justify-center p-10 bg-gray-800 rounded-lg border border-gray-700">
+        <FiLock size={40} className="text-red-500 mb-4" />
+        <h3 className="text-xl font-bold text-white">Tasks are Private</h3>
+        <p className="text-gray-400 mt-2">Only project members can see the task board.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      
+      {/* 1. PROGRESS BAR */}
+      <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+        <div className="flex justify-between items-center mb-2">
+          <h3 className="text-white font-semibold flex items-center">
+            <FiCheckCircle className="mr-2 text-purple-400" /> Project Progress
+          </h3>
+          <span className="text-blue-400 font-bold">{progressPercentage}% Completed</span>
+        </div>
+        <div className="w-full bg-gray-700 rounded-full h-2.5">
+          <div 
+            className="bg-gradient-to-r from-blue-600 to-purple-400 h-2.5 rounded-full transition-all duration-500" 
+            style={{ width: `${progressPercentage}%` }}
+          ></div>
+        </div>
+      </div>
+
+      {/* 2. GÖREV EKLEME FORMU */}
+      {canEdit && (
+        <form onSubmit={handleAddTask} className="flex gap-2">
+          <input 
+            type="text" 
+            value={newTaskTitle}
+            onChange={(e) => setNewTaskTitle(e.target.value)}
+            className="flex-grow bg-gray-800 text-white border border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none"
+            placeholder="Add a new task..."
+          />
+          <button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center">
+            <FiPlus className="mr-2" /> Add Task
+          </button>
+        </form>
+      )}
+
+      {/* 3. KANBAN BOARD */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[600px]">
+        <KanbanColumn 
+          title="To Do" 
+          status="todo" 
+          tasks={tasks} 
+          borderColor="border-indigo-500"
+          badgeColor="bg-indigo-500/20 text-indigo-300"
+          canEdit={canEdit}
+          onMove={moveTask}
+          onDelete={handleDeleteTask}
+          onUpdate={handleUpdateTaskTitle}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          onDragStart={handleDragStart}
+        />
+        <KanbanColumn 
+          title="In Progress" 
+          status="in_progress" 
+          tasks={tasks} 
+          borderColor="border-blue-500" 
+          badgeColor="bg-blue-500/20 text-blue-300"
+          canEdit={canEdit}
+          onMove={moveTask}
+          onDelete={handleDeleteTask}
+          onUpdate={handleUpdateTaskTitle}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          onDragStart={handleDragStart}
+        />
+        <KanbanColumn 
+          title="Done" 
+          status="done" 
+          tasks={tasks} 
+          borderColor="border-purple-500" 
+          badgeColor="bg-purple-500/20 text-purple-300"
+          canEdit={canEdit}
+          onMove={moveTask}
+          onDelete={handleDeleteTask}
+          onUpdate={handleUpdateTaskTitle}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          onDragStart={handleDragStart}
+        />
+      </div>
+    </div>
+  );
+}
+
+// Kanban Kolonu ve TaskItem bileşenleri aynı kalacak...
+// Sadece TaskItem içinde Draggable özelliği için onDragStart prop'unu doğru geçirdiğimizden emin oluyoruz.
+
+function KanbanColumn({ title, status, tasks, borderColor, badgeColor, canEdit, onMove, onDelete, onUpdate, onDragOver, onDrop, onDragStart }) {
+  const columnTasks = tasks.filter(t => t.status === status);
+
+  return (
+    <div 
+      className={`bg-gray-800 rounded-xl border-t-4 ${borderColor} p-4 flex flex-col h-full shadow-lg`}
+      onDragOver={onDragOver}
+      onDrop={(e) => onDrop(e, status)}
+    >
+      <h4 className="text-white font-bold mb-4 flex justify-between items-center">
+        {title} 
+        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${badgeColor}`}>
+          {columnTasks.length}
+        </span>
+      </h4>
+      
+      <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-1 pb-10">
+        {columnTasks.map(task => (
+          <TaskItem 
+            key={task.id} 
+            task={task} 
+            canEdit={canEdit} 
+            status={status}
+            onMove={onMove}
+            onDelete={onDelete}
+            onUpdate={onUpdate}
+            onDragStart={onDragStart}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TaskItem({ task, canEdit, status, onMove, onDelete, onUpdate, onDragStart }) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(task.title);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setIsMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleSaveEdit = () => {
+    if (editTitle.trim() && editTitle !== task.title) {
+      onUpdate(task.id, editTitle);
+    }
+    setIsEditing(false);
+  };
+
+  return (
+    <div 
+      className={`bg-gray-700/50 p-3 rounded-lg border border-gray-600 hover:border-gray-500 hover:bg-gray-700 transition-all group relative ${canEdit ? 'cursor-move' : ''}`}
+      draggable={canEdit}
+      onDragStart={(e) => canEdit && onDragStart(e, task.id)}
+    >
+      
+      {/* Düzenleme Modu */}
+      {isEditing ? (
+        <div className="flex flex-col gap-2">
+          <input 
+            type="text" 
+            value={editTitle} 
+            onChange={(e) => setEditTitle(e.target.value)}
+            className="w-full bg-gray-800 text-white text-sm p-1 rounded border border-blue-500 focus:outline-none"
+            autoFocus
+          />
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setIsEditing(false)} className="text-red-400 hover:text-red-300"><FiX size={16}/></button>
+            <button onClick={handleSaveEdit} className="text-green-400 hover:text-green-300"><FiSave size={16}/></button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="flex justify-between items-start">
+            <p className="text-white text-sm font-medium mb-2 break-words flex-1 pr-6">{task.title}</p>
+            
+            {/* 3 Nokta Menü */}
+            {canEdit && (
+              <div className="relative" ref={menuRef}>
+                <button 
+                  onClick={() => setIsMenuOpen(!isMenuOpen)} 
+                  className="text-gray-400 hover:text-white p-1 rounded-full hover:bg-gray-600 transition-colors"
+                >
+                  <FiMoreVertical size={16} />
+                </button>
+
+                {isMenuOpen && (
+                  <div className="absolute right-0 top-6 w-32 bg-gray-800 border border-gray-600 rounded-md shadow-xl z-10 overflow-hidden">
+                    <button 
+                      onClick={() => { setIsEditing(true); setIsMenuOpen(false); }}
+                      className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-gray-700 flex items-center"
+                    >
+                      <FiEdit className="mr-2" /> Edit
+                    </button>
+                    <button 
+                      onClick={() => { onDelete(task.id); setIsMenuOpen(false); }}
+                      className="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-gray-700 flex items-center"
+                    >
+                      <FiTrash2 className="mr-2" /> Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          
+          <div className="flex flex-col gap-1 mt-2">
+             <div className="flex items-center text-xs text-gray-400">
+               <FiUser className="mr-1.5 w-3 h-3" />
+               <span>Created by: <span className="text-gray-300">{task.created_by_name || 'Unknown'}</span></span>
+             </div>
+             
+             <div className="flex items-center text-xs text-gray-500">
+                <FiClock className="mr-1.5 w-3 h-3"/> 
+                {new Date(task.created_at).toLocaleDateString()}
+             </div>
+          </div>
+
+          {/* Hareket Butonları */}
+          {canEdit && (
+            <div className="mt-3 pt-2 border-t border-gray-600/50 flex justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              {status !== 'todo' && (
+                <button onClick={() => onMove(task, 'todo')} className="text-xs bg-gray-600 hover:bg-indigo-600 text-white px-2 py-1 rounded transition-colors">To Do</button>
+              )}
+              {status !== 'in_progress' && (
+                <button onClick={() => onMove(task, 'in_progress')} className="text-xs bg-gray-600 hover:bg-blue-600 text-white px-2 py-1 rounded transition-colors">Progress</button>
+              )}
+              {status !== 'done' && (
+                <button onClick={() => onMove(task, 'done')} className="text-xs bg-gray-600 hover:bg-purple-600 text-white px-2 py-1 rounded transition-colors">Done</button>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+
+================================================
+FILE: frontend/src/pages/ForgotPasswordPage.js
+================================================
+// src/pages/ForgotPasswordPage.js
+
+import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
+// 1. FiArrowLeft ikonunu ekle
+import { FiMail, FiLoader, FiArrowLeft } from 'react-icons/fi';
+// 2. Arka plan resmini import et (Görsel bütünlük için buraya da ekleyelim)
+import BackgroundImage from '../assets/background.jpg';
+
+export default function ForgotPasswordPage() {
+  const [email, setEmail] = useState('');
+  const [message, setMessage] = useState('');
+  const { forgotPassword, loading, error } = useAuth();
+
+  const handleSubmit = async (e) => {
+    // ... kodlar aynı ...
+    e.preventDefault();
+    try {
+      await forgotPassword(email);
+      setMessage('Check the backend console/terminal for the reset link!');
+    } catch (err) {
+      setMessage('');
+    }
+  };
+
+  return (
+    // 3. Arka planı LoginPage ile aynı yapıyoruz
+    <div 
+      className="relative flex items-center justify-center min-h-screen bg-cover bg-center"
+      style={{ backgroundImage: `url(${BackgroundImage})` }}
+    >
+      <div className="absolute inset-0 bg-black bg-opacity-60"></div>
+
+      {/* 4. BURAYA EKLE: Geri Dön Butonu */}
+      <Link 
+        to="/home" 
+        className="absolute top-8 left-8 z-20 flex items-center text-gray-300 hover:text-white transition-colors"
+      >
+        <FiArrowLeft className="mr-2" size={24} />
+        <span className="font-semibold text-lg">Back to Home</span>
+      </Link>
+
+      <div className="relative z-10 w-full max-w-md p-8 bg-gray-800 bg-opacity-90 rounded-xl shadow-2xl backdrop-blur-sm">
+        <h2 className="text-2xl font-bold text-white text-center mb-4">Reset Password</h2>
+        <p className="text-gray-400 text-center mb-6">Enter your email to receive a reset link.</p>
+        
+        {message && <div className="bg-green-600 text-white p-3 rounded mb-4 text-sm">{message}</div>}
+        {error && <div className="bg-red-600 text-white p-3 rounded mb-4 text-sm">{error}</div>}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="relative">
+            <FiMail className="absolute top-3 left-3 text-gray-500" />
+            <input
+              type="email"
+              required
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full py-2 pl-10 pr-4 bg-gray-700 text-white rounded border border-gray-600 focus:border-blue-500 focus:outline-none"
+            />
+          </div>
+          <button disabled={loading} className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold flex justify-center">
+            {loading ? <FiLoader className="animate-spin" /> : 'Send Reset Link'}
+          </button>
+        </form>
+        <div className="mt-4 text-center">
+          <Link to="/login" className="text-blue-400 hover:text-blue-300 text-sm">Back to Login</Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+================================================
+FILE: frontend/src/pages/LandingPage.js
+================================================
+// src/pages/LandingPage.js
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { FiArrowRight, FiCheckCircle, FiUsers, FiLayout, FiLayers, FiShield } from 'react-icons/fi';
+import BackgroundImage from '../assets/background.jpg';
+import LogoImage from '../assets/logo.png';
+
+const LandingPage = () => {
+  const { user } = useAuth();
+
+  return (
+    <div className="min-h-screen font-sans text-white relative">
+      {/* Background Image with Overlay */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center z-0"
+        style={{ backgroundImage: `url(${BackgroundImage})` }}
+      >
+        {/* Daha modern bir gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-900/90 to-black/80"></div>
+      </div>
+
+      {/* Content Wrapper */}
+      <div className="relative z-10 flex flex-col min-h-screen">
+        
+        {/* --- HEADER --- */}
+        <header className="container mx-auto px-6 py-6 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+             {/* Logo Büyütüldü: h-12 -> h-20 */}
+             <img src={LogoImage} alt="GazozHub Logo" className="h-20 w-20 object-contain drop-shadow-lg" />
+             <span className="text-3xl font-extrabold tracking-tight text-white">GazozHub</span>
+          </div>
+          
+          <div className="hidden md:flex items-center gap-4">
+            {user ? (
+              <Link 
+                to="/dashboard" 
+                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-full transition-all shadow-lg hover:shadow-blue-500/30 flex items-center"
+              >
+                Go to Dashboard <FiArrowRight className="ml-2" />
+              </Link>
+            ) : (
+              <>
+                <Link 
+                  to="/login" 
+                  className="px-4 py-2 text-gray-300 hover:text-white font-medium transition-colors"
+                >
+                  Sign In
+                </Link>
+                <Link 
+                  to="/register" 
+                  className="px-6 py-2.5 bg-white text-gray-900 hover:bg-gray-100 font-bold rounded-full transition-all shadow-lg transform hover:-translate-y-0.5"
+                >
+                  Get Started
+                </Link>
+              </>
+            )}
+          </div>
+        </header>
+
+        {/* --- HERO SECTION --- */}
+        <main className="flex-grow flex flex-col justify-center items-center text-center px-4 py-20">
+          <div className="max-w-5xl mx-auto space-y-8">
+           
+            
+            <h1 className="text-6xl md:text-8xl font-black tracking-tight leading-none mb-6 drop-shadow-2xl">
+              Collaboration <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400">
+                Reimagined.
+              </span>
+            </h1>
+            
+            <p className="text-xl md:text-2xl text-gray-400 max-w-3xl mx-auto leading-relaxed font-light mb-10">
+              GazozHub connects students, teams, and advisors in one seamless workspace. 
+              Manage tasks, track issues, and build amazing things together.
+            </p>
+
+            <div className="flex flex-col sm:flex-row justify-center gap-5">
+              {user ? (
+                <Link 
+                  to="/dashboard" 
+                  className="px-10 py-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white text-xl font-bold rounded-2xl transition-all transform hover:scale-105 shadow-xl shadow-blue-900/20 flex items-center justify-center"
+                >
+                  Launch Dashboard <FiArrowRight className="ml-3" />
+                </Link>
+              ) : (
+                <>
+                  <Link 
+                    to="/register" 
+                    className="px-10 py-4 bg-white text-gray-900 hover:bg-gray-50 text-xl font-bold rounded-2xl transition-all transform hover:scale-105 shadow-xl flex items-center justify-center"
+                  >
+                    Get Started <FiArrowRight className="ml-3" size={24} />
+                  </Link>
+                  <Link 
+                    to="/login" 
+                    className="px-10 py-4 bg-gray-800/50 hover:bg-gray-800 border border-gray-700 text-white text-xl font-bold rounded-2xl transition-all flex items-center justify-center backdrop-blur-sm"
+                  >
+                    Login
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* --- FEATURES GRID --- */}
+          <div className="mt-[40vh] grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl w-full px-4">
+            <FeatureCard 
+              icon={<FiLayout className="w-8 h-8" />} 
+              title="Kanban Boards" 
+              desc="Visualise work with drag-and-drop boards. Move tasks from To Do to Done with ease."
+              color="bg-blue-500"
+            />
+            <FeatureCard 
+              icon={<FiUsers className="w-8 h-8" />} 
+              title="Team Sync" 
+              desc="Real-time collaboration with role-based access control for Editors and Viewers."
+              color="bg-purple-500"
+            />
+            <FeatureCard 
+              icon={<FiCheckCircle className="w-8 h-8" />} 
+              title="Issue Tracking" 
+              desc="Advanced issue tracking system to squash bugs and manage feature requests efficiently."
+              color="bg-green-500"
+            />
+            <FeatureCard 
+              icon={<FiLayers className="w-8 h-8" />} 
+              title="Project Hub" 
+              desc="Centralize all your project files, discussions, and milestones in one place."
+              color="bg-pink-500"
+            />
+            <FeatureCard 
+              icon={<FiShield className="w-8 h-8" />} 
+              title="Secure & Private" 
+              desc="Keep your projects private or share them publicly with granular visibility settings."
+              color="bg-yellow-500"
+            />
+             <div className="p-8 rounded-3xl border border-gray-800 bg-gray-900/40 backdrop-blur-md flex flex-col justify-center items-center text-center">
+                <h3 className="text-2xl font-bold text-white mb-2">And much more...</h3>
+                <p className="text-gray-400">Join GazozHub today to explore all features.</p>
+             </div>
+          </div>
+        </main>
+
+        {/* --- FOOTER --- */}
+        <footer className="py-8 text-center border-t border-gray-800/50 bg-gray-900/50 backdrop-blur-sm mt-auto">
+           <div className="flex items-center justify-center gap-2 mb-2">
+             <img src={LogoImage} alt="Logo" className="h-6 w-6 opacity-50" />
+             <span className="text-gray-500 font-semibold">GazozHub</span>
+           </div>
+           <p className="text-gray-600 text-sm">
+             &copy; {new Date().getFullYear()} GazozHub. Designed for modern teams.
+           </p>
+        </footer>
+      </div>
+    </div>
+  );
+};
+
+// Alt Bileşen: Özellik Kartı
+const FeatureCard = ({ icon, title, desc, color }) => (
+  <div className="group p-8 rounded-3xl border border-gray-800 bg-gray-900/60 backdrop-blur-md hover:bg-gray-800/80 hover:border-gray-700 transition-all duration-300">
+    <div className={`w-14 h-14 rounded-2xl ${color} bg-opacity-20 flex items-center justify-center text-${color.split('-')[1]}-400 mb-6 group-hover:scale-110 transition-transform duration-300`}>
+      {icon}
+    </div>
+    <h3 className="text-2xl font-bold text-white mb-3">{title}</h3>
+    <p className="text-gray-400 leading-relaxed">{desc}</p>
+  </div>
+);
+
+export default LandingPage;
+
+
+================================================
+FILE: frontend/src/pages/LoginPage.js
+================================================
+// src/pages/LoginPage.js
+
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { FiUser, FiLock, FiArrowLeft } from 'react-icons/fi'; 
+import { useAuth } from '../context/AuthContext';
+import BackgroundImage from '../assets/background.jpg';
+
+function LoginPage() {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [localError, setLocalError] = useState(null);
+  
+  const navigate = useNavigate();
+  const { login, loading } = useAuth();
+
+  const handleSubmit = async (event) => { 
+    event.preventDefault(); 
+    setLocalError(null);
+
+    if (!username || !password) {
+        setLocalError("Please enter all fields.");
+        return;
+    }
+    
+    try {
+      // 1. Giriş yapmayı dene
+      await login(username, password);
+      
+      // 2. Hata almazsa Dashboard'a yönlendir
+      // (Artık useEffect beklemiyoruz, direkt gönderiyoruz)
+      navigate('/dashboard', { replace: true });
+      
+    } catch (err) {
+      // Hata varsa ekrana bas
+      setLocalError(err.response?.data?.message || "Login failed.");
+    }
+  };
+
+  return (
+    <div 
+      className="relative flex items-center justify-center min-h-screen bg-cover bg-center"
+      style={{ backgroundImage: `url(${BackgroundImage})` }}
+    >
+      <div className="absolute inset-0 bg-black bg-opacity-60"></div>
+
+      <Link 
+        to="/home" 
+        className="absolute top-8 left-8 z-20 flex items-center text-gray-300 hover:text-white transition-colors"
+      >
+        <FiArrowLeft className="mr-2" size={24} />
+        <span className="font-semibold text-lg">Back to Home</span>
+      </Link>
+
+      <div className="relative z-10 w-full max-w-md p-8 space-y-8 bg-gray-800 bg-opacity-90 rounded-2xl shadow-2xl backdrop-blur-sm">
+        <div className="text-center">
+          <h2 className="text-3xl font-bold text-white">Sign In</h2>
+          <p className="mt-2 text-sm text-gray-400">Welcome to the Project Hub</p>
+        </div>
+        
+        <form className="space-y-6" onSubmit={handleSubmit}>
+             <div className="relative">
+                <div className="absolute top-0 left-0 flex items-center h-full pl-3 pointer-events-none">
+                  <FiUser className="w-5 h-5 text-gray-500" />
+                </div>
+                <input
+                  id="username"
+                  name="username"
+                  type="text"
+                  required
+                  className="w-full py-3 pl-10 pr-4 text-gray-200 bg-gray-700 border border-gray-600 rounded-lg placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                  placeholder="Username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                />
+             </div>
+              
+              <div className="relative">
+                <div className="absolute top-0 left-0 flex items-center h-full pl-3 pointer-events-none">
+                  <FiLock className="w-5 h-5 text-gray-500" />
+                </div>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  required
+                  className="w-full py-3 pl-10 pr-4 text-gray-200 bg-gray-700 border border-gray-600 rounded-lg placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+             </div>
+
+              {localError && (
+                <p className="text-sm text-red-400 text-center bg-red-400/10 p-2 rounded border border-red-400/20">{localError}</p>
+              )}
+
+              <div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full px-4 py-3 font-semibold text-white bg-blue-600 rounded-lg shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500 transition-all duration-300 disabled:opacity-50"
+                >
+                  {loading ? 'Signing In...' : 'Sign In'}
+                </button>
+                <div className="flex justify-end mb-4 mt-2">
+                  <Link to="/forgot-password" className="text-sm text-blue-400 hover:text-blue-300">
+                    Forgot Password?
+                  </Link>
+                </div>
+              </div>
+        </form>
+        
+        <div className="text-center mt-4">
+          <p className="text-sm text-gray-400">
+            Don't have an account?{' '}
+            <Link to="/register" className="font-semibold text-blue-500 hover:text-blue-400">
+              Sign Up
+            </Link>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default LoginPage;
+
+
+================================================
+FILE: frontend/src/pages/ProjectDetailPage.js
+================================================
+// src/pages/ProjectDetailPage.js
+
+import React, { useEffect } from 'react';
+import { useParams, NavLink, Outlet } from 'react-router-dom';
+import { useProjectContext } from '../context/ProjectContext';
+import { 
+  FiLoader, FiAlertTriangle, FiCheckSquare, 
+  FiMessageSquare, FiFile, FiEdit, FiLayout 
+} from 'react-icons/fi';
+
+function ProjectDetailPage() {
+  const { id } = useParams();
+  const { currentProject, loading, error, fetchProjectById } = useProjectContext();
+
+  useEffect(() => {
+    if (id) {
+      fetchProjectById(id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  if (loading || (!currentProject && !error)) {
+    return (
+      <div className="p-20 flex justify-center">
+        <FiLoader className="animate-spin text-blue-500" size={40} />
+      </div>
+    );
+  }
+
+  if (error && !currentProject) {
+    return (
+      <div className="p-20 flex justify-center text-red-400">
+        <FiAlertTriangle size={40} />
+        <span className="ml-4">Error: {error}</span>
+      </div>
+    );
+  }
+
+  const userRole = currentProject?.currentUserRole;
+  const isTasksPublic = currentProject?.is_tasks_public;
+  
+  const showTasksTab = userRole !== 'public_viewer' || isTasksPublic;
+  const showDiscussionsTab = userRole !== 'public_viewer';
+  const showEditTab = userRole === 'owner';
+
+  // === DÜZELTME BURADA ===
+  // Eski "grid hesaplama" kodlarını sildik.
+  // Yerine Flexbox kullanıyoruz.
+
+  const navLinkStyle = ({ isActive }) =>
+    // 'flex-1': Tüm sekmeler eşit genişlikte olsun ve yan yana dolsun
+    `flex-1 flex items-center justify-center px-4 py-3 font-semibold border-b-2 transition-colors ` +
+    (isActive 
+      ? 'text-white border-blue-500' 
+      : 'text-gray-400 border-transparent hover:text-gray-200 hover:bg-gray-800');
+
+  return (
+    <div className="p-4 text-white">
+      <h1 className="text-4xl font-bold mb-2">{currentProject.name}</h1>
+      <p className="text-lg text-gray-400 mb-6">{currentProject.description}</p>
+      
+      {/* <nav> kısmını 'grid' yerine 'flex' yaptık */}
+      <nav className="flex border-b border-gray-700 mb-6">
+        
+        <NavLink to="" end className={navLinkStyle}> 
+          <FiFile className="mr-2" />
+          Files
+        </NavLink>
+
+        {showTasksTab && (
+          <NavLink to="tasks" className={navLinkStyle}>
+            <FiLayout className="mr-2" />
+            Tasks
+          </NavLink>
+        )}
+        
+        <NavLink to="issues" className={navLinkStyle}>
+          <FiCheckSquare className="mr-2" />
+          Issues
+        </NavLink>
+        
+        {showDiscussionsTab && (
+          <NavLink to="discussions" className={navLinkStyle}>
+            <FiMessageSquare className="mr-2" />
+            Discussions
+          </NavLink>
+        )}
+        
+        {showEditTab && (
+          <NavLink to="edit" className={navLinkStyle}>
+            <FiEdit className="mr-2" />
+            Edit
+          </NavLink>
+        )}
+      </nav>
+
+      <Outlet />
+    </div>
+  );
+}
+
+export default ProjectDetailPage;
+
+
+================================================
+FILE: frontend/src/pages/RegisterPage.js
+================================================
+// src/pages/RegisterPage.js
+
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+// 1. FiArrowLeft'i ekle
+import { FiUser, FiLock, FiMail, FiArrowLeft } from 'react-icons/fi';
+import { useAuth } from '../context/AuthContext';
+import BackgroundImage from '../assets/background.jpg';
+
+function RegisterPage() {
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const { register, loading } = useAuth(); 
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    // ... submit kodları aynı ...
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+    if (!username || !email || !password) {
+      setError("Please enter all fields.");
+      return;
+    }
+
+    try {
+      await register(username, email, password);
+      setSuccess("Account created successfully! Redirecting to login...");
+      setTimeout(() => {
+        navigate('/login');
+      }, 2000);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  return (
+    <div 
+      className="relative flex items-center justify-center min-h-screen bg-cover bg-center"
+      style={{ backgroundImage: `url(${BackgroundImage})` }}
+    >
+      <div className="absolute inset-0 bg-black bg-opacity-60"></div>
+
+      {/* 2. BURAYA EKLE: Geri Dön Butonu */}
+      <Link 
+        to="/home" 
+        className="absolute top-8 left-8 z-20 flex items-center text-gray-300 hover:text-white transition-colors"
+      >
+        <FiArrowLeft className="mr-2" size={24} />
+        <span className="font-semibold text-lg">Back to Home</span>
+      </Link>
+
+      <div className="relative z-10 w-full max-w-md p-8 space-y-8 bg-gray-800 bg-opacity-90 rounded-2xl shadow-2xl backdrop-blur-sm">
+         {/* ... Form Kodları Aynı ... */}
+         <div className="text-center">
+          <h2 className="text-3xl font-bold text-white">Create Account</h2>
+          <p className="mt-2 text-sm text-gray-400">Join the Project Hub</p>
+        </div>
+        <form className="space-y-6" onSubmit={handleSubmit}>
+          
+          <div className="relative">
+            <div className="absolute top-0 left-0 flex items-center h-full pl-3 pointer-events-none">
+              <FiUser className="w-5 h-5 text-gray-500" />
+            </div>
+            <input
+              id="username"
+              type="text"
+              required
+              className="w-full py-3 pl-10 pr-4 text-gray-200 bg-gray-700 border border-gray-600 rounded-lg placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          </div>
+
+          <div className="relative">
+            <div className="absolute top-0 left-0 flex items-center h-full pl-3 pointer-events-none">
+              <FiMail className="w-5 h-5 text-gray-500" />
+            </div>
+            <input
+              id="email"
+              type="email"
+              required
+              className="w-full py-3 pl-10 pr-4 text-gray-200 bg-gray-700 border border-gray-600 rounded-lg placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          
+          <div className="relative">
+            <div className="absolute top-0 left-0 flex items-center h-full pl-3 pointer-events-none">
+              <FiLock className="w-5 h-5 text-gray-500" />
+            </div>
+            <input
+              id="password"
+              type="password"
+              required
+              className="w-full py-3 pl-10 pr-4 text-gray-200 bg-gray-700 border border-gray-600 rounded-lg placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+
+          {error && <p className="text-sm text-red-400 text-center">{error}</p>}
+          {success && <p className="text-sm text-green-400 text-center">{success}</p>}
+
+          <div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full px-4 py-3 font-semibold text-white bg-blue-600 rounded-lg shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500 transition-all duration-300 disabled:opacity-50"
+            >
+              {loading ? 'Creating Account...' : 'Sign Up'}
+            </button>
+          </div>
+        </form>
+        
+        <div className="text-center mt-4">
+          <p className="text-sm text-gray-400">
+            Already have an account?{' '}
+            <Link to="/login" className="font-semibold text-blue-500 hover:text-blue-400">
+              Sign In
+            </Link>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default RegisterPage;
+
+
+================================================
+FILE: frontend/src/pages/ResetPasswordPage.js
+================================================
+// src/pages/ResetPasswordPage.js
+import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { FiLock, FiLoader } from 'react-icons/fi';
+
+export default function ResetPasswordPage() {
+  const [newPassword, setNewPassword] = useState('');
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token'); // URL'den token'ı al
+  
+  const { resetPassword, loading, error } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await resetPassword(token, newPassword);
+      alert('Password reset successful! You can now login.');
+      navigate('/login');
+    } catch (err) {
+      // Error context'te işlenir
+    }
+  };
+
+  if (!token) return <div className="text-white text-center mt-20">Invalid Link</div>;
+
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-900">
+      <div className="w-full max-w-md p-8 bg-gray-800 rounded-xl shadow-2xl">
+        <h2 className="text-2xl font-bold text-white text-center mb-4">Set New Password</h2>
+        
+        {error && <div className="bg-red-600 text-white p-3 rounded mb-4 text-sm">{error}</div>}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="relative">
+            <FiLock className="absolute top-3 left-3 text-gray-500" />
+            <input
+              type="password"
+              required
+              placeholder="New Password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="w-full py-2 pl-10 pr-4 bg-gray-700 text-white rounded border border-gray-600 focus:border-blue-500 focus:outline-none"
+            />
+          </div>
+          <button disabled={loading} className="w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded font-bold flex justify-center">
+            {loading ? <FiLoader className="animate-spin" /> : 'Update Password'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+
+================================================
+FILE: frontend/src/pages/Users.js
+================================================
+// src/pages/Users.js
+
+import React, { useState, useEffect, useRef } from 'react';
+import api from '../services/api';
+import { 
+  FiMail, FiUserPlus, FiMoreVertical, FiEdit2, FiTrash2, 
+  FiEye, FiChevronLeft, FiChevronRight, FiX, FiUser, FiCheck, FiSearch, FiLock, FiShield
+} from 'react-icons/fi';
+
+function Users() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [usersPerPage] = useState(7);
+  const [searchTerm, setSearchTerm] = useState(""); 
+  const [openMenuUserId, setOpenMenuUserId] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    role: 'student'
+  });
+
+  const menuRef = useRef(null);
+
+  useEffect(() => { fetchUsers(); }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const response = await api.get('/api/auth/users');
+      if (Array.isArray(response.data)) {
+         setUsers(response.data.sort((a, b) => new Date(b.created_at || Date.now()) - new Date(a.created_at || Date.now())));
+      }
+    } catch (err) {
+      console.error("Fetch Error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredUsers = users.filter(user => 
+    (user.username && user.username.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+  const indexOfLastUser = currentPage * usersPerPage;
+  const indexOfFirstUser = indexOfLastUser - usersPerPage;
+  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
+  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+  
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  const handleSearch = (e) => { setSearchTerm(e.target.value); setCurrentPage(1); };
+
+  const handleInputChange = (e) => {
+      setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const openAddModal = () => {
+      setSelectedUser(null);
+      setFormData({ username: '', email: '', password: '', role: 'student' });
+      setShowModal(true);
+  };
+
+  const openEditModal = (user) => {
+      setSelectedUser(user);
+      setFormData({
+          username: user.username,
+          email: user.email,
+          password: '',
+          role: user.role || 'student'
+      });
+      setOpenMenuUserId(null);
+      setShowModal(true);
+  };
+
+  // --- FORM SUBMIT (GÜNCELLENMİŞ VERSİYON) ---
+  const handleSubmit = async (e) => {
+    // 1. Sayfanın yenilenmesini engelle
+    e.preventDefault();
+    console.log("Form gönderiliyor..."); // Kontrol için
+
+    setIsSubmitting(true);
+
+    if (!formData.username || !formData.email) {
+        alert("Username and Email are required.");
+        setIsSubmitting(false);
+        return;
+    }
+
+    try {
+        if (selectedUser) {
+            // --- GÜNCELLEME ---
+            const payload = { ...formData };
+            if (!payload.password) delete payload.password; // Şifre yoksa gönderme
+
+            console.log("Güncelleme isteği atılıyor:", payload);
+            await api.put(`/api/auth/users/${selectedUser.id}`, payload);
+            
+            alert(`User updated successfully!`);
+            fetchUsers(); // Listeyi yenile
+
+        } else {
+            // --- EKLEME ---
+            if (!formData.password) {
+                alert("Password is required for new users.");
+                setIsSubmitting(false);
+                return;
+            }
+            const payload = { ...formData };
+            await api.post('/api/auth/register', payload);
+            
+            alert(`User created successfully!`);
+            fetchUsers(); // Listeyi yenile
+        }
+
+        setShowModal(false);
+        setFormData({ username: '', email: '', password: '', role: 'student' });
+
+    } catch (err) {
+        console.error("Submit Error:", err);
+        const errorMsg = err.response?.data?.message || "Operation failed. Check console.";
+        alert(errorMsg);
+    } finally {
+        setIsSubmitting(false);
+    }
+  };
+
+  // ... (Diğer toggleMenu ve useEffect kısımları aynı)
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) setOpenMenuUserId(null);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => { document.removeEventListener("mousedown", handleClickOutside); };
+  }, [menuRef]);
+
+  const toggleMenu = (id, e) => { e.stopPropagation(); setOpenMenuUserId(openMenuUserId === id ? null : id); };
+
+  if (loading) return <div className="p-10 text-center text-gray-400">Loading...</div>;
+
+  return (
+    <div className="flex flex-col h-[calc(100vh-140px)] container mx-auto max-w-6xl px-4 py-4">
+      {/* HEADER */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+        <div>
+            <h1 className="text-2xl font-bold text-white">User Management</h1>
+            <p className="text-xs text-gray-400 mt-1">Total <span className="text-white">{filteredUsers.length}</span> records.</p>
+        </div>
+        <div className="flex items-center gap-3 w-full md:w-auto">
+            <div className="relative flex-1 md:w-64">
+                <FiSearch className="absolute left-3 top-2.5 text-gray-500" />
+                <input type="text" placeholder="Search users..." value={searchTerm} onChange={handleSearch} className="w-full bg-gray-800 border border-gray-700 text-gray-300 text-sm rounded-lg pl-10 pr-4 py-2 focus:border-blue-500 outline-none" />
+            </div>
+            <button onClick={openAddModal} className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg shadow-lg font-medium text-sm whitespace-nowrap">
+                <FiUserPlus className="mr-2" size={16} /> Add User
+            </button>
+        </div>
+      </div>
+
+      {/* TABLE */}
+      <div className="flex-1 bg-gray-800 rounded-xl border border-gray-700 shadow-xl overflow-hidden flex flex-col relative" ref={menuRef}>
+        <div className="overflow-x-auto flex-1 custom-scrollbar">
+          <table className="w-full text-left text-gray-300">
+            <thead className="bg-gray-900/50 text-xs uppercase text-gray-400 font-semibold sticky top-0 z-10 backdrop-blur-sm">
+              <tr>
+                <th className="px-6 py-3">User</th>
+                <th className="px-6 py-3">Email</th>
+                <th className="px-6 py-3">Role</th>
+                <th className="px-6 py-3 text-right">Date</th>
+                <th className="px-6 py-3 w-10"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-700/50 text-sm">
+              {currentUsers.length > 0 ? (
+                  currentUsers.map((user) => (
+                    <tr key={user.id} className="hover:bg-gray-700/30 transition-colors">
+                      <td className="px-6 py-2.5">
+                        <div className="flex items-center">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold mr-3 text-xs">
+                            {user.username?.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="font-medium text-white">{user.username}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-2.5 text-gray-400 flex items-center">
+                        <FiMail className="mr-2 opacity-50" /> {user.email}
+                      </td>
+                      <td className="px-6 py-2.5">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${user.role === 'admin' ? 'border-red-500/30 text-red-400 bg-red-500/10' : 'border-blue-500/30 text-blue-400 bg-blue-500/10'}`}>
+                            {user.role ? user.role.toUpperCase() : 'STUDENT'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-2.5 text-right text-xs text-gray-500 font-mono">
+                        {new Date(user.created_at || Date.now()).toLocaleDateString('en-US')}
+                      </td>
+                      <td className="px-6 py-2.5 relative">
+                        <button onClick={(e) => toggleMenu(user.id, e)} className="p-1.5 rounded-full hover:bg-gray-600 text-gray-500">
+                            <FiMoreVertical size={16} />
+                        </button>
+                        {openMenuUserId === user.id && (
+                            <div className="absolute right-8 top-2 w-32 bg-gray-800 border border-gray-600 rounded-lg shadow-2xl z-50 animate-fade-in">
+                                <button onClick={() => openEditModal(user)} className="w-full text-left px-4 py-2 text-xs text-gray-300 hover:bg-gray-700 flex items-center"><FiEdit2 className="mr-2"/> Edit</button>
+                                <button className="w-full text-left px-4 py-2 text-xs text-red-400 hover:bg-red-500/10 flex items-center"><FiTrash2 className="mr-2"/> Delete</button>
+                            </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+              ) : (<tr><td colSpan="5" className="p-10 text-center text-gray-500">No users found.</td></tr>)}
+            </tbody>
+          </table>
+        </div>
+        <div className="bg-gray-900/50 border-t border-gray-700 p-3 flex items-center justify-between">
+            <span className="text-xs text-gray-500">Page {currentPage} of {totalPages || 1}</span>
+            <div className="flex space-x-1">
+                <button onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1} className="p-1.5 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50"><FiChevronLeft size={16}/></button>
+                <button onClick={() => paginate(currentPage + 1)} disabled={currentPage === totalPages || totalPages === 0} className="p-1.5 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50"><FiChevronRight size={16}/></button>
+            </div>
+        </div>
+      </div>
+
+      {/* MODAL */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in">
+            <div className="bg-gray-800 border border-gray-700 rounded-2xl w-full max-w-md shadow-2xl p-6 relative">
+                <button onClick={() => setShowModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white"><FiX size={24} /></button>
+                <h2 className="text-2xl font-bold text-white mb-2 flex items-center">
+                    {selectedUser ? <><FiEdit2 className="mr-3 text-yellow-500" /> Edit User</> : <><FiUserPlus className="mr-3 text-blue-500" /> New User</>}
+                </h2>
+                <p className="text-sm text-gray-400 mb-6">{selectedUser ? `Updating details for ${selectedUser.username}` : "Create a new student account."}</p>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="relative"><div className="absolute top-0 left-0 flex items-center h-full pl-3 pointer-events-none"><FiUser className="w-5 h-5 text-gray-500" /></div><input type="text" name="username" required value={formData.username} onChange={handleInputChange} className="w-full py-2.5 pl-10 pr-4 text-gray-200 bg-gray-900 border border-gray-700 rounded-lg placeholder:text-gray-500 focus:outline-none focus:border-blue-500" placeholder="Username"/></div>
+                    <div className="relative"><div className="absolute top-0 left-0 flex items-center h-full pl-3 pointer-events-none"><FiMail className="w-5 h-5 text-gray-500" /></div><input type="email" name="email" required value={formData.email} onChange={handleInputChange} className="w-full py-2.5 pl-10 pr-4 text-gray-200 bg-gray-900 border border-gray-700 rounded-lg placeholder:text-gray-500 focus:outline-none focus:border-blue-500" placeholder="Email"/></div>
+                    <div className="relative"><div className="absolute top-0 left-0 flex items-center h-full pl-3 pointer-events-none"><FiLock className="w-5 h-5 text-gray-500" /></div><input type="password" name="password" required={!selectedUser} value={formData.password} onChange={handleInputChange} className="w-full py-2.5 pl-10 pr-4 text-gray-200 bg-gray-900 border border-gray-700 rounded-lg placeholder:text-gray-500 focus:outline-none focus:border-blue-500" placeholder={selectedUser ? "New Password (Optional)" : "Password"}/></div>
+                    {selectedUser && (
+                        <div className="relative"><div className="absolute top-0 left-0 flex items-center h-full pl-3 pointer-events-none"><FiShield className="w-5 h-5 text-gray-500" /></div><select name="role" value={formData.role} onChange={handleInputChange} className="w-full py-2.5 pl-10 pr-4 text-gray-200 bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:border-blue-500 appearance-none"><option value="student">Student</option><option value="admin">Admin</option></select></div>
+                    )}
+                    <button type="submit" disabled={isSubmitting} className={`w-full text-white font-medium rounded-lg text-sm px-5 py-3 mt-4 flex justify-center items-center transition-colors ${selectedUser ? 'bg-yellow-600 hover:bg-yellow-500' : 'bg-blue-600 hover:bg-blue-500'}`}>{isSubmitting ? 'Saving...' : (<>{selectedUser ? <><FiCheck className="mr-2"/> Update User</> : <><FiCheck className="mr-2"/> Create User</>}</>)}</button>
+                </form>
+            </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default Users;
+
+
+================================================
+FILE: frontend/src/services/api.js
+================================================
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: 'http://localhost:5000',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+// TOKEN EKLEME INTERCEPTOR'I
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      // Backend'in beklediği header anahtarı: 'x-auth-token'
+      // Eğer backend middleware'inde 'Authorization' bekliyorsan burayı değiştirmen gerekir.
+      // Senin backend/middleware/auth.js dosyan 'x-auth-token' bekliyor.
+      config.headers['x-auth-token'] = token;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+export default api;
+

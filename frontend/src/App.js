@@ -22,7 +22,8 @@ import DashboardOverviewPage from './pages/DashboardOverviewPage';
 import MyProjectsPage from './pages/MyProjectsPage';
 import SharedProjectsPage from './pages/SharedProjectsPage';
 import SettingsPage from './pages/SettingsPage';
-import Users from './pages/Users';
+import AdminUsers from './pages/AdminUsers';
+import AdminProjects from './pages/AdminProjects';
 
 // Pages - Project Details & Tabs
 import ProjectDetailPage from './pages/ProjectDetailPage';
@@ -77,7 +78,8 @@ function App() {
                 <Route path="discussions" element={<ProjectDiscussion />} />
                 <Route path="edit" element={<ProjectEditPage />} />
               </Route>
-              <Route path="users" element={<Users />} />
+              <Route path="admin-users" element={<AdminUsers />} />
+              <Route path="admin-projects" element={<AdminProjects />} />
               
               {/* Tanımsız bir rota girilirse dashboard'a yönlendir */}
               <Route path="*" element={<Navigate to="/dashboard" replace />} />

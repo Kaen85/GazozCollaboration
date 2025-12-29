@@ -2,31 +2,35 @@
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
-// This function is our "gatekeeper"
 function authMiddleware(req, res, next) {
-  // Get the token from the request header
-  // It's usually sent as 'Bearer <token>'
+  // 1. Try to get token from 'Authorization' header
   const authHeader = req.header('Authorization');
+  let token;
 
-  if (!authHeader) {
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  } 
+  // 2. Fallback: Check 'x-auth-token' header
+  else if (req.header('x-auth-token')) {
+    token = req.header('x-auth-token');
+  }
+  // 3. Fallback: Check URL Query parameter (Crucial for iframe/preview)
+  else if (req.query && req.query.token) {
+    token = req.query.token;
+  }
+
+  // 4. If no token found anywhere
+  if (!token) {
     return res.status(401).json({ message: 'No token, authorization denied' });
   }
 
-  // Check if it starts with 'Bearer '
-  const token = authHeader.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ message: 'Token is malformed, authorization denied' });
-  }
-
   try {
-    // Verify the token using our secret key
+    // 5. Verify the token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Token is valid. Add the user's information to the request object
-    // Now any protected route can access req.user
     req.user = decoded.user;
-    next(); // Pass control to the next function (the actual route handler)
+    next();
   } catch (err) {
+    console.error("Token Verification Error:", err.message);
     res.status(401).json({ message: 'Token is not valid' });
   }
 }

@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext'; // Import the theme hook
+import { useTheme } from '../context/ThemeContext';
 import { 
   FiArrowRight, FiCheckCircle, FiUsers, FiLayout, 
   FiLayers, FiShield, FiSun, FiMoon 
@@ -12,117 +12,112 @@ import LogoImage from '../assets/logo.png';
 
 const LandingPage = () => {
   const { user } = useAuth();
-  const { theme, toggleTheme } = useTheme(); // Access theme state
+  const { theme, toggleTheme } = useTheme();
 
   return (
-    <div className="min-h-screen font-sans text-text-main relative transition-colors duration-300">
+    <div className="min-h-screen font-sans text-text-main relative transition-colors duration-300 bg-surface">
       
-      {/* Background Image with Overlay */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center z-0 fixed"
-        style={{ backgroundImage: `url(${BackgroundImage})` }}
-      >
-        <div className="absolute inset-0 bg-white/70 dark:bg-gray-900/70 backdrop-blur-[2px] transition-colors duration-500"></div>
-      </div>
-
-      {/* Content Wrapper */}
-      <div className="relative z-10 flex flex-col min-h-screen">
+      <div className="relative flex flex-col min-h-screen">
         
-        {/* --- HEADER --- */}
-        <header className="container mx-auto px-6 py-6 flex justify-between items-center fixed top-0 left-0 right-0 z-50 bg-transparent">
-          <div className="flex items-center gap-1">
-             <img src={LogoImage} alt="GazozHub Logo" className="h-20 w-20 object-contain drop-shadow-lg brightness-0 dark:brightness-100 transition-all duration-300" />
-             <span className="text-3xl font-extrabold tracking-tight text-text-main">GazozHub</span>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            {/* --- THEME TOGGLE BUTTON --- */}
-            <button
-              onClick={() => toggleTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="relative flex items-center justify-between w-16 h-8 p-1 rounded-full bg-gray-200 dark:bg-gray-700 transition-colors duration-300 focus:outline-none shadow-inner"
-              aria-label="Toggle Theme"
-            >
-              <div
-                className={`absolute w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 flex items-center justify-center ${
-                  theme === 'dark' ? 'translate-x-8 bg-indigo-500' : 'translate-x-0 bg-amber-400'
-                }`}
-              >
-                {theme === 'dark' ? (
-                  <FiMoon className="text-white w-4 h-4" />
-                ) : (
-                  <FiSun className="text-white w-4 h-4" />
-                )}
-              </div>
-              <FiSun className={`ml-1 w-4 h-4 ${theme === 'dark' ? 'text-gray-500' : 'opacity-0'}`} />
-              <FiMoon className={`mr-1 w-4 h-4 ${theme === 'light' ? 'text-gray-400' : 'opacity-0'}`} />
-            </button>
-
-            {/* Existing Desktop Nav */}
-            <div className="hidden md:flex items-center gap-4">
-              {user ? (
-                <Link 
-                  to="/dashboard" 
-                  className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white font-semibold rounded-full transition-all shadow-lg hover:shadow-primary/30 flex items-center"
-                >
-                  Go to Dashboard <FiArrowRight className="ml-2" />
-                </Link>
-              ) : (
-                <>
-                  <Link to="/login" className="px-4 py-2 text-text-secondary hover:text-text-main font-medium transition-colors">
-                    Sign In
-                  </Link>
-                  <Link to="/register" className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-full transition-all shadow-lg transform hover:-translate-y-0.5">
-                    Get Started
-                  </Link>
-                </>
-              )}
-            </div>
-          </div>
-        </header>
-
         {/* --- HERO SECTION --- */}
-        <main className="flex-grow flex flex-col items-center">
+        <section className="relative min-h-screen flex flex-col px-4 overflow-hidden">
           
-          <section className="min-h-screen flex flex-col justify-center items-center text-center px-4">
-            <div className="max-w-5xl mx-auto space-y-8">
-              <h1 className="text-6xl md:text-8xl font-black tracking-tight leading-none mb-6 drop-shadow-2xl text-text-main">
-                Collaboration <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500">
-                  Reimagined.
-                </span>
-              </h1>
-              
-              <p className="text-xl md:text-2xl text-text-secondary max-w-3xl mx-auto leading-relaxed font-light mb-10">
-                GazozHub connects students, teams, and advisors in one seamless workspace. 
-                Manage tasks, track issues, and build amazing things together.
-              </p>
+          {/* Background - Adjusted opacity for better readability */}
+          <div 
+            className="absolute inset-0 bg-cover bg-center z-0"
+            style={{ backgroundImage: `url(${BackgroundImage})` }}
+          >
+            <div className="absolute inset-0 bg-white/85 dark:bg-gray-900/85 backdrop-blur-[2px] transition-colors duration-500"></div>
+          </div>
 
-              <div className="flex flex-col sm:flex-row justify-center gap-5">
+          {/* --- TOP NAVIGATION --- */}
+          <nav className="relative z-20 container mx-auto px-6 py-6 flex justify-between items-center bg-transparent">
+            <div className="flex items-center gap-1">
+               <img src={LogoImage} alt="GazozHub Logo" className="h-20 w-20 object-contain drop-shadow-lg brightness-0 dark:brightness-100 transition-all duration-300" />
+               <span className="text-3xl font-extrabold tracking-tight text-text-main">GazozHub</span>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => toggleTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="relative flex items-center justify-between w-16 h-8 p-1 rounded-full bg-gray-200 dark:bg-gray-700 transition-colors duration-300 focus:outline-none shadow-inner"
+                aria-label="Toggle Theme"
+              >
+                <div
+                  className={`absolute w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 flex items-center justify-center ${
+                    theme === 'dark' ? 'translate-x-8 bg-indigo-500' : 'translate-x-0 bg-amber-400'
+                  }`}
+                >
+                  {theme === 'dark' ? <FiMoon className="text-white w-4 h-4" /> : <FiSun className="text-white w-4 h-4" />}
+                </div>
+                <FiSun className={`ml-1 w-4 h-4 ${theme === 'dark' ? 'text-gray-500' : 'opacity-0'}`} />
+                <FiMoon className={`mr-1 w-4 h-4 ${theme === 'light' ? 'text-gray-400' : 'opacity-0'}`} />
+              </button>
+
+              <div className="hidden md:flex items-center gap-4">
                 {user ? (
-                  <Link to="/dashboard" className="px-10 py-4 bg-primary hover:bg-primary-hover text-white text-xl font-bold rounded-2xl transition-all transform hover:scale-105 shadow-xl shadow-primary/20 flex items-center justify-center">
-                    Launch Dashboard <FiArrowRight className="ml-3" />
+                  <Link 
+                    to="/dashboard" 
+                    className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white font-semibold rounded-full transition-all shadow-lg flex items-center"
+                  >
+                    Dashboard <FiArrowRight className="ml-2" />
                   </Link>
                 ) : (
                   <>
-                    <Link to="/register" className="px-10 py-4 bg-primary hover:bg-primary-hover text-white text-xl font-bold rounded-2xl transition-all transform hover:scale-105 shadow-xl flex items-center justify-center">
-                      Get Started <FiArrowRight className="ml-3" size={24} />
+                    <Link to="/login" className="px-4 py-2 text-text-secondary hover:text-text-main font-medium transition-colors">
+                      Sign In
                     </Link>
-                    <Link to="/login" className="px-10 py-4 bg-surface hover:bg-surface-hover border border-border text-text-main text-xl font-bold rounded-2xl transition-all flex items-center justify-center backdrop-blur-sm">
-                      Login
+                    <Link to="/register" className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-full transition-all shadow-lg">
+                      Get Started
                     </Link>
                   </>
                 )}
               </div>
             </div>
+          </nav>
 
-            <div className="absolute bottom-10 animate-bounce text-text-secondary">
-              <p className="text-sm font-medium mb-2">Scroll to explore</p>
-              <div className="flex justify-center">↓</div>
+          {/* Hero Content */}
+          <div className="relative z-10 flex-grow flex flex-col justify-center items-center text-center max-w-5xl mx-auto space-y-8">
+            <h1 className="text-6xl md:text-8xl font-black tracking-tight leading-none mb-6 drop-shadow-2xl text-text-main">
+              Collaboration <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500">
+                Reimagined.
+              </span>
+            </h1>
+            
+            {/* --- IMPROVED READABILITY TEXT --- */}
+            <p className="text-xl md:text-2xl text-gray-800 dark:text-gray-200 max-w-3xl mx-auto leading-relaxed font-medium mb-10">
+              GazozHub connects students, teams, and advisors in one seamless workspace. 
+              Manage tasks, track issues, and build amazing things together.
+            </p>
+
+            <div className="flex flex-col sm:flex-row justify-center gap-5">
+              {user ? (
+                <Link to="/dashboard" className="px-10 py-4 bg-primary hover:bg-primary-hover text-white text-xl font-bold rounded-2xl transition-all transform hover:scale-105 shadow-xl flex items-center justify-center">
+                  Launch Dashboard <FiArrowRight className="ml-3" />
+                </Link>
+              ) : (
+                <>
+                  <Link to="/register" className="px-10 py-4 bg-primary hover:bg-primary-hover text-white text-xl font-bold rounded-2xl transition-all transform hover:scale-105 shadow-xl flex items-center justify-center">
+                    Get Started <FiArrowRight className="ml-3" size={24} />
+                  </Link>
+                  <Link to="/login" className="px-10 py-4 bg-white/50 dark:bg-surface border border-border text-text-main text-xl font-bold rounded-2xl transition-all flex items-center justify-center backdrop-blur-sm">
+                    Login
+                  </Link>
+                </>
+              )}
             </div>
-          </section>
+          </div>
 
-          {/* --- FEATURES GRID --- */}
-          <div className="pb-20 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl w-full px-4 mt-20">
+          <div className="relative z-10 pb-10 animate-bounce text-text-secondary text-center">
+            <p className="text-sm font-medium mb-2">Scroll to explore</p>
+            <div className="flex justify-center">↓</div>
+          </div>
+        </section>
+
+        {/* --- FEATURES SECTION --- */}
+        <main className="bg-surface relative z-10">
+          <div className="py-24 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl w-full mx-auto px-4">
             <FeatureCard 
               icon={<FiLayout className="w-8 h-8" />} 
               title="Kanban Boards" 
@@ -161,21 +156,20 @@ const LandingPage = () => {
           </div>
         </main>
 
-        <footer className="py-8 text-center border-t border-border bg-surface/50 backdrop-blur-sm mt-auto">
-           <div className="flex items-center justify-center gap-2 mb-2">
-             <img src={LogoImage} alt="Logo" className="h-6 w-6 opacity-80" />
-             <span className="text-text-secondary font-semibold">GazozHub</span>
-           </div>
-           <p className="text-text-secondary text-sm">
-             &copy; {new Date().getFullYear()} GazozHub. Designed for modern teams.
-           </p>
+        <footer className="py-8 text-center border-t border-border bg-surface mt-auto">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <img src={LogoImage} alt="Logo" className="h-6 w-6 opacity-80" />
+              <span className="text-text-secondary font-semibold">GazozHub</span>
+            </div>
+            <p className="text-text-secondary text-sm">
+              &copy; {new Date().getFullYear()} GazozHub. Designed for modern teams.
+            </p>
         </footer>
       </div>
     </div>
   );
 };
 
-// Sub-component: Feature Card
 const FeatureCard = ({ icon, title, desc, color }) => (
   <div className="group p-8 rounded-3xl border border-border bg-surface/80 backdrop-blur-md hover:bg-surface hover:border-primary/50 transition-all duration-300 shadow-sm hover:shadow-lg">
     <div className={`w-14 h-14 rounded-2xl ${color} bg-opacity-10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>

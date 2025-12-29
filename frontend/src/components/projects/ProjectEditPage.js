@@ -12,7 +12,11 @@ import {
 export default function ProjectEditPage() {
   const { user } = useAuth(); 
   const navigate = useNavigate();
-  const { currentProject, addMember, removeMember, currentMembers, fetchMembers, updateProjectVisibility, updateTasksVisibility, updateProjectDetails, deleteProject } = useProjectContext();
+  const { 
+    currentProject, addMember, removeMember, currentMembers, 
+    fetchMembers, updateProjectVisibility, updateTasksVisibility, 
+    updateProjectDetails, deleteProject, updateMemberRole 
+  } = useProjectContext();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -32,6 +36,7 @@ export default function ProjectEditPage() {
   const [updatingTasks, setUpdatingTasks] = useState(false);
 
   const [removingId, setRemovingId] = useState(null); 
+  const [updatingRoleId, setUpdatingRoleId] = useState(null);
   const [isDeletingProject, setIsDeletingProject] = useState(false);
 
   useEffect(() => {
@@ -43,7 +48,6 @@ export default function ProjectEditPage() {
       setTasksPublic(currentProject.is_tasks_public);
       fetchMembers(currentProject.id);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentProject]);
 
   if (!currentProject) return <div className="p-10 text-center"><FiLoader className="animate-spin text-primary" /></div>;
@@ -92,6 +96,17 @@ export default function ProjectEditPage() {
     } catch (err) { setAddError(err.message); } finally { setIsAdding(false); }
   };
 
+  const handleRoleChange = async (memberId, newRole) => {
+    setUpdatingRoleId(memberId);
+    try {
+      await updateMemberRole(currentProject.id, memberId, newRole);
+    } catch (err) {
+      alert("Failed to update role: " + err.message);
+    } finally {
+      setUpdatingRoleId(null);
+    }
+  };
+
   const handleRemoveMember = async (memberId, memberUsername) => {
     if (window.confirm(`Remove ${memberUsername}?`)) {
       setRemovingId(memberId);
@@ -111,7 +126,6 @@ export default function ProjectEditPage() {
     } else if (confirmName !== null) { alert("Project name did not match."); }
   };
 
-  // --- RENDER ---
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-20">
       
@@ -205,7 +219,22 @@ export default function ProjectEditPage() {
                   <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-text-main font-bold mr-3">{member.username.charAt(0).toUpperCase()}</div>
                   <div>
                     <p className="text-text-main font-medium text-sm">{member.username}</p>
-                    <span className="text-xs text-text-secondary bg-app px-2 py-0.5 rounded border border-border capitalize">{member.role}</span>
+                    {member.role === 'owner' ? (
+                      <span className="text-xs text-text-secondary bg-app px-2 py-0.5 rounded border border-border capitalize">Owner</span>
+                    ) : (
+                      <div className="flex items-center gap-2 mt-1">
+                        <select 
+                          value={member.role} 
+                          disabled={updatingRoleId === member.id}
+                          onChange={(e) => handleRoleChange(member.id, e.target.value)}
+                          className="text-xs bg-app border border-border rounded px-1.5 py-0.5 text-text-main outline-none focus:border-primary cursor-pointer disabled:opacity-50"
+                        >
+                          <option value="viewer">Viewer</option>
+                          <option value="editor">Editor</option>
+                        </select>
+                        {updatingRoleId === member.id && <FiLoader className="animate-spin text-xs text-primary"/>}
+                      </div>
+                    )}
                   </div>
                 </div>
                 {member.role !== 'owner' && (

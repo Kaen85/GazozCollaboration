@@ -3,12 +3,37 @@ const router = express.Router();
 const db = require('../db'); 
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs'); // <--- EKLENDİ (Klasör kontrolü için)
 const auth = require('../middleware/auth'); 
+const libre = require('libreoffice-convert');
+const util = require('util');
+const { exec } = require('child_process');
 
-// === MULTER AYARLARI ===
+
+
+function convertToPdf(inputBuffer) {
+    return new Promise((resolve, reject) => {
+        libre.convert(inputBuffer, '.pdf', undefined, (err, done) => {
+            if (err) {
+                return reject(err);
+            }
+            resolve(done);
+        });
+    });
+}
+
+// === MULTER AYARLARI (GÜNCELLENDİ) ===
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/'),
-  filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
+  destination: (req, file, cb) => {
+    const dir = 'uploads/';
+    if (!fs.existsSync(dir)){
+        fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + '-' + file.originalname);
+  }
 });
 const upload = multer({ storage: storage });
 
@@ -66,10 +91,9 @@ const checkProjectMember = async (req, res, next) => {
 };
 
 // =================================
-// 1. PROJE LİSTELEME (GÜVENLİ ROTALAR)
+// 1. PROJE LİSTELEME
 // =================================
 
-// @route   GET /api/projects/my-projects (SAHİBİ OLDUKLARIN)
 router.get('/my-projects', auth, async (req, res) => {
   try {
     const projects = await db.query(`
@@ -77,19 +101,14 @@ router.get('/my-projects', auth, async (req, res) => {
       WHERE owner_id = $1
       ORDER BY last_updated_at DESC
     `, [req.user.id]);
-    
-    // Log atarak terminalden kontrol et: console.log("Owned Projects:", projects.rows);
     res.json(projects.rows);
   } catch (err) {
     res.status(500).send('Server error');
   }
 });
 
-// @route   GET /api/projects/shared-projects (ÜYESİ OLDUKLARIN - KESİN KONTROL)
 router.get('/shared-projects', auth, async (req, res) => {
   try {
-    // Sadece project_members tablosunda kaydı olanları getirir. 
-    // Üye olmadığın public projeler bu sorguya asla giremez.
     const projects = await db.query(`
       SELECT p.*, pm.role as user_role, pm.joined_at, u.username as owner_name
       FROM projects p
@@ -104,7 +123,6 @@ router.get('/shared-projects', auth, async (req, res) => {
   }
 });
 
-// @route   GET /api/projects/public-explorer (SADECE TÜM PUBLIC PROJELER)
 router.get('/public-explorer', auth, async (req, res) => {
   try {
     const projects = await db.query(`
@@ -121,7 +139,6 @@ router.get('/public-explorer', auth, async (req, res) => {
   }
 });
 
-// @route   GET /api/projects/user/all-tasks
 router.get('/user/all-tasks', auth, async (req, res) => {
   const userId = req.user.id;
   try {
@@ -286,8 +303,96 @@ router.put('/:id/issues/:issueId', auth, checkProjectMember, async (req, res) =>
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
+router.get('/:id/files/:fileId/preview', auth, checkProjectMember, async (req, res) => {
+    try {
+        await db.query('UPDATE project_files SET view_count = COALESCE(view_count, 0) + 1 WHERE id = $1', [req.params.fileId]);
+        // 1. Fetch file data
+        const fileResult = await db.query('SELECT * FROM project_files WHERE id = $1', [req.params.fileId]);
+        if (fileResult.rows.length === 0) return res.status(404).send('File not found');
+
+        const file = fileResult.rows[0];
+
+        // 2. Construct file path
+        // Fix Windows backslashes if necessary
+        const filePath = path.join(__dirname, '..', file.file_path.replace(/\\/g, '/'));
+        const outputDir = path.dirname(filePath); // PDF will be output to the same folder
+
+        // 3. Check if file exists on disk
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).send('File missing from disk');
+        }
+
+        const ext = path.extname(file.filename).toLowerCase();
+
+        // 4. If already PDF or Image/Text, send directly
+        if (['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.txt'].includes(ext)) {
+            // Set content type specifically for PDF or default to image/text handling
+            if (ext === '.pdf') {
+                res.contentType('application/pdf');
+            } else if (ext === '.txt') {
+                res.contentType('text/plain');
+            } else {
+                res.contentType('image/jpeg'); // or generic image type
+            }
+            return res.sendFile(filePath);
+        }
+
+        // 5. IF OFFICE FILE -> Convert to PDF via Manual Command
+        if (['.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls'].includes(ext)) {
+
+            // Determine PDF filename (LibreOffice keeps the name, changes ext to pdf)
+            // Example: uploads/file.docx -> uploads/file.pdf
+            const pdfFileName = path.basename(filePath, ext) + '.pdf';
+            const pdfFilePath = path.join(outputDir, pdfFileName);
+
+            // If PDF was already created previously, send it directly (Performance optimization)
+            if (fs.existsSync(pdfFilePath)) {
+                res.contentType("application/pdf");
+                return res.sendFile(pdfFilePath);
+            }
+
+            // --- MANUAL CONVERSION COMMAND ---
+            // Path to LibreOffice (Default for Windows)
+            // Change this path if it is installed elsewhere on your server!
+            const sofficePath = 'C:\\Program Files\\LibreOffice\\program\\soffice.exe';
+
+            // Command: soffice --headless --convert-to pdf --outdir "uploads/" "uploads/file.docx"
+            const command = `"${sofficePath}" --headless --convert-to pdf --outdir "${outputDir}" "${filePath}"`;
+
+            // Execute Command
+            exec(command, (error, stdout, stderr) => {
+                if (error) {
+                    console.error("Conversion Error:", error);
+                    console.error("Stderr:", stderr);
+                    return res.status(500).send("PDF Conversion Failed: " + error.message);
+                }
+
+                // Conversion finished, check for the generated PDF and send it
+                if (fs.existsSync(pdfFilePath)) {
+                    res.contentType("application/pdf");
+
+                    // Send the file
+                    res.sendFile(pdfFilePath, (err) => {
+                        if (err) console.error("Sending error:", err);
+                        // Optional: fs.unlinkSync(pdfFilePath); // Delete PDF after sending if you don't want to cache it
+                    });
+                } else {
+                    res.status(500).send("PDF file was not created by LibreOffice.");
+                }
+            });
+
+        } else {
+            res.status(400).send('Preview not supported');
+        }
+
+    } catch (err) {
+        console.error("General Error:", err);
+        res.status(500).send("Server Error");
+    }
+});
+
 // =================================
-// 5. COMMENTS & MEMBERS & FILES
+// 5. COMMENTS & MEMBERS
 // =================================
 
 router.get('/:id/comments', auth, checkProjectMember, async (req, res) => {
@@ -329,6 +434,23 @@ router.post('/:id/members', auth, checkProjectMember, async (req, res) => {
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
+router.put('/:id/members/:userId', auth, checkProjectMember, async (req, res) => {
+  if (req.memberRole !== 'owner') return res.status(403).json({ message: 'Only owner can change roles.' });
+  if (req.params.userId === req.user.id.toString()) return res.status(400).json({ message: 'Cannot change owner role.' });
+  const { role } = req.body;
+  try {
+    const updatedMember = await db.query(
+      'UPDATE project_members SET role = $1 WHERE project_id = $2 AND user_id = $3 RETURNING *',
+      [role, req.projectId, req.params.userId]
+    );
+    if (updatedMember.rows.length === 0) return res.status(404).json({ message: 'Member not found.' });
+    res.json(updatedMember.rows[0]);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
 router.delete('/:id/members/:userId', auth, checkProjectMember, async (req, res) => {
   if (req.memberRole !== 'owner') return res.status(403).json({message:'Denied'});
   if (req.params.userId === req.user.id) return res.status(400).json({message:'Cannot remove owner'});
@@ -339,6 +461,10 @@ router.delete('/:id/members/:userId', auth, checkProjectMember, async (req, res)
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
+// =================================
+// 6. DOSYALAR (FILES) - GÜNCELLENDİ
+// =================================
+
 router.get('/:id/files', auth, checkProjectMember, async (req, res) => {
   try {
     const f = await db.query('SELECT pf.*, u.username as uploader_name FROM project_files pf JOIN users u ON pf.uploader_id = u.id WHERE pf.project_id = $1 ORDER BY pf.created_at DESC', [req.projectId]);
@@ -346,16 +472,60 @@ router.get('/:id/files', auth, checkProjectMember, async (req, res) => {
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
+// DOSYA YÜKLEME (500 Hatası çözümü burada)
 router.post('/:id/files', auth, checkProjectMember, upload.single('file'), async (req, res) => {
-  if(req.memberRole!=='owner' && req.memberRole!=='editor') return res.status(403).json({message:'Denied'});
-  if(!req.file) return res.status(400).json({message:'No file'});
+  // 1. Yetki Kontrolü
+  if (req.memberRole !== 'owner' && req.memberRole !== 'editor') {
+      return res.status(403).json({ message: 'Denied' });
+  }
+  
+  // 2. Dosya Kontrolü
+  if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+  }
+  
   try {
-    const nf = await db.query('INSERT INTO project_files (project_id, uploader_id, filename, file_path, file_type) VALUES ($1, $2, $3, $4, $5) RETURNING *', [req.projectId, req.user.id, req.file.originalname, req.file.path, req.file.mimetype]);
+    const cleanPath = req.file.path.replace(/\\/g, '/');
+    
+    // --- DÜZELTME 1: Dosya boyutunu (size) değişkene alıyoruz ---
+    const fileSize = req.file.size; 
+
+    // Veritabanına Kayıt
+    // --- DÜZELTME 2: VALUES kısmına $6 eklendi (file_size için) ---
+    const nf = await db.query(
+      `INSERT INTO project_files 
+       (project_id, uploader_id, filename, file_path, file_type, file_size) 
+       VALUES ($1, $2, $3, $4, $5, $6) 
+       RETURNING *`, 
+      [
+        req.projectId || req.params.id, // Middleware req.projectId atamıyorsa req.params.id kullanılır
+        req.user.id, 
+        req.file.originalname, 
+        cleanPath, 
+        req.file.mimetype, 
+        fileSize // Burası düzeltildi (eskiden 'size' yazıyordu ve tanımsızdı)
+      ]
+    );
+    
+    // Kullanıcı adını çekip cevaba ekle
     const u = await db.query('SELECT username FROM users WHERE id=$1', [req.user.id]);
     const r = nf.rows[0];
-    r.uploader_name = u.rows[0].username;
+    
+    if (u.rows.length > 0) {
+        r.uploader_name = u.rows[0].username;
+    } else {
+        r.uploader_name = 'Unknown';
+    }
+    
     res.status(201).json(r);
-  } catch (err) { res.status(500).send('Server Error'); }
+
+  } catch (err) { 
+    console.error("BACKEND HATASI (Dosya Yükleme):", err);
+    res.status(500).json({ 
+        message: 'Sunucu Hatası: ' + err.message,
+        detail: err.detail 
+    }); 
+  }
 });
 
 router.delete('/:id/files/:fileId', auth, checkProjectMember, async (req, res) => {
@@ -366,23 +536,53 @@ router.delete('/:id/files/:fileId', auth, checkProjectMember, async (req, res) =
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
-// backend/routes/projectRoutes.js
-// Tüm projeleri getiren admin listesi
+// =================================
+// 7. ADMIN VE KULLANICILAR
+// =================================
+
 router.get('/admin/all-projects', auth, async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: "Admin access required" });
+  }
+
   try {
-    const [projects] = await db.execute(`
+    const result = await db.query(`
       SELECT 
         p.id, 
         p.name, 
-        u.username as owner_name 
+        p.description,
+        p.created_at,
+        p.is_public,
+        p.last_updated_at,
+        u.username as owner_name,
+        (
+            SELECT COALESCE(SUM(file_size), 0) 
+            FROM project_files 
+            WHERE project_id = p.id
+        ) as total_size
       FROM projects p 
       LEFT JOIN users u ON p.owner_id = u.id 
-      ORDER BY p.updated_at DESC
+      ORDER BY p.created_at DESC
     `);
-    res.json(projects);
+    res.json(result.rows);
   } catch (err) {
-    console.error("Database Error:", err);
+    console.error("Database Error:", err.message);
     res.status(500).json({ message: "Internal server error" });
+  }
+});
+router.get('/users', auth, async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: "Access denied" });
+  }
+
+  try {
+    const result = await db.query(
+      'SELECT id, username, email, role, created_at FROM users ORDER BY created_at DESC'
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("User list error:", err.message);
+    res.status(500).send('Server Error');
   }
 });
 

@@ -1,14 +1,17 @@
 // src/pages/DashboardOverviewPage.js
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useProjectContext } from '../context/ProjectContext';
+import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
+import api from '../services/api';
 import { 
-  FiFolder, FiShare2, FiLayers, FiCheckSquare, 
-  FiClock, FiArrowRight, FiActivity, FiBriefcase, FiAlertCircle, FiGlobe, FiLock
+  FiFolder, FiCheckSquare, FiClock, FiArrowRight, 
+  FiActivity, FiUsers, FiGlobe, FiLock, FiUserPlus, FiPlusCircle 
 } from 'react-icons/fi';
 
 function DashboardOverviewPage() {
+  const { user } = useAuth();
   const { 
     myProjects, sharedProjects, 
     dashboardTasks, fetchDashboardTasks, 
@@ -16,191 +19,233 @@ function DashboardOverviewPage() {
     loading 
   } = useProjectContext();
 
+  const [adminStats, setAdminStats] = useState({ users: [], allProjects: [], loading: false });
+  const isAdmin = user?.role === 'admin';
+
   useEffect(() => {
     fetchMyProjects();
     fetchSharedProjects();
-    fetchDashboardTasks(); 
+    if (!isAdmin) fetchDashboardTasks();
+    
+    if (isAdmin) {
+      fetchAdminData();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isAdmin]);
 
-  // --- 1. RECENT PROJECTS MANTIĞI (YENİ EKLENDİ) ---
-  // Hem benim hem paylaşılan projeleri birleştir
+  const fetchAdminData = async () => {
+    setAdminStats(prev => ({ ...prev, loading: true }));
+    try {
+      const [usersRes, projectsRes] = await Promise.all([
+        api.get('/api/auth/users'),
+        api.get('/api/projects/admin/all-projects')
+      ]);
+      setAdminStats({
+        users: usersRes.data,
+        allProjects: projectsRes.data,
+        loading: false
+      });
+    } catch (err) {
+      console.error("Admin data fetch error:", err);
+      setAdminStats(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  // --- MANTIKSAL VERİLER ---
   const allProjects = [...myProjects, ...sharedProjects];
-  
-  // Tarihe göre sırala (En yeni tarihli en başa) ve ilk 4 tanesini al
   const recentProjects = allProjects
     .sort((a, b) => new Date(b.last_updated_at || b.created_at) - new Date(a.last_updated_at || a.created_at))
     .slice(0, 4);
 
-
-  // --- 2. GÖREV FİLTRELEME MANTIĞI (MEVCUT) ---
   const activeTasks = dashboardTasks ? dashboardTasks.filter(task => task.status !== 'done') : [];
-  const visibleTasks = activeTasks.slice(0, 10);
-  const hiddenCount = activeTasks.length - visibleTasks.length;
 
-  // Helper: Görev Durumu Badge'i
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'done':
-        return <span className="px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs font-semibold border border-green-900/50">Done</span>;
-      case 'in_progress':
-        return <span className="px-2 py-1 bg-blue-900/30 text-blue-400 rounded text-xs font-semibold border border-blue-900/50">In Progress</span>;
-      default: // todo
-        return <span className="px-2 py-1 bg-gray-700 text-gray-300 rounded text-xs font-semibold border border-gray-600">To Do</span>;
-    }
-  };
+  // Admin için son veriler
+  const latestUsers = [...adminStats.users].slice(0, 5);
+  const latestAllProjects = [...adminStats.allProjects].slice(0, 5);
 
-  return (
-    <div className="transition-colors duration-300 pb-10">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white transition-colors duration-300">Dashboard</h1>
+  // --- RENDER FUNCTIONS ---
+
+  const renderAdminDashboard = () => (
+    <div className="space-y-8 animate-fade-in">
+      {/* 1. İstatistik Kartları */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <StatCard 
+          icon={<FiUsers size={24}/>} 
+          title="Total Users" 
+          count={adminStats.users.length} 
+          color="bg-blue-500" 
+        />
+        <StatCard 
+          icon={<FiFolder size={24}/>} 
+          title="Total Projects" 
+          count={adminStats.allProjects.length} 
+          color="bg-purple-500" 
+        />
+        <StatCard 
+          icon={<FiActivity size={24}/>} 
+          title="System Status" 
+          count="Active" 
+          color="bg-green-500" 
+        />
       </div>
-      
-      <div className="space-y-8">
 
-        {/* === BÖLÜM 1: RECENT PROJECTS (SON PROJELER) === */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Son Katılan Üyeler */}
+        <div className="bg-surface border border-border rounded-2xl overflow-hidden shadow-sm">
+          <div className="p-5 border-b border-border flex justify-between items-center bg-app/50">
+            <h3 className="font-bold text-text-main flex items-center gap-2">
+              <FiUserPlus className="text-blue-500" /> Recently Joined Members
+            </h3>
+            <Link to="/admin-users" className="text-xs text-primary font-bold hover:underline">View All</Link>
+          </div>
+          <div className="p-2">
+            {adminStats.loading ? <div className="p-4 animate-pulse space-y-2"><div className="h-10 bg-app rounded"></div></div> : latestUsers.map(u => (
+              <div key={u.id} className="flex items-center justify-between p-3 hover:bg-app/50 rounded-xl transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
+                    {u.username.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-text-main">{u.username}</p>
+                    <p className="text-[10px] text-text-secondary">{u.email}</p>
+                  </div>
+                </div>
+                <span className="text-[10px] text-text-secondary font-mono">{new Date(u.created_at).toLocaleDateString()}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Son Açılan Projeler */}
+        <div className="bg-surface border border-border rounded-2xl overflow-hidden shadow-sm">
+          <div className="p-5 border-b border-border flex justify-between items-center bg-app/50">
+            <h3 className="font-bold text-text-main flex items-center gap-2">
+              <FiPlusCircle className="text-purple-500" /> Recently Created Projects
+            </h3>
+            <Link to="/admin-projects" className="text-xs text-primary font-bold hover:underline">Manage All</Link>
+          </div>
+          <div className="p-2">
+            {adminStats.loading ? <div className="p-4 animate-pulse space-y-2"><div className="h-10 bg-app rounded"></div></div> : latestAllProjects.map(p => (
+              <div key={p.id} className="flex items-center justify-between p-3 hover:bg-app/50 rounded-xl transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-500/10 text-purple-500 rounded-lg"><FiFolder size={16}/></div>
+                  <div>
+                    <p className="text-sm font-bold text-text-main">{p.name}</p>
+                    <p className="text-[10px] text-text-secondary">Owner: {p.owner_name}</p>
+                  </div>
+                </div>
+                <Link to={`/project/${p.id}`} className="p-1.5 hover:bg-primary/10 text-primary rounded-lg transition-colors">
+                  <FiArrowRight size={16} />
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderStudentDashboard = () => (
+    <div className="space-y-8 animate-fade-in">
+        {/* RECENT PROJECTS */}
         <div>
             <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center">
+                <h2 className="text-xl font-bold text-text-main flex items-center">
                     <FiClock className="mr-2 text-purple-500" /> Recent Projects
                 </h2>
-                <Link to="/my-projects" className="text-sm text-blue-500 hover:text-blue-400 font-medium flex items-center">
-                    View All Projects <FiArrowRight className="ml-1"/>
+                <Link to="/my-projects" className="text-sm text-primary hover:opacity-80 font-bold flex items-center transition-opacity">
+                    View All <FiArrowRight className="ml-1"/>
                 </Link>
             </div>
 
-            {loading ? (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    {[1,2,3,4].map(i => (
-                        <div key={i} className="h-32 bg-gray-200 dark:bg-gray-800 rounded-xl animate-pulse"></div>
-                    ))}
-                </div>
-            ) : recentProjects.length === 0 ? (
-                <div className="bg-surface p-6 rounded-xl border border-border shadow-sm text-center text-gray-500">
-                    No projects found. Create one to get started!
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {recentProjects.map(project => (
-                        <Link key={project.id} to={`/project/${project.id}`} className="group">
-                            <div className="bg-white dark:bg-gray-800 h-full p-5 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-lg transition-all duration-200 flex flex-col justify-between">
-                                <div>
-                                    <div className="flex justify-between items-start mb-3">
-                                        <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                                            <FiFolder size={20} />
-                                        </div>
-                                        {project.is_public ? (
-                                            <FiGlobe className="text-gray-400" size={14} title="Public"/>
-                                        ) : (
-                                            <FiLock className="text-gray-400" size={14} title="Private"/>
-                                        )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {recentProjects.map(project => (
+                    <Link key={project.id} to={`/project/${project.id}`} className="group">
+                        <div className="bg-surface h-full p-5 rounded-2xl border border-border hover:border-primary hover:shadow-xl transition-all duration-300 flex flex-col justify-between">
+                            <div>
+                                <div className="flex justify-between items-start mb-3">
+                                    <div className="p-2 bg-primary/10 rounded-xl text-primary group-hover:bg-primary group-hover:text-white transition-all">
+                                        <FiFolder size={20} />
                                     </div>
-                                    <h3 className="font-bold text-gray-900 dark:text-white mb-1 truncate" title={project.name}>
-                                        {project.name}
-                                    </h3>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 h-8">
-                                        {project.description || "No description."}
-                                    </p>
+                                    {project.is_public ? <FiGlobe size={14} className="text-text-secondary/40"/> : <FiLock size={14} className="text-text-secondary/40"/>}
                                 </div>
-                                <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between text-xs text-gray-400">
-                                    <span>{new Date(project.last_updated_at || project.created_at).toLocaleDateString()}</span>
-                                    <span className="group-hover:translate-x-1 transition-transform text-blue-500">
-                                        <FiArrowRight />
-                                    </span>
-                                </div>
+                                <h3 className="font-bold text-text-main mb-1 truncate">{project.name}</h3>
+                                <p className="text-xs text-text-secondary line-clamp-2 h-8">{project.description || "No description."}</p>
                             </div>
-                        </Link>
-                    ))}
-                </div>
-            )}
+                            <div className="mt-4 pt-3 border-t border-border flex items-center justify-between text-[10px] font-bold text-text-secondary uppercase tracking-tighter">
+                                <span>{new Date(project.last_updated_at || project.created_at).toLocaleDateString()}</span>
+                                <FiArrowRight className="group-hover:translate-x-1 transition-transform text-primary" size={14}/>
+                            </div>
+                        </div>
+                    </Link>
+                ))}
+            </div>
         </div>
 
-        {/* === BÖLÜM 2: GÖREV ÖZETİ (TASK SUMMARY) === */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
-          <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-            <h2 className="text-xl font-bold text-text-main dark:text-white flex items-center">
-              <FiActivity className="mr-2 text-blue-500" />
-              Active Priority Tasks
+        {/* TASKS SUMMARY */}
+        <div className="bg-surface rounded-2xl border border-border overflow-hidden shadow-sm">
+          <div className="p-6 border-b border-border flex justify-between items-center">
+            <h2 className="text-xl font-bold text-text-main flex items-center">
+              <FiCheckSquare className="mr-2 text-blue-500" /> Your Active Tasks
             </h2>
           </div>
-
-          <div className="p-0">
-            {loading ? (
-              <div className="p-8 text-center text-gray-500">Loading tasks...</div>
-            ) : activeTasks.length === 0 ? (
-              <div className="p-12 text-center flex flex-col items-center">
-                <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4 text-gray-400">
-                  <FiCheckSquare size={32} />
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">All caught up!</h3>
-                <p className="text-text-secondary dark:text-gray-400 mt-1 max-w-sm">
-                  You have no active tasks. Completed tasks are hidden from this view.
-                </p>
-              </div>
+          <div className="overflow-x-auto">
+            {activeTasks.length === 0 ? (
+                <div className="p-10 text-center text-text-secondary italic">No active tasks found.</div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
-                      <th className="p-4 font-medium">Task Name</th>
-                      <th className="p-4 font-medium">Project</th>
-                      <th className="p-4 font-medium">Status</th>
-                      <th className="p-4 font-medium text-right">Created</th>
-                      <th className="p-4 font-medium text-right">Action</th>
+                <table className="w-full text-left">
+                  <thead className="bg-app/50 text-text-secondary text-[10px] uppercase font-black tracking-widest border-b border-border">
+                    <tr>
+                      <th className="p-4">Task</th>
+                      <th className="p-4">Project</th>
+                      <th className="p-4 text-right">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                    {visibleTasks.map(task => (
-                      <tr key={task.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                        <td className="p-4">
-                          <div className="font-medium text-gray-900 dark:text-white">{task.title}</div>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center">
-                            <FiFolder className="mr-2 text-blue-500" size={14} />
-                            <span className="text-gray-600 dark:text-gray-300 text-sm">{task.project_name}</span>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          {getStatusBadge(task.status)}
-                        </td>
-                        <td className="p-4 text-right text-sm text-gray-500 dark:text-gray-400">
-                          <div className="flex items-center justify-end">
-                            <FiClock className="mr-1.5 w-3 h-3" />
-                            {new Date(task.created_at).toLocaleDateString()}
-                          </div>
-                        </td>
+                  <tbody className="divide-y divide-border">
+                    {activeTasks.slice(0, 6).map(task => (
+                      <tr key={task.id} className="hover:bg-app/30 transition-colors">
+                        <td className="p-4 font-bold text-text-main text-sm">{task.title}</td>
+                        <td className="p-4 text-xs text-text-secondary font-medium">{task.project_name}</td>
                         <td className="p-4 text-right">
-                          <Link 
-                            to={`/project/${task.project_id}/tasks`}
-                            className="inline-flex items-center text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
-                          >
-                            View Board <FiArrowRight className="ml-1" />
-                          </Link>
+                          <Link to={`/project/${task.project_id}/tasks`} className="text-primary hover:underline text-xs font-black">VIEW</Link>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
             )}
           </div>
-          
-          {/* Footer Info */}
-          <div className="p-4 bg-gray-50 dark:bg-gray-900/30 border-t border-gray-200 dark:border-gray-700 flex justify-center items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-             <span>Showing top {visibleTasks.length} active tasks.</span>
-             {hiddenCount > 0 && (
-               <span className="flex items-center text-amber-600 dark:text-amber-500 font-medium ml-2">
-                 <FiAlertCircle className="mr-1" />
-                 {hiddenCount} more tasks are waiting in queue.
-               </span>
-             )}
-          </div>
         </div>
+    </div>
+  );
 
+  return (
+    <div className="pb-10">
+      <div className="flex flex-col mb-8">
+        <h1 className="text-3xl font-black text-text-main tracking-tight">
+          {isAdmin ? "System Overview" : `Welcome back, ${user?.username}!`}
+        </h1>
+        <p className="text-text-secondary text-sm mt-1">
+          {isAdmin ? "Manage and monitor the entire GazozHub ecosystem." : "Here is what's happening with your projects."}
+        </p>
       </div>
+
+      {isAdmin ? renderAdminDashboard() : renderStudentDashboard()}
     </div>
   );
 }
+
+// Alt Bileşen: Stat Kartı
+const StatCard = ({ icon, title, count, color }) => (
+  <div className="bg-surface p-6 rounded-2xl border border-border shadow-sm flex items-center gap-5 transition-all hover:shadow-md hover:-translate-y-1">
+    <div className={`p-4 rounded-2xl ${color} text-white shadow-lg`}>
+      {icon}
+    </div>
+    <div>
+      <p className="text-xs font-bold text-text-secondary uppercase tracking-widest">{title}</p>
+      <p className="text-3xl font-black text-text-main tracking-tight">{count}</p>
+    </div>
+  </div>
+);
 
 export default DashboardOverviewPage;

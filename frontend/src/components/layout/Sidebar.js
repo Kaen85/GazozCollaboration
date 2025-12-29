@@ -2,16 +2,15 @@
 
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext'; // 1. AuthContext eklendi
+import { useAuth } from '../../context/AuthContext';
 import { 
   FiHome, FiBox, FiUsers, 
   FiChevronsLeft, FiChevronsRight,
-  FiUserCheck // 2. Yeni ikon eklendi (Admin Users için)
+  FiUserCheck,
+  FiLayers // Projeler yönetimi için yeni ikon
 } from 'react-icons/fi';
 
 function Sidebar({ isCollapsed, toggleSidebar }) {
-  
-  // 3. Kullanıcı rolünü kontrol etmek için user bilgisini çekiyoruz
   const { user } = useAuth();
 
   const navItems = [
@@ -24,7 +23,7 @@ function Sidebar({ isCollapsed, toggleSidebar }) {
     <div 
       className={`${
         isCollapsed ? 'w-20' : 'w-64'
-      } bg-surface border-border flex flex-col transition-all duration-300 relative shadow-xl pt-4`}
+      } bg-surface border-r border-border flex flex-col transition-all duration-300 relative shadow-xl pt-4`}
     >
       
       {/* MENU LİSTESİ */}
@@ -37,15 +36,12 @@ function Sidebar({ isCollapsed, toggleSidebar }) {
               `flex items-center px-4 py-3 mx-2 rounded-lg transition-colors group relative ${
                 isActive
                   ? 'bg-blue-600 text-white'
-                  : 'text-gray-400 hover:bg-gray-700 hover:text-white'
+                  : 'text-text-secondary hover:bg-surface-hover hover:text-text-main'
               } ${isCollapsed ? 'justify-center' : ''}`
             }
           >
             <span className="flex-shrink-0">{item.icon}</span>
-
-            {!isCollapsed && (
-              <span className="ml-3 font-medium whitespace-nowrap">{item.name}</span>
-            )}
+            {!isCollapsed && <span className="ml-3 font-medium whitespace-nowrap">{item.name}</span>}
             
             {isCollapsed && (
               <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
@@ -55,37 +51,47 @@ function Sidebar({ isCollapsed, toggleSidebar }) {
           </NavLink>
         ))}
 
-        {/* --- 4. ADMIN USERS BUTONU --- */}
-        {/* Sadece user varsa ve rolü 'admin' ise bu bloğu göster */}
+        {/* --- ADMIN BÖLÜMÜ --- */}
         {user && user.role === 'admin' && (
           <>
-            {/* Ayırıcı Çizgi (İsteğe bağlı, görsel ayrım için) */}
-            <div className="my-2 border-t border-gray-700 mx-4 opacity-50" />
-
+            <div className="my-4 border-t border-border mx-4 opacity-50" />
+            
+            {/* ADMIN USERS BUTONU */}
             <NavLink
-              to="/users" 
+              to="/admin-users" 
               className={({ isActive }) =>
                 `flex items-center px-4 py-3 mx-2 rounded-lg transition-colors group relative ${
                   isActive
                     ? 'bg-red-600/80 text-white'
-                    : 'text-gray-400 hover:bg-gray-700 hover:text-white'
+                    : 'text-text-secondary hover:bg-surface-hover hover:text-text-main'
                 } ${isCollapsed ? 'justify-center' : ''}`
               }
             >
-              {/* İkon */}
-              <span className="flex-shrink-0">
-                <FiUserCheck size={20} />
-              </span>
-
-              {/* Metin */}
-              {!isCollapsed && (
-                <span className="ml-3 font-medium whitespace-nowrap">Users</span>
-              )}
-
-              {/* Tooltip */}
+              <span className="flex-shrink-0"><FiUserCheck size={20} /></span>
+              {!isCollapsed && <span className="ml-3 font-medium whitespace-nowrap">Manage Users</span>}
               {isCollapsed && (
-                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
                   Users Management
+                </div>
+              )}
+            </NavLink>
+
+            {/* --- YENİ: ADMIN PROJECTS BUTONU --- */}
+            <NavLink
+              to="/admin-projects" // Mevcut Users sayfasındaki 'Projects' tabını kullanıyorsanız burası /users kalabilir
+              state={{ activeTab: 'projects' }} // Sayfaya 'projects' tabı açık gelsin bilgisi gönderiyoruz
+              className={({ isActive }) =>
+                `flex items-center px-4 py-3 mx-2 rounded-lg transition-colors group relative ${
+                   // Eğer url /users ise ve state içinde projects varsa aktif gösterilebilir
+                   isActive ? 'bg-purple-600/80 text-white' : 'text-text-secondary hover:bg-surface-hover hover:text-text-main'
+                } ${isCollapsed ? 'justify-center' : ''}`
+              }
+            >
+              <span className="flex-shrink-0"><FiLayers size={20} /></span>
+              {!isCollapsed && <span className="ml-3 font-medium whitespace-nowrap">Manage Projects</span>}
+              {isCollapsed && (
+                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                  All Projects
                 </div>
               )}
             </NavLink>
@@ -93,11 +99,11 @@ function Sidebar({ isCollapsed, toggleSidebar }) {
         )}
       </nav>
 
-      {/* ALT KISIM */}
-      <div className="p-4 border-t border-gray-700">
+      {/* ALT KISIM (Collapse Button) */}
+      <div className="p-4 border-t border-border">
         <button
           onClick={toggleSidebar}
-          className="w-full flex items-center justify-center py-2 text-gray-500 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
+          className="w-full flex items-center justify-center py-2 text-text-secondary hover:text-text-main hover:bg-surface-hover rounded-lg transition-colors"
         >
           {isCollapsed ? <FiChevronsRight size={24} /> : <FiChevronsLeft size={24} />}
         </button>
