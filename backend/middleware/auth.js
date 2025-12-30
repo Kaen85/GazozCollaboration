@@ -34,4 +34,6 @@ module.exports = function(req, res, next) {
     console.error("Auth Error:", err.message);
     res.status(401).json({ message: 'Token is not valid' });
   }
+
+  
 };

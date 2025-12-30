@@ -44,7 +44,7 @@ function ProjectIssues() {
   const filteredIssues = issues.filter(issue => issue.text.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
-    // bg-surface
+    // bg-surface: Kart arka planı
     <div className="bg-surface p-6 rounded-lg shadow-sm border border-border">
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-xl font-bold text-text-main">Project Issues</h3>
@@ -58,18 +58,20 @@ function ProjectIssues() {
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
           <FiSearch className="text-text-secondary" />
         </div>
+        {/* Input: bg-app */}
         <input 
           type="text" placeholder="Search issues..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full bg-app text-text-main border border-border text-sm rounded-lg focus:ring-primary focus:border-primary block pl-10 p-2.5 placeholder-text-secondary transition-colors"
+          className="w-full bg-app text-text-main border border-border text-sm rounded-lg focus:ring-primary focus:border-primary block pl-10 p-2.5 placeholder-text-secondary transition-colors outline-none"
         />
       </div>
 
       {/* CREATE FORM */}
       {(userRole === 'owner' || userRole === 'editor') && (
         <form onSubmit={handleSubmit} className="flex mb-6">
+          {/* Input: bg-app */}
           <input 
             type="text" value={newIssueText} onChange={(e) => setNewIssueText(e.target.value)}
-            className="flex-grow py-2 px-3 text-text-main bg-app border border-border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-primary placeholder-text-secondary"
+            className="flex-grow py-2 px-3 text-text-main bg-app border border-border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-primary placeholder-text-secondary transition-colors"
             placeholder="New issue title..."
           />
           <button type="submit" disabled={loading} className="flex items-center bg-primary hover:bg-primary-hover text-white font-semibold py-2 px-4 rounded-r-lg transition-colors disabled:opacity-50">

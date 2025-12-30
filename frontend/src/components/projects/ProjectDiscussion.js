@@ -64,7 +64,7 @@ export default function ProjectDiscussion() {
           <div className="flex justify-center items-center h-full"><FiLoader className="animate-spin text-primary" size={24} /></div>
         ) : messages.length === 0 ? (
           <div className="flex justify-center items-center h-full flex-col opacity-50">
-             <div className="w-12 h-12 bg-app rounded-full flex items-center justify-center mb-2"><FiSend size={20} className="text-text-secondary" /></div>
+             <div className="w-12 h-12 bg-app rounded-full flex items-center justify-center mb-2 border border-border"><FiSend size={20} className="text-text-secondary" /></div>
             <p className="text-text-secondary text-sm">No messages yet.</p>
           </div>
         ) : (
@@ -98,12 +98,13 @@ export default function ProjectDiscussion() {
         <div ref={chatEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="p-3 border-t border-border bg-app/50 rounded-b-lg">
+      {/* Input Area: bg-surface border-t */}
+      <div className="p-3 border-t border-border bg-surface rounded-b-lg">
         <form onSubmit={handleSendMessage} className="flex space-x-2">
+          {/* Input Field: bg-app */}
           <input
             type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)}
-            className="flex-grow py-2.5 px-4 text-sm text-text-main bg-surface border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-primary transition-all placeholder-text-secondary shadow-sm"
+            className="flex-grow py-2.5 px-4 text-sm text-text-main bg-app border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-primary transition-all placeholder-text-secondary shadow-inner"
             placeholder="Type your message..." disabled={isSending || contextLoading}
           />
           <button type="submit" disabled={isSending || contextLoading} className="flex items-center justify-center w-10 h-10 bg-primary hover:bg-primary-hover text-white rounded-full transition-all shadow-md disabled:opacity-50">

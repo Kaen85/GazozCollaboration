@@ -21,7 +21,7 @@ import DashboardLayout from './pages/DashboardLayout';
 import DashboardOverviewPage from './pages/DashboardOverviewPage';
 import MyProjectsPage from './pages/MyProjectsPage';
 import SharedProjectsPage from './pages/SharedProjectsPage';
-import SettingsPage from './pages/SettingsPage';
+import ProfilePage from './pages/ProfilePage';
 import AdminUsers from './pages/AdminUsers';
 import AdminProjects from './pages/AdminProjects';
 
@@ -67,7 +67,7 @@ function App() {
               <Route path="dashboard" element={<DashboardOverviewPage />} />
               <Route path="my-projects" element={<MyProjectsPage />} />
               <Route path="shared-projects" element={<SharedProjectsPage />} />
-              <Route path="settings" element={<SettingsPage />} />
+              <Route path="profile" element={<ProfilePage />} />
               
 
               {/* Project Detail Routes */}

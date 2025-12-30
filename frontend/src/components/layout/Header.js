@@ -1,20 +1,20 @@
 // src/components/layout/Header.js
 
 import React, { useState, useEffect, useRef } from 'react';
-import { FiBell, FiChevronDown, FiInfo, FiSun, FiMoon } from 'react-icons/fi'; // İkonlar güncellendi
+import { FiChevronDown, FiSun, FiMoon } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 import ProfileDropdown from './ProfileDropdown';
 import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext'; // Tema hook'u eklendi
+import { useTheme } from '../../context/ThemeContext';
 import LogoImage from '../../assets/logo.png';
 
 function Header({ onToggleRightSidebar }) {
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
   const { user } = useAuth();
-  const { theme, toggleTheme } = useTheme(); // Tema durumu ve değiştirme fonksiyonu
+  const { theme, toggleTheme } = useTheme();
 
-  // Dropdown dışına tıklanınca kapatma mantığı
+  // Dropdown dışına tıklanınca kapatma
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -27,13 +27,17 @@ function Header({ onToggleRightSidebar }) {
     };
   }, [dropdownRef]);
 
+  // Profil Resmi URL'si
+  const avatarUrl = user?.profile_picture 
+    ? `http://localhost:5000/${user.profile_picture}` 
+    : null;
+
   return (
-    // bg-surface/80 ve backdrop-blur-md: Buzlu cam efekti verir.
     <header className="sticky top-0 z-40 w-full border-b border-border bg-surface/80 backdrop-blur-md transition-colors duration-300">
       
       <div className="px-6 py-3 flex justify-between items-center">
         
-        {/* SOL: LOGO VE MARKA */}
+        {/* SOL: LOGO */}
         <Link to="/dashboard" className="flex items-center group gap-1.5">
           <img 
             src={LogoImage} 
@@ -50,7 +54,7 @@ function Header({ onToggleRightSidebar }) {
         {/* SAĞ: BUTONLAR VE PROFİL */}
         <div className="flex items-center space-x-3 md:space-x-5">
           
-          {/* --- TEMA DEĞİŞTİRME BUTONU (YENİ) --- */}
+          {/* TEMA DEĞİŞTİRME BUTONU (Mevcut Kodun) */}
           <button
             onClick={() => toggleTheme(theme === 'dark' ? 'light' : 'dark')}
             className="relative flex items-center justify-between w-14 h-7 p-1 rounded-full bg-gray-200 dark:bg-gray-700 transition-colors duration-300 focus:outline-none shadow-inner"
@@ -61,11 +65,7 @@ function Header({ onToggleRightSidebar }) {
                 theme === 'dark' ? 'translate-x-7 bg-indigo-500' : 'translate-x-0 bg-amber-400'
               }`}
             >
-              {theme === 'dark' ? (
-                <FiMoon className="text-white w-3 h-3" />
-              ) : (
-                <FiSun className="text-white w-3 h-3" />
-              )}
+              {theme === 'dark' ? <FiMoon className="text-white w-3 h-3" /> : <FiSun className="text-white w-3 h-3" />}
             </div>
             <FiSun className={`ml-1 w-3.5 h-3.5 ${theme === 'dark' ? 'text-gray-500' : 'opacity-0'}`} />
             <FiMoon className={`mr-1 w-3.5 h-3.5 ${theme === 'light' ? 'text-gray-400' : 'opacity-0'}`} />
@@ -77,8 +77,13 @@ function Header({ onToggleRightSidebar }) {
               onClick={() => setDropdownOpen(!isDropdownOpen)} 
               className="flex items-center space-x-2 p-1.5 pr-3 rounded-full hover:bg-surface-hover border border-transparent hover:border-border transition-all group"
             >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white text-sm font-bold shadow-sm">
-                 {user?.username?.charAt(0).toUpperCase() || 'U'}
+              {/* AVATAR KISMI GÜNCELLENDİ: Resim varsa göster, yoksa harf */}
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white text-sm font-bold shadow-sm overflow-hidden border border-border">
+                 {avatarUrl ? (
+                   <img src={avatarUrl} alt="User" className="w-full h-full object-cover" />
+                 ) : (
+                   user?.username?.charAt(0).toUpperCase() || 'U'
+                 )}
               </div>
 
               <span className="font-medium text-sm text-text-main hidden md:block">
@@ -94,7 +99,6 @@ function Header({ onToggleRightSidebar }) {
               <FiChevronDown size={16} className="text-text-secondary group-hover:text-text-main transition-colors" />
             </button>
             
-            {/* Dropdown Bileşeni */}
             <ProfileDropdown isOpen={isDropdownOpen} />
           </div>
         </div>

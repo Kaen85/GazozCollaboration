@@ -7,6 +7,7 @@ const authRoutes = require('./routes/authRoutes');
 
 const app = express();
 
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -18,6 +19,7 @@ app.use(express.urlencoded({ limit: '500mb', extended: true }));
 app.use('/api/auth', require('./routes/authRoutes')); 
 app.use('/api/projects', require('./routes/projectRoutes'));
 app.use("/users", usersRouter);
+
 
 // Serve Static Files (Uploads)
 app.use('/uploads', express.static('uploads'));

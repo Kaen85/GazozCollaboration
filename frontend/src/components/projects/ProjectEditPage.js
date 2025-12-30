@@ -138,48 +138,49 @@ export default function ProjectEditPage() {
       
       {/* 1. GENEL AYARLAR */}
       <div className="bg-surface rounded-xl border border-border p-6 shadow-sm">
-        <h3 className="text-xl font-semibold text-text-main mb-4">General Settings</h3>
-        <form onSubmit={handleDetailsSubmit} className="space-y-4">
+        <h3 className="text-xl font-bold text-text-main mb-6">General Settings</h3>
+        <form onSubmit={handleDetailsSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1">Project Name</label>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-app border border-border rounded-lg px-4 py-2 text-text-main focus:ring-2 focus:ring-primary outline-none transition-colors"/>
+            <label className="block text-xs font-bold text-text-secondary mb-1.5 uppercase tracking-wide">Project Name</label>
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-app border border-border rounded-xl px-4 py-3 text-text-main focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-colors font-medium"/>
+          </div>
+        
+          <div>
+            <label className="block text-xs font-bold text-text-secondary mb-1.5 uppercase tracking-wide">Short Description</label>
+            <textarea rows="2" value={description} onChange={(e) => setDescription(e.target.value)} className="w-full bg-app border border-border rounded-xl px-4 py-3 text-text-main focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-colors resize-none"/>
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1">Short Description (Header)</label>
-            <textarea rows="2" value={description} onChange={(e) => setDescription(e.target.value)} className="w-full bg-app border border-border rounded-lg px-4 py-2 text-text-main focus:ring-2 focus:ring-primary outline-none transition-colors"/>
+            <label className="block text-xs font-bold text-text-secondary mb-1.5 flex items-center uppercase tracking-wide"><FiFileText className="mr-1"/> Long Description (Readme)</label>
+             <textarea rows="6" value={longDescription} onChange={(e) => setLongDescription(e.target.value)} className="w-full bg-app border border-border rounded-xl px-4 py-3 text-text-main focus:ring-2 focus:ring-primary outline-none font-mono text-sm transition-colors" placeholder="Documentation..."/>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1 flex items-center"><FiFileText className="mr-1"/> Long Description (Readme)</label>
-            <textarea rows="6" value={longDescription} onChange={(e) => setLongDescription(e.target.value)} className="w-full bg-app border border-border rounded-lg px-4 py-2 text-text-main focus:ring-2 focus:ring-primary outline-none font-mono text-sm transition-colors" placeholder="Documentation..."/>
-          </div>
-          <div className="flex items-center justify-between">
-            <button type="submit" disabled={isSavingDetails} className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-lg font-semibold flex items-center disabled:opacity-50 transition-colors">
+          <div className="flex items-center justify-between pt-2">
+            <button type="submit" disabled={isSavingDetails} className="bg-primary hover:bg-primary-hover text-white px-6 py-2.5 rounded-xl font-bold flex items-center disabled:opacity-50 transition-colors shadow-md">
               {isSavingDetails ? <FiLoader className="animate-spin mr-2"/> : <FiSave className="mr-2"/>} Save Changes
             </button>
-            {saveMessage && <span className={`text-sm ${saveMessage.type === 'success' ? 'text-green-500' : 'text-red-500'}`}>{saveMessage.text}</span>}
+            {saveMessage && <span className={`text-sm font-bold ${saveMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>{saveMessage.text}</span>}
           </div>
         </form>
       </div>
 
-      {/* 2. GÖRÜNÜRLÜK */}
+      {/* 2. GÖRÜNÜRLÜK (AYNI YAPI, RENKLER GÜNCELLENDİ) */}
       <div className="bg-surface rounded-xl border border-border overflow-hidden shadow-sm">
         <div className="p-6 border-b border-border flex justify-between items-center">
           <div>
-            <h3 className="text-xl font-semibold text-text-main flex items-center">
-              {isPublic ? <FiGlobe className="mr-2 text-green-500"/> : <FiLock className="mr-2 text-red-500"/>} Project Visibility
+            <h3 className="text-lg font-bold text-text-main flex items-center">
+               {isPublic ? <FiGlobe className="mr-2 text-green-500"/> : <FiLock className="mr-2 text-red-500"/>} Project Visibility
             </h3>
             <p className="text-text-secondary text-sm mt-1">{isPublic ? "Visible to everyone." : "Private. Only members can access."}</p>
           </div>
-          <button onClick={handleVisibilityToggle} disabled={updatingVisibility} className={`px-4 py-2 rounded-lg font-medium border transition-colors ${isPublic ? 'border-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20' : 'border-green-500 text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20'}`}>
+          <button onClick={handleVisibilityToggle} disabled={updatingVisibility} className={`px-4 py-2 rounded-lg font-bold border-2 transition-colors text-sm ${isPublic ? 'border-red-500 text-red-500 hover:bg-red-500 hover:text-white' : 'border-green-500 text-green-500 hover:bg-green-500 hover:text-white'}`}>
             {updatingVisibility ? <FiLoader className="animate-spin"/> : (isPublic ? "Make Private" : "Make Public")}
           </button>
         </div>
         <div className="p-6 flex justify-between items-center">
           <div>
-            <h3 className="text-xl font-semibold text-text-main flex items-center"><FiLayout className="mr-2 text-blue-500"/> Tasks Visibility</h3>
+            <h3 className="text-lg font-bold text-text-main flex items-center"><FiLayout className="mr-2 text-blue-500"/> Tasks Visibility</h3>
             <p className="text-text-secondary text-sm mt-1">{tasksPublic ? "Tasks are visible to public visitors." : "Tasks are hidden from public visitors."}</p>
           </div>
-          <button onClick={handleTasksVisibilityToggle} disabled={updatingTasks} className={`px-4 py-2 rounded-lg font-medium border transition-colors ${tasksPublic ? 'border-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20' : 'border-green-500 text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20'}`}>
+          <button onClick={handleTasksVisibilityToggle} disabled={updatingTasks} className={`px-4 py-2 rounded-lg font-bold border-2 transition-colors text-sm ${tasksPublic ? 'border-red-500 text-red-500 hover:bg-red-500 hover:text-white' : 'border-green-500 text-green-500 hover:bg-green-500 hover:text-white'}`}>
             {updatingTasks ? <FiLoader className="animate-spin"/> : (tasksPublic ? "Hide Tasks" : "Show Tasks")}
           </button>
         </div>
@@ -187,47 +188,48 @@ export default function ProjectEditPage() {
 
       {/* 3. ÜYE YÖNETİMİ */}
       <div className="bg-surface rounded-xl border border-border p-6 shadow-sm">
-        <h3 className="text-xl font-semibold text-text-main mb-4 flex items-center"><FiUsers className="mr-2" /> Manage Team</h3>
-        <form onSubmit={handleMemberSubmit} className="bg-app p-4 rounded-lg mb-6 flex flex-col md:flex-row gap-3 items-end border border-border">
-          <div className="flex-grow w-full">
-            <label className="text-xs text-text-secondary uppercase font-bold">Username</label>
-            <input type="text" value={usernameToAdd} onChange={(e) => setUsernameToAdd(e.target.value)} className="w-full bg-surface border border-border rounded px-3 py-2 text-text-main outline-none focus:border-primary" placeholder="username"/>
+        <h3 className="text-xl font-bold text-text-main mb-6 flex items-center"><FiUsers className="mr-2" /> Manage Team</h3>
+        
+        <form onSubmit={handleMemberSubmit} className="bg-app p-4 rounded-xl mb-6 flex flex-col md:flex-row gap-3 items-end border border-border">
+           <div className="flex-grow w-full">
+            <label className="text-xs text-text-secondary uppercase font-bold mb-1 block">Username</label>
+            <input type="text" value={usernameToAdd} onChange={(e) => setUsernameToAdd(e.target.value)} className="w-full bg-surface border border-border rounded-lg px-3 py-2.5 text-text-main outline-none focus:border-primary transition-colors" placeholder="username"/>
           </div>
           <div className="w-full md:w-40">
-            <label className="text-xs text-text-secondary uppercase font-bold">Role</label>
-            <select value={roleToAdd} onChange={(e) => setRoleToAdd(e.target.value)} className="w-full bg-surface border border-border rounded px-3 py-2 text-text-main outline-none focus:border-primary">
+            <label className="text-xs text-text-secondary uppercase font-bold mb-1 block">Role</label>
+            <select value={roleToAdd} onChange={(e) => setRoleToAdd(e.target.value)} className="w-full bg-surface border border-border rounded-lg px-3 py-2.5 text-text-main outline-none focus:border-primary cursor-pointer transition-colors">
               <option value="viewer">Viewer</option>
               <option value="editor">Editor</option>
             </select>
           </div>
-          <button disabled={isAdding} type="submit" className="w-full md:w-auto bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded font-semibold flex items-center justify-center disabled:opacity-50 transition-colors">
-            {isAdding ? <FiLoader className="animate-spin"/> : <FiUserPlus />}
+          <button disabled={isAdding} type="submit" className="w-full md:w-auto bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-lg font-bold flex items-center justify-center disabled:opacity-50 transition-colors shadow-sm">
+             {isAdding ? <FiLoader className="animate-spin"/> : <FiUserPlus />}
           </button>
         </form>
         
         {(addSuccess || addError) && (
-          <div className={`mb-4 p-2 rounded text-sm flex items-center ${addSuccess ? 'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/20' : 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/20'}`}>
+          <div className={`mb-4 p-3 rounded-lg text-sm font-bold flex items-center ${addSuccess ? 'text-green-700 bg-green-100 border border-green-200' : 'text-red-700 bg-red-100 border border-red-200'}`}>
             {addSuccess ? <FiCheck className="mr-2"/> : <FiAlertTriangle className="mr-2"/>} {addSuccess || addError}
-          </div>
+           </div>
         )}
 
         <div className="space-y-2">
           {currentMembers.length > 0 ? (
             currentMembers.map(member => (
-              <div key={member.id} className="flex justify-between items-center p-3 bg-surface hover:bg-surface-hover border border-border rounded transition-colors">
+              <div key={member.id} className="flex justify-between items-center p-3 bg-surface hover:bg-surface-hover border border-border rounded-xl transition-colors">
                 <div className="flex items-center">
-                  <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-text-main font-bold mr-3">{member.username.charAt(0).toUpperCase()}</div>
+                  <div className="w-10 h-10 rounded-full bg-app border border-border flex items-center justify-center text-text-main font-bold mr-3">{member.username.charAt(0).toUpperCase()}</div>
                   <div>
-                    <p className="text-text-main font-medium text-sm">{member.username}</p>
+                    <p className="text-text-main font-bold text-sm">{member.username}</p>
                     {member.role === 'owner' ? (
-                      <span className="text-xs text-text-secondary bg-app px-2 py-0.5 rounded border border-border capitalize">Owner</span>
-                    ) : (
+                      <span className="text-[10px] text-text-secondary bg-app px-2 py-0.5 rounded border border-border uppercase tracking-wider font-bold">Owner</span>
+                  ) : (
                       <div className="flex items-center gap-2 mt-1">
                         <select 
                           value={member.role} 
                           disabled={updatingRoleId === member.id}
                           onChange={(e) => handleRoleChange(member.id, e.target.value)}
-                          className="text-xs bg-app border border-border rounded px-1.5 py-0.5 text-text-main outline-none focus:border-primary cursor-pointer disabled:opacity-50"
+                          className="text-xs bg-app border border-border rounded px-2 py-1 text-text-main outline-none focus:border-primary cursor-pointer disabled:opacity-50"
                         >
                           <option value="viewer">Viewer</option>
                           <option value="editor">Editor</option>
@@ -238,7 +240,7 @@ export default function ProjectEditPage() {
                   </div>
                 </div>
                 {member.role !== 'owner' && (
-                  <button onClick={() => handleRemoveMember(member.id, member.username)} disabled={removingId === member.id} className="text-text-secondary hover:text-red-500 p-2">
+                  <button onClick={() => handleRemoveMember(member.id, member.username)} disabled={removingId === member.id} className="text-text-secondary hover:text-red-500 p-2 transition-colors">
                     {removingId === member.id ? <FiLoader className="animate-spin"/> : <FiTrash2 />}
                   </button>
                 )}
@@ -253,8 +255,8 @@ export default function ProjectEditPage() {
         <h3 className="text-xl font-bold text-red-600 dark:text-red-500 flex items-center mb-2"><FiShield className="mr-2" /> Danger Zone</h3>
         <p className="text-red-600/70 dark:text-gray-400 text-sm mb-6">Deleting this project will permanently remove all issues, comments, files, and member associations.</p>
         <div className="flex justify-end">
-          <button onClick={handleDeleteProject} disabled={isDeletingProject} className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow-lg transition-colors disabled:opacity-50 flex items-center">
-            {isDeletingProject ? <FiLoader className="animate-spin mr-2"/> : <FiTrash2 className="mr-2"/>} Delete Project
+          <button onClick={handleDeleteProject} disabled={isDeletingProject} className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-lg transition-colors disabled:opacity-50 flex items-center">
+             {isDeletingProject ? <FiLoader className="animate-spin mr-2"/> : <FiTrash2 className="mr-2"/>} Delete Project
           </button>
         </div>
       </div>

@@ -1,129 +1,85 @@
+// src/components/projects/CreateProjectModal.js
+
 import React, { useState } from 'react';
-import { useProjectContext } from '../../context/ProjectContext'; // 1. Context'i import et
+import { useProjectContext } from '../../context/ProjectContext';
 import { FiX, FiLoader } from 'react-icons/fi';
 
-// Component, 'isOpen' (açık mı?) ve 'onClose' (kapatma fonksiyonu) proplarını alır
 function CreateProjectModal({ isOpen, onClose }) {
-  
-  // 2. Context'ten 'createProject' fonksiyonunu ve 'loading' durumunu al
   const { createProject, loading } = useProjectContext();
-
-  // 3. Form alanları için state'ler
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState(null);
 
-  // Form gönderildiğinde çalışacak fonksiyon
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null); // Eski hatayı temizle
-
-    if (!name) {
-      setError('Project name is required.');
-      return;
-    }
-
+    setError(null);
+    if (!name) { setError('Project name is required.'); return; }
     try {
-      // 4. Context'teki 'createProject' fonksiyonunu çağır
-      // Bu fonksiyon backend'e API isteği atacak
       await createProject(name, description);
-      
-      // Başarılı olursa, formu temizle ve modal'ı kapat
       setName('');
       setDescription('');
-      onClose(); 
+      onClose();
     } catch (err) {
-      // Başarısız olursa (örn: sunucu hatası), hatayı göster
       setError(err.message);
     }
   };
 
-  // Eğer modal 'isOpen' false ise, hiçbir şey gösterme
-  if (!isOpen) {
-    return null;
-  }
+  if (!isOpen) return null;
 
-  // Modal açıksa, bu JSX'i göster
   return (
-    // Arka planı karartan overlay
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 animate-fade-in">
       
-      {/* Asıl Modal Penceresi */}
-      <div className="bg-gray-800 rounded-lg shadow-2xl w-full max-w-lg p-6">
+      {/* Modal Kutusu: bg-surface kullanarak temaya duyarlı hale getirdik */}
+      <div className="bg-surface border border-border rounded-2xl shadow-2xl w-full max-w-lg p-6 relative">
         
         {/* Başlık ve Kapatma Butonu */}
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold text-white">Create New Project</h2>
-          <button 
-            onClick={onClose} 
-            className="text-gray-400 hover:text-white"
-          >
-            <FiX size={24} />
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-text-main">Create New Project</h2>
+          <button onClick={onClose} className="text-text-secondary hover:text-text-main transition-colors bg-app p-1 rounded-full">
+            <FiX size={20} />
           </button>
         </div>
         
-        {/* Proje Oluşturma Formu */}
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            
-           
-            <div>
-              <label htmlFor="projectName" className="block text-sm font-medium text-gray-300 mb-1">
-                Project Name
-              </label>
-              <input 
-                type="text"
-                id="projectName"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full py-2 px-3 text-gray-200 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="My New Awesome Project"
-              />
-            </div>
-            
-            
-            <div>
-              <label htmlFor="projectDescription" className="block text-sm font-medium text-gray-300 mb-1">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label htmlFor="projectName" className="block text-sm font-bold text-text-secondary mb-1.5 uppercase tracking-wide">
+              Project Name
+            </label>
+            {/* Input renkleri düzenlendi */}
+            <input 
+              type="text" id="projectName"
+              value={name} onChange={(e) => setName(e.target.value)}
+              className="w-full py-2.5 px-4 text-text-main bg-app border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+              placeholder="e.g. Website Redesign"
+            />
+          </div>
+          
+          <div>
+             <label htmlFor="projectDescription" className="block text-sm font-bold text-text-secondary mb-1.5 uppercase tracking-wide">
                 Description (Optional)
               </label>
               <textarea
-                id="projectDescription"
-                rows="3"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="w-full py-2 px-3 text-gray-200 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="What is this project about?"
+                id="projectDescription" rows="3"
+                value={description} onChange={(e) => setDescription(e.target.value)}
+                className="w-full py-2.5 px-4 text-text-main bg-app border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all resize-none"
+                placeholder="Briefly describe your project..."
               />
-            </div>
           </div>
           
-         
-          {error && (
-            <p className="text-sm text-red-400 text-center mt-4">
-              {error}
-            </p>
-          )}
+          {error && <p className="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800 text-center font-medium">{error}</p>}
 
-          
-          <div className="flex justify-end space-x-3 mt-6">
+          <div className="flex justify-end space-x-3 pt-2">
             <button
-              type="button"
-              onClick={onClose}
-              disabled={loading}
-              className="py-2 px-4 bg-gray-600 hover:bg-gray-500 text-white rounded-lg transition-colors disabled:opacity-50"
+              type="button" onClick={onClose} disabled={loading}
+              className="py-2.5 px-5 bg-app hover:bg-surface-hover border border-border text-text-main font-semibold rounded-xl transition-colors"
             >
               Cancel
             </button>
             <button
-              type="submit"
-              disabled={loading}
-              className="flex items-center justify-center py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50"
+              type="submit" disabled={loading}
+              className="flex items-center justify-center py-2.5 px-6 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl shadow-md transition-all disabled:opacity-70"
             >
-              {loading ? (
-                <FiLoader className="animate-spin mr-2" />
-              ) : (
-                'Create Project'
-              )}
+              {loading ? <FiLoader className="animate-spin mr-2" /> : 'Create Project'}
             </button>
           </div>
         </form>

@@ -115,6 +115,16 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateProfile = async (formData) => {
+    // formData içinde: username, email, password (opsiyonel), avatar (dosya)
+    const res = await api.put('/api/auth/profile', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    // State'i güncelle
+    setUser(res.data);
+    return res.data;
+};
+
   // --- LOGOUT ---
   const logout = () => {
     localStorage.removeItem('token');
@@ -132,7 +142,8 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     forgotPassword,
-    resetPassword
+    resetPassword,
+    updateProfile
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
