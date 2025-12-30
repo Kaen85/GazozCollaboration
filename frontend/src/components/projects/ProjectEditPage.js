@@ -91,10 +91,16 @@ export default function ProjectEditPage() {
     setAddSuccess(null);
     try {
       const addedMember = await addMember(currentProject.id, usernameToAdd, roleToAdd);
+      
       setAddSuccess(`Added ${addedMember.username} as ${addedMember.role}.`);
       setUsernameToAdd('');
-    } catch (err) { setAddError(err.message); } finally { setIsAdding(false); }
-  };
+    } catch (err) { 
+      const msg = err.response?.status === 401 ? "Unauthorized: Only Owner can add members." : err.message;
+      setAddError(msg); 
+    } finally { 
+      setIsAdding(false); 
+    }
+};
 
   const handleRoleChange = async (memberId, newRole) => {
     setUpdatingRoleId(memberId);

@@ -149,12 +149,20 @@ export const ProjectProvider = ({ children }) => {
 
   const addMember = async (projectId, username, role) => {
     try {
-        const response = await axios.post(`${API_URL}/${projectId}/members`, { username, role }, getAuthHeaders());
-        setCurrentMembers(prev => [...prev, response.data]);
-        return response.data;
-    } catch (err) { handleError(err); throw err; }
+     
+      const response = await axios.post(
+        `${API_URL}/${projectId}/members`, 
+        { username, role }, 
+        getAuthHeaders()
+      );
+      
+      setCurrentMembers(prev => [...prev, response.data]);
+      return response.data;
+    } catch (err) {
+      handleError(err); // Dosyadaki genel hata yönetimi kullanıldı
+      throw err;
+    }
   };
-
   const removeMember = async (projectId, userId) => {
     try {
         await axios.delete(`${API_URL}/${projectId}/members/${userId}`, getAuthHeaders());

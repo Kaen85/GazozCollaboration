@@ -52,8 +52,7 @@ function DashboardOverviewPage() {
   const recentProjects = allProjects
     .sort((a, b) => new Date(b.last_updated_at || b.created_at) - new Date(a.last_updated_at || a.created_at))
     .slice(0, 4);
-  const activeTasks = dashboardTasks ? dashboardTasks.filter(task => task.status !== 'done') : [];
-  
+  const activeTasks = dashboardTasks ? dashboardTasks.filter(task => task.status !== 'done' && (task.assignee_id === user?.id || task.assignee_id === null)): [];  
   const latestUsers = [...adminStats.users].slice(0, 5);
   const latestAllProjects = [...adminStats.allProjects].slice(0, 5);
 

@@ -51,6 +51,7 @@ export default function ProjectFiles() {
     if (previewFile) {
         const category = getFileTypeCategory(previewFile.filename);
         // Eğer önizlemesi olmayan bir dosya türü ise (ZIP vb.), manuel istek atarak sayacı artır.
+        // Image ve Previewable olanlar zaten iframe/img src yüklenirken artıyor.
         if (category === 'other') {
             fetch(getPreviewUrl(previewFile)).catch(err => console.log("Counter ping sent"));
         }
@@ -154,12 +155,17 @@ export default function ProjectFiles() {
     return `http://localhost:5000/${cleanPath}`;
   };
 
-  // Cache busting (t=Date.now()) ile sayaç her zaman çalışır
+  // --- DÜZELTME BAŞLANGICI ---
+  // Sorun: Burada Date.now() kullanmak her render'da URL'i değiştiriyor ve sonsuz döngü yaratıyor.
+  // Çözüm: Dosya seçildiğinde oluşturulan sabit timestamp'i (_ts) kullanmak.
   const getPreviewUrl = (file) => {
     if (!file) return '';
     const token = localStorage.getItem('token');
-    return `http://localhost:5000/api/projects/${file.project_id}/files/${file.id}/preview?token=${token}&t=${Date.now()}`;
+    // Eğer dosyayı seçerken oluşturduğumuz timestamp varsa onu kullan, yoksa o anı al (fallback)
+    const ts = file._previewTs || Date.now(); 
+    return `http://localhost:5000/api/projects/${file.project_id}/files/${file.id}/preview?token=${token}&t=${ts}`;
   };
+  // --- DÜZELTME BİTİŞİ ---
 
   const getFileTypeCategory = (filename) => {
     if (!filename) return 'other';
@@ -169,9 +175,7 @@ export default function ProjectFiles() {
     return 'other';
   };
 
-  // BOYUT HESAPLAMA FONKSİYONU
   const formatFileSize = (bytes) => {
-    // Veritabanından string gelme ihtimaline karşı parseInt yapıyoruz
     const b = parseInt(bytes, 10);
     if (!b || isNaN(b) || b === 0) return '0 B';
     
@@ -192,11 +196,16 @@ export default function ProjectFiles() {
     } else {
       newIndex = currentIndex - 1 >= 0 ? currentIndex - 1 : validFiles.length - 1; 
     }
-    setPreviewFile(validFiles[newIndex]);
+    
+    // DÜZELTME: Dosya değişirken timestamp'i burada oluşturup state'e ekliyoruz.
+    const nextFile = validFiles[newIndex];
+    setPreviewFile({ ...nextFile, _previewTs: Date.now() });
   };
 
   const handleOpenPreview = (file) => {
-      setPreviewFile(file);
+      // DÜZELTME: Dosya açılırken timestamp'i burada oluşturup state'e ekliyoruz.
+      // Böylece URL render sırasında değişmeyecek.
+      setPreviewFile({ ...file, _previewTs: Date.now() });
   };
 
   // --- RENDER PREVIEW CONTENT ---
@@ -249,7 +258,7 @@ export default function ProjectFiles() {
         </button>
         {isDescriptionOpen && (
           <div className="p-4 border-t border-border bg-app/30 text-text-secondary text-sm leading-relaxed whitespace-pre-wrap animate-fade-in max-h-64 overflow-y-auto">
-             {currentProject?.long_description || currentProject?.description || "No description provided."}
+              {currentProject?.long_description || currentProject?.description || "No description provided."}
           </div>
         )}
       </div>
@@ -335,13 +344,13 @@ export default function ProjectFiles() {
                   
                   {/* VIEWS DISPLAY */}
                   <div className="w-20 text-center flex justify-center items-center gap-1 text-xs text-text-secondary font-medium">
-                     <FiEye size={14} className="opacity-50"/> {file.view_count || 0}
+                      <FiEye size={14} className="opacity-50"/> {file.view_count || 0}
                   </div>
                   
                   <div className="w-16 flex justify-center items-center" onClick={(e) => e.stopPropagation()}>
-                     <a href={getDownloadUrl(file.file_path)} download className="p-2 hover:bg-surface-hover rounded-full text-text-secondary hover:text-primary transition-colors flex items-center">
-                       <FiDownload size={16}/>
-                     </a>
+                      <a href={getDownloadUrl(file.file_path)} download className="p-2 hover:bg-surface-hover rounded-full text-text-secondary hover:text-primary transition-colors flex items-center">
+                        <FiDownload size={16}/>
+                      </a>
                   </div>
                 </li>
               );
@@ -355,14 +364,14 @@ export default function ProjectFiles() {
       {previewFile && (
         <div className="fixed top-0 left-0 w-screen h-[100vh] z-[99999] bg-black/95 flex flex-col animate-fade-in overflow-hidden m-0 p-0">
           <div className="flex-none h-16 flex items-center justify-between px-6 bg-zinc-900 border-b border-white/10 text-white z-50">
-             <div className="flex items-center gap-4 overflow-hidden">
+              <div className="flex items-center gap-4 overflow-hidden">
                <button onClick={() => { setPreviewFile(null); loadFiles(); }} className="p-2 hover:bg-white/10 rounded-full transition-colors border-none bg-transparent cursor-pointer text-white"><FiX size={24} /></button>
                <span className="font-bold truncate text-sm md:text-base">{previewFile.filename}</span>
-             </div>
-             <div className="flex items-center gap-3 flex-shrink-0">
+              </div>
+              <div className="flex items-center gap-3 flex-shrink-0">
                <a href={getPreviewUrl(previewFile)} target="_blank" rel="noreferrer" className="hidden md:flex items-center gap-2 px-4 py-2 hover:bg-white/10 rounded-lg text-sm font-medium transition-colors text-white no-underline"><FiExternalLink /> New Tab</a>
                <a href={getDownloadUrl(previewFile.file_path)} download className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover rounded-lg text-sm font-bold transition-colors text-white no-underline"><FiDownload /> Download</a>
-             </div>
+              </div>
           </div>
           <div className="flex-1 relative w-full h-full overflow-hidden bg-zinc-900">
             <button onClick={(e) => { e.stopPropagation(); handleNextPrev('prev'); }} className="absolute left-4 top-1/2 -translate-y-1/2 z-[100] text-white/50 hover:text-white p-4 hover:bg-white/10 rounded-full transition-all border-none bg-transparent cursor-pointer"><FiChevronLeft size={48} /></button>

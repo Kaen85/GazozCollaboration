@@ -1,191 +1,75 @@
 // src/components/layout/RightSidebar.js
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useProjectContext } from '../../context/ProjectContext';
-import api from '../../services/api';
 import { 
-  FiX, FiCalendar, FiClock, FiUser, FiUsers, 
-  FiChevronsRight, FiTarget, FiActivity, 
-  FiShield, FiInfo
+  FiCalendar, FiClock, FiUser, FiUsers, 
+  FiChevronsRight, FiShield, FiEdit2, FiEye
 } from 'react-icons/fi';
+
+// Tarih Formatlayıcı
+const formatDate = (dateString) => {
+  if (!dateString) return 'N/A';
+  return new Date(dateString).toLocaleDateString('en-US', { 
+    day: 'numeric', 
+    month: 'short', 
+    year: 'numeric' 
+  });
+};
+
+// Profil Resmi URL Oluşturucu
+const getProfileSrc = (path) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    return `http://localhost:5000/${path.replace(/\\/g, '/')}`;
+};
+
+// Rol Etiketi Yardımcı Bileşeni
+const RoleBadge = ({ role }) => {
+    let colorClass = "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400";
+    let icon = <FiEye size={10} className="mr-1"/>;
+    let label = "Viewer";
+
+    if (role === 'editor') {
+        colorClass = "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400";
+        icon = <FiEdit2 size={10} className="mr-1"/>;
+        label = "Editor";
+    } else if (role === 'owner') {
+        colorClass = "bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400";
+        icon = <FiShield size={10} className="mr-1"/>;
+        label = "Owner";
+    }
+
+    return (
+        <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full flex items-center ${colorClass}`}>
+            {icon} {label}
+        </span>
+    );
+};
 
 function RightSidebar({ isOpen, toggleSidebar }) {
   const location = useLocation();
   const { currentProject, currentMembers, fetchMembers } = useProjectContext();
+  
+  // Sadece proje sayfasındaysak ve proje verisi varsa render et
   const isProjectPage = location.pathname.startsWith('/project/');
-  const isUsersPage = location.pathname === '/users';
-  const showProjectDetails = isProjectPage && currentProject;
-  const shouldRenderSidebar = isProjectPage || isUsersPage;
+  const shouldRenderSidebar = isProjectPage && currentProject;
 
-  const [stats, setStats] = useState({ total: 0, admins: 0, users: 0, loading: false });
-
-  useEffect(() => { if (showProjectDetails && currentProject?.id) fetchMembers(currentProject.id); }, [currentProject?.id]);
-  useEffect(() => {
-    if (isUsersPage && isOpen) {
-        const fetchStats = async () => {
-            setStats(prev => ({ ...prev, loading: true }));
-            try {
-                const res = await api.get('/api/auth/users');
-                const usersList = res.data;
-                const total = usersList.length;
-                const admins = usersList.filter(u => u.role === 'admin').length;
-                setStats({ total, admins, users: total - admins, loading: false });
-            } catch (err) { setStats(prev => ({ ...prev, loading: false })); }
-        };
-        fetchStats();
+  // Üyeleri Çek
+  useEffect(() => { 
+    if (shouldRenderSidebar && currentProject?.id) {
+        fetchMembers(currentProject.id); 
     }
-  }, [isUsersPage, isOpen]);
-
-  const projectOwner = currentMembers ? currentMembers.find(m => m.role === 'owner') : null;
-  const otherMembers = currentMembers ? currentMembers.filter(m => m.role !== 'owner') : [];
-  const formatDate = (dateString) => { if (!dateString) return 'N/A'; return new Date(dateString).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }); };
+  }, [currentProject?.id, shouldRenderSidebar, fetchMembers]);
 
   if (!shouldRenderSidebar) return null;
 
-  const renderProjectContent = () => (
-    <div className="animate-fade-in flex flex-col h-full">
-        <div className="mt-1 mb-8">
-            <h2 className="text-3xl font-black text-text-main leading-tight tracking-tight">
-                {currentProject.name}
-            </h2>
-        </div>
-
-        <div className="mb-8">
-            {currentProject.description ? (
-               <p className="text-sm text-text-secondary leading-relaxed font-medium">
-                {currentProject.description}
-                </p>
-            ) : (
-                <p className="text-sm text-text-secondary italic">No description added.</p>
-            )}
-         </div>
-
-        <div className="mb-8">
-            <h4 className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-3 flex items-center">
-                Led By
-            </h4>
-            <div className="flex items-center p-3 bg-app border border-border rounded-xl hover:border-primary/50 transition-colors group shadow-sm">
-                 <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-md mr-3 group-hover:scale-105 transition-transform">
-                    {projectOwner?.username?.charAt(0).toUpperCase() || <FiUser />}
-                </div>
-                <div>
-                    <p className="text-text-main font-bold text-sm">
-                        {projectOwner?.username || 'Loading...'}
-                    </p>
-                    <p className="text-xs text-primary font-bold uppercase tracking-wider">Project Owner</p>
-                </div>
-            </div>
-        </div>
-
-        <div className="mb-8 flex-1">
-            <div className="flex justify-between items-end mb-3">
-                <h4 className="text-xs font-bold text-text-secondary uppercase tracking-wider">Team</h4>
-                <span className="text-xs font-bold text-text-secondary bg-app px-2 py-0.5 rounded-md border border-border">
-                    {otherMembers.length} members
-                </span>
-            </div>
-            {otherMembers.length > 0 ? (
-                <div className="space-y-2">
-                    {otherMembers.map(member => (
-                        <div key={member.id} className="flex items-center justify-between p-2 hover:bg-app rounded-lg transition-colors cursor-default border border-transparent hover:border-border">
-                             <div className="flex items-center">
-                                <div className="w-8 h-8 rounded-full bg-surface border border-border flex items-center justify-center text-text-main text-xs font-bold mr-3 shadow-sm">
-                                    {member.username.charAt(0).toUpperCase()}
-                                 </div>
-                                <span className="text-text-main text-sm font-medium">{member.username}</span>
-                            </div>
-                            <span className="text-[10px] text-text-secondary uppercase font-bold border border-border px-1.5 py-0.5 rounded bg-surface">
-                                {member.role}
-                            </span>
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                <div className="p-4 border border-dashed border-border rounded-xl text-center bg-app/50">
-                    <FiUsers className="mx-auto text-text-secondary mb-2" />
-                    <p className="text-xs text-text-secondary font-medium">Solo project for now.</p>
-                </div>
-            )}
-        </div>
-
-        <div className="mt-auto pt-6 border-t border-border grid grid-cols-2 gap-4">
-            <div>
-                 <div className="flex items-center text-text-secondary mb-1">
-                    <FiCalendar className="mr-1.5 text-xs"/> <span className="text-[10px] uppercase font-bold tracking-wide">Created</span>
-                </div>
-                <span className="text-text-main text-xs font-mono font-bold">
-                {formatDate(currentProject.created_at)}
-                </span>
-            </div>
-            <div>
-                <div className="flex items-center text-text-secondary mb-1">
-                    <FiClock className="mr-1.5 text-xs"/> <span className="text-[10px] uppercase font-bold tracking-wide">Updated</span>
-                </div>
-                 <span className="text-text-main text-xs font-mono font-bold">
-                {formatDate(currentProject.last_updated_at || currentProject.created_at)}
-                </span>
-            </div>
-        </div>
-    </div>
-  );
-
-  const renderUsersContent = () => (
-    <div className="animate-fade-in flex flex-col h-full">
-        <div className="mt-2 mb-8">
-            <h2 className="text-2xl font-black text-text-main flex items-center tracking-tight">
-                <FiActivity className="mr-3 text-primary" />
-                System Overview
-            </h2>
-        </div>
-
-         {stats.loading ? (
-            <div className="flex justify-center py-10"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>
-        ) : (
-            <>
-                <div className="bg-surface p-5 rounded-2xl border border-border mb-8 relative overflow-hidden group shadow-sm">
-                    <div className="absolute -right-4 -top-4 text-text-secondary opacity-5 group-hover:opacity-10 transition-opacity transform group-hover:scale-110 duration-500">
-                        <FiUsers size={100} />
-                    </div>
-                    <h3 className="text-text-secondary text-xs uppercase font-bold tracking-wider mb-1">Total Users</h3>
-                    <p className="text-5xl font-black text-text-main tracking-tight">{stats.total}</p>
-                </div>
-
-                <div className="mb-10 space-y-5">
-                    <h4 className="text-sm font-bold text-text-main flex items-center uppercase tracking-wide border-b border-border pb-2">
-                        <FiShield className="mr-2 text-primary" /> Role Distribution
-                    </h4>
-                    
-                    <div className="group">
-                        <div className="flex justify-between text-xs font-bold text-text-secondary mb-1.5">
-                             <span className="group-hover:text-red-500 transition-colors">Admins</span>
-                            <span className="font-mono text-text-main">{stats.admins}</span>
-                        </div>
-                        <div className="w-full bg-app rounded-full h-2.5 overflow-hidden border border-border">
-                            <div 
-                                className="bg-gradient-to-r from-red-600 to-red-400 h-full rounded-full transition-all duration-1000 ease-out" 
-                                style={{ width: stats.total > 0 ? `${(stats.admins / stats.total) * 100}%` : '0%' }}
-                            />
-                        </div>
-                    </div>
-
-                     <div className="group">
-                        <div className="flex justify-between text-xs font-bold text-text-secondary mb-1.5">
-                            <span className="group-hover:text-blue-500 transition-colors">Students</span>
-                            <span className="font-mono text-text-main">{stats.users}</span>
-                        </div>
-                        <div className="w-full bg-app rounded-full h-2.5 overflow-hidden border border-border">
-                            <div 
-                               className="bg-gradient-to-r from-blue-600 to-blue-400 h-full rounded-full transition-all duration-1000 ease-out" 
-                                style={{ width: stats.total > 0 ? `${(stats.users / stats.total) * 100}%` : '0%' }}
-                            />
-                        </div>
-                    </div>
-                </div>
-             </>
-        )}
-    </div>
-  );
+  const membersList = currentMembers || [];
+  
+  // Proje sahibi ve Diğer üyeleri ayır
+  const projectOwner = membersList.find(m => m.role === 'owner' || m.id === currentProject?.owner_id);
+  const otherMembers = membersList.filter(m => m.role !== 'owner' && m.id !== currentProject?.owner_id);
 
   return (
     <div 
@@ -193,17 +77,119 @@ function RightSidebar({ isOpen, toggleSidebar }) {
         isOpen ? 'w-80 translate-x-0' : 'w-0 translate-x-full'
       } bg-surface border-l border-border flex flex-col transition-all duration-300 ease-in-out absolute right-0 top-0 h-full z-30 shadow-2xl`}
     >
-      <div className="relative z-10 flex-1 overflow-y-auto px-6 pb-20 custom-scrollbar pt-6">
-        {isUsersPage ? renderUsersContent() : showProjectDetails ? renderProjectContent() : null}
-      </div>
+      <div className="relative z-10 flex-1 overflow-y-auto custom-scrollbar">
+        <div className="animate-fade-in flex flex-col h-full p-6">
+            
+            {/* HEADER & KAPAT BUTONU */}
+            <div className="flex justify-between items-start mb-6">
+                <h2 className="text-2xl font-black text-text-main leading-tight tracking-tight break-words flex-1 pr-2">
+                    {currentProject.name}
+                </h2>
+                <button 
+                    onClick={toggleSidebar}
+                    className="text-text-secondary hover:text-text-main hover:bg-app p-2 rounded-full transition-colors flex-shrink-0"
+                >
+                    <FiChevronsRight size={24} />
+                </button>
+            </div>
 
-      <div className="absolute bottom-0 left-0 w-full h-12 border-t border-border bg-surface/90 backdrop-blur-sm z-20 flex items-center justify-center">
-        <button
-          onClick={toggleSidebar}
-          className="text-text-secondary hover:text-text-main transition-colors p-2 rounded-full hover:bg-app group"
-        >
-          <FiChevronsRight size={20} className="group-hover:translate-x-1 transition-transform" />
-        </button>
+            <div className="mb-6">
+                <div className="text-sm text-text-secondary leading-relaxed font-medium">
+                    {currentProject.description || <span className="italic opacity-70">No description provided.</span>}
+                </div>
+            </div>
+
+            {/* PROJE SAHİBİ KARTI */}
+            <div className="mb-8">
+                <h4 className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-3 flex items-center">
+                    Project Lead
+                </h4>
+                <div className="flex items-center justify-between p-3 bg-app border border-border rounded-xl shadow-sm group hover:border-primary/30 transition-colors">
+                    <div className="flex items-center overflow-hidden">
+                        {/* AVATAR - OWNER */}
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-md mr-3 overflow-hidden border border-white/10 flex-shrink-0">
+                            {projectOwner?.profile_picture ? (
+                                <img 
+                                    src={getProfileSrc(projectOwner.profile_picture)} 
+                                    alt={projectOwner.username} 
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                projectOwner?.username?.charAt(0).toUpperCase() || <FiUser />
+                            )}
+                        </div>
+                        <p className="text-text-main font-bold text-sm truncate max-w-[120px]">
+                            {projectOwner ? projectOwner.username : 'Unknown'}
+                        </p>
+                    </div>
+                    <RoleBadge role="owner" />
+                </div>
+            </div>
+
+            {/* ÜYE LİSTESİ */}
+            <div className="mb-8 flex-1 overflow-hidden flex flex-col">
+                <div className="flex justify-between items-end mb-3">
+                    <h4 className="text-xs font-bold text-text-secondary uppercase tracking-wider">Team Members</h4>
+                    <span className="text-[10px] font-bold text-text-secondary bg-app px-2 py-0.5 rounded border border-border">
+                        {otherMembers.length}
+                    </span>
+                </div>
+                
+                <div className="overflow-y-auto custom-scrollbar pr-1 -mr-1 flex-1">
+                    {otherMembers.length > 0 ? (
+                        <div className="space-y-2">
+                            {otherMembers.map(member => (
+                                <div key={member.id} className="flex items-center justify-between p-2 hover:bg-app rounded-lg transition-colors border border-transparent hover:border-border group">
+                                    <div className="flex items-center overflow-hidden">
+                                        {/* AVATAR - MEMBERS */}
+                                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-500 to-gray-700 flex items-center justify-center text-white text-xs font-bold mr-3 shadow-sm group-hover:from-primary group-hover:to-purple-600 transition-all overflow-hidden flex-shrink-0">
+                                            {member.profile_picture ? (
+                                                <img 
+                                                    src={getProfileSrc(member.profile_picture)} 
+                                                    alt={member.username} 
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                member.username.charAt(0).toUpperCase()
+                                            )}
+                                        </div>
+                                        <span className="text-text-main text-sm font-medium truncate max-w-[100px]">{member.username}</span>
+                                    </div>
+                                    
+                                    {/* ROL ETİKETİ */}
+                                    <RoleBadge role={member.role} />
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="p-6 border border-dashed border-border rounded-xl text-center bg-app/30 flex flex-col items-center justify-center h-32">
+                            <FiUsers className="text-text-secondary mb-2 opacity-50" size={24} />
+                            <p className="text-xs text-text-secondary font-medium">No other members yet.</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* FOOTER STATS */}
+            <div className="mt-auto pt-6 border-t border-border grid grid-cols-2 gap-4">
+                <div>
+                    <div className="flex items-center text-text-secondary mb-1">
+                        <FiCalendar className="mr-1.5 text-xs"/> <span className="text-[10px] uppercase font-bold tracking-wide">Created</span>
+                    </div>
+                    <span className="text-text-main text-xs font-mono font-bold block">
+                        {formatDate(currentProject.created_at)}
+                    </span>
+                </div>
+                <div>
+                    <div className="flex items-center text-text-secondary mb-1">
+                        <FiClock className="mr-1.5 text-xs"/> <span className="text-[10px] uppercase font-bold tracking-wide">Updated</span>
+                    </div>
+                    <span className="text-text-main text-xs font-mono font-bold block">
+                        {formatDate(currentProject.last_updated_at || currentProject.created_at)}
+                    </span>
+                </div>
+            </div>
+        </div>
       </div>
     </div>
   );

@@ -143,11 +143,13 @@ router.get('/user/all-tasks', auth, async (req, res) => {
   const userId = req.user.id;
   try {
     const query = `
-      SELECT t.id, t.title, t.status, t.due_date, t.created_at, p.id as project_id, p.name as project_name
+      SELECT t.id, t.title, t.status, t.due_date, t.created_at, t.assignee_id, p.id as project_id, p.name as project_name
       FROM project_tasks t
       JOIN projects p ON t.project_id = p.id
       JOIN project_members pm ON p.id = pm.project_id
-      WHERE pm.user_id = $1
+      WHERE pm.user_id = $1 
+      AND (t.assignee_id = $1 OR t.assignee_id IS NULL) -- Sadece bana atanan veya boşta olanlar
+      AND t.status != 'done' -- Tamamlananları getirme (Opsiyonel)
       ORDER BY t.created_at DESC
       LIMIT 10
     `;
@@ -223,39 +225,103 @@ router.put('/:id/visibility', auth, checkProjectMember, async (req, res) => {
 // =================================
 
 router.get('/:id/tasks', auth, checkProjectMember, async (req, res) => {
-  if (req.memberRole === 'public_viewer' && !req.projectSettings.is_tasks_public) return res.status(403).json({ message: 'Tasks are private.' });
   try {
-    const tasks = await db.query('SELECT t.*, u.username as created_by_name FROM project_tasks t LEFT JOIN users u ON t.assignee_id = u.id WHERE t.project_id = $1 ORDER BY t.created_at ASC', [req.projectId]);
+    // DÜZELTME: t.assigned_to YERİNE t.assignee_id KULLANILDI
+    const tasks = await db.query(`
+      SELECT t.*, u.username as assignee_name 
+      FROM project_tasks t
+      LEFT JOIN users u ON t.assignee_id = u.id 
+      WHERE t.project_id = $1
+      ORDER BY t.created_at ASC
+    `, [req.projectId]);
     res.json(tasks.rows);
-  } catch (err) { res.status(500).send('Server Error'); }
+  } catch (err) { 
+    console.error("Task Get Error:", err);
+    res.status(500).send('Server Error'); 
+  }
 });
 
 router.post('/:id/tasks', auth, checkProjectMember, async (req, res) => {
   if (req.memberRole === 'public_viewer') return res.status(403).json({ message: 'Read-only.' });
-  const { title, description, status, due_date } = req.body;
+  
+  const { title, description, status, due_date, assigned_to } = req.body; // assigned_to frontend'den gelir
+
   try {
-    const newTask = await db.query('INSERT INTO project_tasks (project_id, title, description, status, due_date, assignee_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *', [req.projectId, title, description, status || 'todo', due_date, req.user.id]);
+    // Boş gelirse NULL yap (Herkes seçeneği için)
+    const assigneeId = assigned_to || null;
+
+    // DÜZELTME: Kolon adı 'assignee_id', değer $6
+    const newTask = await db.query(
+      'INSERT INTO project_tasks (project_id, title, description, status, due_date, assignee_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *', 
+      [req.projectId, title, description, status || 'todo', due_date, assigneeId]
+    );
+
+    // Oluşturan kişinin adını da ekle
     const user = await db.query('SELECT username FROM users WHERE id = $1', [req.user.id]);
     const taskObj = newTask.rows[0];
     taskObj.created_by_name = user.rows[0].username;
+    
+    // Atanan kişinin ismini de bulup geri döndürelim (Frontend'de hemen görünmesi için)
+    if (assigneeId) {
+       const assignee = await db.query('SELECT username FROM users WHERE id = $1', [assigneeId]);
+       taskObj.assignee_name = assignee.rows[0]?.username;
+    }
+
     res.status(201).json(taskObj);
-  } catch (err) { res.status(500).send('Server Error'); }
+  } catch (err) { 
+    console.error("Task Create Error:", err);
+    res.status(500).send('Server Error'); 
+  }
 });
 
+// ==========================================
+// UPDATE TASK (Geliştirilmiş Versiyon)
+// ==========================================
 router.put('/:id/tasks/:taskId', auth, checkProjectMember, async (req, res) => {
-  if (req.memberRole === 'public_viewer') return res.status(403).json({ message: 'Read-only.' });
-  const { title, status } = req.body;
+  const { title, status, assigned_to, due_date } = req.body;
   const { taskId } = req.params;
+
   try {
-    let q, p;
-    if (status) { q = 'UPDATE project_tasks SET status = $1 WHERE id = $2 RETURNING *'; p = [status, taskId]; }
-    else { q = 'UPDATE project_tasks SET title = $1 WHERE id = $2 RETURNING *'; p = [title, taskId]; }
-    const upd = await db.query(q, p);
-    const taskObj = upd.rows[0];
-    const user = await db.query('SELECT username FROM users WHERE id = $1', [taskObj.assignee_id]);
-    taskObj.created_by_name = user.rows.length > 0 ? user.rows[0].username : 'Unknown';
-    res.json(taskObj);
-  } catch (err) { res.status(500).send('Server Error'); }
+    // 1. VERİ TEMİZLİĞİ: "Herkes" seçilirse (boş string) NULL yap
+    let safeAssignee = assigned_to;
+    if (assigned_to === "" || assigned_to === undefined) safeAssignee = null;
+
+    let safeDate = due_date;
+    if (due_date === "") safeDate = null;
+
+    // 2. GÜNCELLEME SORGUSU
+    // DÜZELTME: assigned_to = $3 YERİNE assignee_id = $3
+    const updatedTask = await db.query(
+      `UPDATE project_tasks SET 
+        title = COALESCE($1, title), 
+        status = COALESCE($2, status),
+        assignee_id = $3, 
+        due_date = $4      
+       WHERE id = $5 AND project_id = $6 RETURNING *`,
+      [
+        title,           // $1
+        status,          // $2
+        safeAssignee,    // $3 (assignee_id kolonuna gider)
+        safeDate,        // $4
+        taskId,          // $5
+        req.projectId    // $6
+      ]
+    );
+    
+    // 3. GÜNCEL VERİYİ KULLANICI ADIYLA DÖNDÜR
+    // DÜZELTME: t.assigned_to YERİNE t.assignee_id
+    const result = await db.query(`
+      SELECT t.*, u.username as assignee_name 
+      FROM project_tasks t
+      LEFT JOIN users u ON t.assignee_id = u.id
+      WHERE t.id = $1
+    `, [taskId]);
+
+    res.json(result.rows[0]);
+  } catch (err) { 
+    console.error("Task Update Error:", err); 
+    res.status(500).send('Server Error'); 
+  }
 });
 
 router.delete('/:id/tasks/:taskId', auth, checkProjectMember, async (req, res) => {
@@ -265,6 +331,108 @@ router.delete('/:id/tasks/:taskId', auth, checkProjectMember, async (req, res) =
     res.json({ message: 'Deleted' });
   } catch (err) { res.status(500).send('Server Error'); }
 });
+
+// =================================
+//  COLUMNS (KOLON YÖNETİMİ) - YENİ
+// =================================
+
+// Kolonları Getir
+router.get('/:id/columns', auth, checkProjectMember, async (req, res) => {
+  try {
+    // 1. Mevcut kolonları çekmeye çalış
+    const result = await db.query(
+      'SELECT * FROM project_columns WHERE project_id = $1 ORDER BY position ASC', 
+      [req.projectId]
+    );
+
+    // 2. EĞER HİÇ KOLON YOKSA (Proje yeni açılmışsa)
+    // Varsayılan kolonları (To Do, In Progress, Done) oluştur ve 'is_fixed' yap.
+    if (result.rows.length === 0) {
+      await db.query(`
+        INSERT INTO project_columns (project_id, column_id, title, position, is_fixed)
+        VALUES 
+        ($1, 'todo', 'To Do', 0, true),
+        ($1, 'in_progress', 'In Progress', 1, true),
+        ($1, 'done', 'Done', 2, true)
+      `, [req.projectId]);
+
+      // Yeni oluşturulanları çekip gönder
+      const newResult = await db.query(
+        'SELECT * FROM project_columns WHERE project_id = $1 ORDER BY position ASC', 
+        [req.projectId]
+      );
+      return res.json(newResult.rows);
+    }
+
+    // Zaten kolon varsa onları gönder
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
+  }
+});
+// Yeni Kolon Ekle
+router.post('/:id/columns', auth, checkProjectMember, async (req, res) => {
+  const { title, column_id, position } = req.body;
+  try {
+    const newCol = await db.query(
+      'INSERT INTO project_columns (project_id, title, column_id, position) VALUES ($1, $2, $3, $4) RETURNING *',
+      [req.projectId, title, column_id, position || 0]
+    );
+    res.status(201).json(newCol.rows[0]);
+  } catch (err) { res.status(500).send('Server Error'); }
+});
+
+// Kolon Sırasını Güncelle (Sürükle-Bırak sonrası)
+router.put('/:id/columns/reorder', auth, checkProjectMember, async (req, res) => {
+  const { newOrder } = req.body; // ['todo', 'in_progress', 'custom_1'] gibi array
+  try {
+    // Transaction başlatıp hepsini sırayla güncelle
+    await db.query('BEGIN');
+    for (let i = 0; i < newOrder.length; i++) {
+      await db.query(
+        'UPDATE project_columns SET position = $1 WHERE project_id = $2 AND column_id = $3',
+        [i, req.projectId, newOrder[i]]
+      );
+    }
+    await db.query('COMMIT');
+    res.json({ message: 'Order updated' });
+  } catch (err) {
+    await db.query('ROLLBACK');
+    res.status(500).send('Server Error');
+  }
+});
+
+// Kolon Silme
+router.delete('/:id/columns/:columnId', auth, checkProjectMember, async (req, res) => {
+  const { columnId } = req.params;
+  try {
+    // 1. Önce bu kolonun 'is_fixed' (sabit) olup olmadığını kontrol edelim
+    // (Opsiyonel: Eğer Todo/Done gibi kolonların silinmesini istemiyorsan)
+    const check = await db.query(
+        'SELECT is_fixed FROM project_columns WHERE project_id = $1 AND column_id = $2',
+        [req.projectId, columnId]
+    );
+
+    if (check.rows.length > 0 && check.rows[0].is_fixed) {
+        return res.status(400).json({ message: 'Sabit kolonlar silinemez.' });
+    }
+
+    // 2. Kolonu veritabanından sil
+    await db.query(
+      'DELETE FROM project_columns WHERE project_id = $1 AND column_id = $2',
+      [req.projectId, columnId]
+    );
+
+    
+    
+    res.json({ message: 'Column deleted' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
+  }
+});
+
 
 // =================================
 // 4. ISSUES
@@ -413,27 +581,73 @@ router.post('/:id/comments', auth, checkProjectMember, async (req, res) => {
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
+
 router.get('/:id/members', auth, checkProjectMember, async (req, res) => {
   try {
-    const m = await db.query('SELECT u.id, u.username, pm.role FROM project_members pm LEFT JOIN users u ON pm.user_id = u.id WHERE pm.project_id = $1', [req.projectId]);
-    res.json(m.rows);
-  } catch (err) { res.status(500).send('Server Error'); }
+    // DÜZELTME: 'pm.role' EKLENDİ.
+    // Artık frontend'de member.role verisi dolu gelecek (editor/viewer).
+    const members = await db.query(`
+      SELECT u.id, u.username, u.email, u.profile_picture, pm.role
+      FROM project_members pm
+      JOIN users u ON pm.user_id = u.id
+      WHERE pm.project_id = $1
+    `, [req.projectId]);
+    res.json(members.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
+  }
 });
 
 router.post('/:id/members', auth, checkProjectMember, async (req, res) => {
-  if (req.memberRole !== 'owner' && req.memberRole !== 'editor') return res.status(403).json({message:'Denied'});
-  const { username, role } = req.body;
-  try {
-    const u = await db.query('SELECT id FROM users WHERE username = $1', [username]);
-    if(u.rows.length===0) return res.status(404).json({message:'User not found'});
-    const uid = u.rows[0].id;
-    const check = await db.query('SELECT * FROM project_members WHERE project_id=$1 AND user_id=$2', [req.projectId, uid]);
-    if(check.rows.length>0) return res.status(400).json({message:'Already member'});
-    const nm = await db.query('INSERT INTO project_members (project_id, user_id, role) VALUES ($1, $2, $3) RETURNING role', [req.projectId, uid, role]);
-    res.status(201).json({id: uid, username, role: nm.rows[0].role});
-  } catch (err) { res.status(500).send('Server Error'); }
-});
+  // 1. Permission Check
+  if (req.memberRole !== 'owner' && req.memberRole !== 'editor') {
+      return res.status(403).json({ message: 'Denied. Only Owner or Editor can add members.' });
+  }
 
+  const { username, role } = req.body;
+
+  try {
+    // 2. Find User (Get ID AND Profile Picture)
+    // We need profile_picture here to return it to the frontend for immediate display
+    const u = await db.query('SELECT id, profile_picture FROM users WHERE username = $1', [username]);
+    
+    if (u.rows.length === 0) {
+        return res.status(404).json({ message: 'User not found' });
+    }
+    
+    const uid = u.rows[0].id;
+    const userProfilePic = u.rows[0].profile_picture;
+    
+    // 3. Check if already a member
+    const check = await db.query('SELECT * FROM project_members WHERE project_id=$1 AND user_id=$2', [req.projectId, uid]);
+    if (check.rows.length > 0) {
+        return res.status(400).json({ message: 'Already member' });
+    }
+    
+    // 4. Define Role (Fix for "Always Viewer" issue)
+    // If role is undefined or empty string, default to 'viewer'
+    const roleToAssign = role || 'viewer';
+
+    // 5. Insert into Database
+    const nm = await db.query(
+        'INSERT INTO project_members (project_id, user_id, role) VALUES ($1, $2, $3) RETURNING role', 
+        [req.projectId, uid, roleToAssign]
+    );
+    
+    // 6. Return Data (Including profile_picture)
+    res.status(201).json({ 
+        id: uid, 
+        username, 
+        role: nm.rows[0].role, 
+        profile_picture: userProfilePic 
+    });
+
+  } catch (err) { 
+      console.error(err); 
+      res.status(500).send('Server Error'); 
+  }
+});
 router.put('/:id/members/:userId', auth, checkProjectMember, async (req, res) => {
   if (req.memberRole !== 'owner') return res.status(403).json({ message: 'Only owner can change roles.' });
   if (req.params.userId === req.user.id.toString()) return res.status(400).json({ message: 'Cannot change owner role.' });
