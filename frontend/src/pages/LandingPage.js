@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { 
   FiArrowRight, FiCheckCircle, FiUsers, FiLayout, 
-  FiLayers, FiShield, FiSun, FiMoon 
+  FiLayers, FiShield, FiSun, FiMoon, FiMail, FiMapPin, FiGithub
 } from 'react-icons/fi';
 import BackgroundImage from '../assets/background.jpg';
 import LogoImage from '../assets/logo.png';
@@ -22,7 +22,7 @@ const LandingPage = () => {
         {/* --- HERO SECTION --- */}
         <section className="relative min-h-screen flex flex-col px-4 overflow-hidden">
           
-          {/* Background - Adjusted opacity for better readability */}
+          {/* Background */}
           <div 
             className="absolute inset-0 bg-cover bg-center z-0"
             style={{ backgroundImage: `url(${BackgroundImage})` }}
@@ -85,7 +85,6 @@ const LandingPage = () => {
               </span>
             </h1>
             
-            {/* --- IMPROVED READABILITY TEXT --- */}
             <p className="text-xl md:text-2xl text-gray-800 dark:text-gray-200 max-w-3xl mx-auto leading-relaxed font-medium mb-10">
               GazozHub connects students, teams, and advisors in one seamless workspace. 
               Manage tasks, track issues, and build amazing things together.
@@ -115,8 +114,10 @@ const LandingPage = () => {
           </div>
         </section>
 
-        {/* --- FEATURES SECTION --- */}
+        {/* --- MAIN CONTENT WRAPPER --- */}
         <main className="bg-surface relative z-10">
+          
+          {/* --- FEATURES SECTION --- */}
           <div className="py-24 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl w-full mx-auto px-4">
             <FeatureCard 
               icon={<FiLayout className="w-8 h-8" />} 
@@ -156,14 +157,73 @@ const LandingPage = () => {
           </div>
         </main>
 
-        <footer className="py-8 text-center border-t border-border bg-surface mt-auto">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <img src={LogoImage} alt="Logo" className="h-6 w-6 opacity-80" />
-              <span className="text-text-secondary font-semibold">GazozHub</span>
+        {/* --- EXPANDED FOOTER (Copyright & Contact Together) --- */}
+        <footer className="bg-surface border-t border-border pt-16 pb-8 mt-auto z-10 relative">
+            <div className="max-w-7xl mx-auto px-4">
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
+                    {/* Column 1: Brand Info */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                            <img src={LogoImage} alt="Logo" className="h-8 w-8 opacity-90 brightness-0 dark:brightness-100" />
+                            <span className="text-xl font-bold text-text-main">GazozHub</span>
+                        </div>
+                        <p className="text-text-secondary leading-relaxed">
+                            Simplifying academic collaboration for students and advisors. 
+                            Build, track, and succeed together.
+                        </p>
+                    </div>
+
+                    {/* Column 2: Quick Links (Optional, looks good) */}
+                    <div className="space-y-4">
+                         <h4 className="text-lg font-bold text-text-main">Quick Links</h4>
+                         <ul className="space-y-2 text-text-secondary">
+                             <li><Link to="/login" className="hover:text-primary transition-colors">Login</Link></li>
+                             <li><Link to="/register" className="hover:text-primary transition-colors">Register</Link></li>
+                             <li><a href="#" className="hover:text-primary transition-colors">Documentation</a></li>
+                         </ul>
+                    </div>
+
+                    {/* Column 3: Contact Info (Requested Area) */}
+                    <div className="space-y-4">
+                        <h4 className="text-lg font-bold text-text-main">Contact Us</h4>
+                        
+                        <div className="flex items-start gap-3 text-text-secondary">
+                            <FiMapPin className="mt-1 flex-shrink-0 text-primary" />
+                            <span>
+                                Final International University<br/>
+                                Kyrenia, Cyprus
+                            </span>
+                        </div>
+                        
+                        <div className="flex items-center gap-3 text-text-secondary">
+                            <FiMail className="flex-shrink-0 text-primary" />
+                            <a href="mailto:support@gazozhub.com" className="hover:text-primary transition-colors">
+                                support@gazozhub.com
+                            </a>
+                        </div>
+
+                         <div className="flex items-center gap-4 mt-4">
+                            <a href="#" className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-primary hover:text-white transition-colors">
+                                <FiGithub size={20} />
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Divider */}
+                <hr className="border-border/50 mb-8" />
+
+                {/* Bottom Bar: Copyright */}
+                <div className="flex flex-col md:flex-row justify-between items-center text-sm text-text-secondary">
+                    <p>&copy; {new Date().getFullYear()} GazozHub. Designed for modern teams.</p>
+                    <div className="flex gap-6 mt-4 md:mt-0">
+                        <a href="#" className="hover:text-text-main">Privacy Policy</a>
+                        <a href="#" className="hover:text-text-main">Terms of Service</a>
+                    </div>
+                </div>
+
             </div>
-            <p className="text-text-secondary text-sm">
-              &copy; {new Date().getFullYear()} GazozHub. Designed for modern teams.
-            </p>
         </footer>
       </div>
     </div>
